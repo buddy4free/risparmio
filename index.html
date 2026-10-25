@@ -25,6 +25,9 @@
   --marker:"Permanent Marker", "Marker Felt", "Comic Sans MS", cursive;
   color-scheme:dark;
 }
+/* l'app è già scura: i browser con tema scuro forzato (es. Samsung Internet) la lasciano com'è */
+@media (prefers-color-scheme: dark){:root{color-scheme:dark}}
+@media (prefers-color-scheme: light){:root{color-scheme:dark}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;

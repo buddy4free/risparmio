@@ -1120,15 +1120,42 @@ function insights(ym){
 const view = document.getElementById('view');
 const nav$ = r => "data-nav='" + JSON.stringify(r).replace(/'/g, '&#39;') + "'";
 let GOAL_FROM = null, PREV = null, TXBACK = null;
+const NAVSTACK = []; let EXIT_ARMED = 0;
 const GOAL_SCR = ['goal', 'whatif', 'gtips', 'read'];
 const SCROLL = {}, skey = r => r.screen + ':' + (r.id || '');
-function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; PREV = R; R = r; try { localStorage.setItem('b4f-last', JSON.stringify({r, t:Date.now()})); } catch(e) {} render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
+function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  if (r.screen === 'home') NAVSTACK.length = 0; else if (!back && R && !same(R, r) && !(R.screen === 'add' && r.screen === 'add') && !['welcome', 'setup'].includes(R.screen)) { NAVSTACK.push(R); if (NAVSTACK.length > 60) NAVSTACK.shift(); } else if (back && NAVSTACK.length && same(NAVSTACK[NAVSTACK.length - 1], r)) NAVSTACK.pop();
+  if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; PREV = R; R = r; try { localStorage.setItem('b4f-last', JSON.stringify({r, t:Date.now()})); } catch(e) {} render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
 view.addEventListener('click', e => { const b = e.target.closest('[data-nav]'); if (b) nav(JSON.parse(b.dataset.nav), b.classList.contains('back')); });
 document.getElementById('logo').onclick = () => nav(S.setup ? {screen:'home'} : {screen:'welcome'});
 document.getElementById('fab').onclick = () => { F = null; nav({screen:'add'}); };
 document.getElementById('gear').innerHTML = ic('gear');
 document.getElementById('gear').onclick = () => nav(S.setup ? {screen:'settings'} : {screen:'welcome'});
 document.getElementById('help').onclick = () => nav({screen:'legend'});
+/* tasto indietro del telefono: torna al passo o alla schermata di prima, invece di chiudere l'app */
+function phoneBack(){
+  const pop = document.querySelector('.psheet');
+  if (pop) { if (pop.id === 'psheet') { ST.sheet = false; render(); } else pop.remove(); return true; }
+  if (R.screen === 'add' && F && !R.edit && !R.editX && F.t !== 'xfer' && F.step && F.step !== 'cat') {
+    const CT = F.rf ? 'out' : F.t, hasSub = F.c && (catOf(CT, F.c).subs || []).length, fa = document.getElementById('f-a');
+    if (fa) { F.a = fa.value; F.d = val('f-d') || F.d; F.n = val('f-n'); }
+    F.step = F.step === 'amt' ? 'dest' : F.step === 'dest' && hasSub ? 'sub' : 'cat'; render(); window.scrollTo({top:0}); return true; }
+  if (R.screen === 'add' && (R.type || R.xfer) && !R.edit && !R.editX) { nav({screen:'add'}, true); return true; }
+  if (R.screen === 'an' && AN.c) { if (AN.s !== null) AN.s = null; else AN.c = null; render(); return true; }
+  if (R.screen === 'tx' && TXSEL) { TXSEL = null; render(); return true; }
+  if (R.screen === 'cats' && !R.id && CATX.mode) { CATX.mode = ''; render(); return true; }
+  if (R.screen === 'home' || !S.setup) return false;
+  if (NAVSTACK.length) { nav(NAVSTACK.pop(), true); return true; }
+  if (S.setup && R.screen !== 'home') { nav({screen:'home'}, true); return true; }
+  return false;
+}
+try { history.replaceState({b4f:'base'}, ''); history.pushState({b4f:'top'}, ''); } catch (e) {}
+window.addEventListener('popstate', () => {
+  const again = () => { try { history.pushState({b4f:'top'}, ''); } catch (e) {} };
+  if (phoneBack()) { EXIT_ARMED = 0; return again(); }
+  if (!EXIT_ARMED) { EXIT_ARMED = 1; toast('Premi ancora indietro per uscire'); setTimeout(() => EXIT_ARMED = 0, 2500); return again(); }
+  try { history.back(); } catch (e) {}
+});
 const TABS = [['home','Home','house'],['tx','Movimenti','list'],['stats','Statistiche','chart'],['pillars','Pilastri','pillars'],['gym','Palestra','dumbbell'],['well','Benessere','leaf']];
 const TAB_OF = {import:'home', privacy:'home', terms:'home', support:'home', whatif:'pillars', debts:'pillars', missions:'gym', mission:'gym', learn:'gym', lesson:'gym', wbi:'home', dues:'tx', an:'stats', home:'home', tx:'tx', stats:'stats', charts:'stats', add:'tx', review:'stats', pillars:'pillars', pillar:'pillars', goal:'pillars', gtips:'pillars', sim:'pillars', gym:'gym', read:'gym', champ:'gym', well:'well', breath:'well'};
 function backBtn(label, r){ return '<button class="back" ' + nav$(r) + '>' + ic('left') + label + '</button>'; }

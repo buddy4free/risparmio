@@ -277,8 +277,8 @@ i.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right
 .pn{min-height:2.4em;align-items:flex-start!important;justify-content:center}
 .pplot{position:relative;width:100%;display:flex;align-items:flex-end;justify-content:center}
 .pbarv{width:68%;max-width:56px;border-radius:6px 6px 2px 2px;position:relative}
-.pbreak::after{content:'';position:absolute;left:-5px;right:-5px;top:36%;height:5px;background:repeating-linear-gradient(90deg,#fff 0 7px,transparent 7px 11px);transform:skewY(-14deg)}
-.brk-key{display:inline-block;width:16px;height:4px;margin-right:6px;vertical-align:3px;background:repeating-linear-gradient(90deg,#fff 0 5px,transparent 5px 8px);transform:skewY(-14deg)}
+.pbreak::after{content:'';position:absolute;left:-5px;right:-5px;top:36%;height:2px;background:repeating-linear-gradient(90deg,#fff 0 6px,transparent 6px 10px);transform:skewY(-14deg)}
+.brk-key{display:inline-block;width:16px;height:2px;margin-right:6px;vertical-align:4px;background:repeating-linear-gradient(90deg,#fff 0 4px,transparent 4px 7px);transform:skewY(-14deg)}
 .ptgt{position:absolute;left:8%;right:8%;border-top:2px dashed var(--fg);opacity:.85}
 .pn{font-size:.74rem;font-weight:700;display:flex;align-items:center;gap:5px;text-align:center;line-height:1.15}
 .pn i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
@@ -1501,7 +1501,7 @@ function renderPillar(){
     (p.id === 'inv' ? '<button class="readcard" ' + nav$({screen:'sim'}) + '><span class="t"><b>' + ic('chart') + ' Simulatore del futuro</b><span>Prova capitale, risparmio mensile, anni e rendimento</span></span>' + ic('right') + '</button><p class="small muted">Nessun tetto: qui va il denaro che non ti serve per molti anni. Le informazioni nell\'app non sono una consulenza finanziaria.</p>' : '') +
     (p.id !== 'goal' ? '<div class="row"><button class="btn sm" data-mv="' + p.id + '" data-sign="1">Aggiungi</button><button class="btn ghost sm" data-mv="' + p.id + '" data-sign="-1">Preleva</button><button class="textlink" data-set="' + p.id + '">Correggi il saldo</button></div><div id="mv-' + p.id + '"></div>' +
       '<details class="histbox"' + (R.hist ? ' open' : '') + '><summary>' + ic('calendar') + ' Ricostruisci lo storico</summary><p class="small muted">Hai i saldi del passato, per esempio dagli estratti conto o dal vecchio programma? Scrivi quanto c\'era in questo pilastro alla fine di un mese: il grafico qui sotto si aggiorna e il saldo di oggi non cambia. Puoi aggiungerne quanti vuoi, anche uno per anno.</p>' +
-        '<div class="grid2"><div class="field"><label for="h-m">Fine del mese</label><input id="h-m" type="month" max="' + addMonths(curYM(), -1) + '" value="' + addMonths(curYM(), -1) + '"></div><div class="field"><label for="h-v">Saldo</label><div class="eur"><input id="h-v" inputmode="decimal" placeholder="0"></div></div></div><button class="btn sm" id="h-ok" style="align-self:flex-start">Aggiungi al grafico</button>' +
+        '<div class="grid2"><div class="field"><label for="h-m">Fine del mese</label><input id="h-m" type="month" max="' + addMonths(curYM(), -1) + '" value="' + (R.hm || addMonths(curYM(), -1)) + '"></div><div class="field"><label for="h-v">Saldo</label><div class="eur"><input id="h-v" inputmode="decimal" placeholder="0"></div></div></div><button class="btn sm" id="h-ok" style="align-self:flex-start">Aggiungi al grafico</button>' +
         (((S.hist || {})[p.id] || []).length ? '<div class="list" style="margin-top:10px">' + S.hist[p.id].slice().sort((a, b) => b.ym.localeCompare(a.ym)).map(h => '<div class="item" style="grid-template-columns:1fr auto auto"><span class="t"><b>Fine ' + ymLabel(h.ym, {month:'long', year:'numeric'}) + '</b></span><span class="num">' + eur(h.v) + '</span><button class="textlink" data-hdel="' + h.ym + '" aria-label="Togli">Togli</button></div>').join('') + '</div>' : '') + '</details>' : '') +
     '<div class="card"><div class="spread"><span class="label">Saldo attuale</span><b class="num" style="font-family:var(--display);font-size:1.6rem">' + eur(bal) + '</b></div>' +
       '<div class="hist" role="img" aria-label="Saldo a fine mese, ultimi 12 mesi">' + series.map(s => '<div title="' + ymLabel(s.ym) + ': ' + eur(s.v) + '"><span style="height:' + Math.max(2, s.v / max * 130) + 'px;background:' + p.c + '"></span><small>' + ymLabel(s.ym, {month:'narrow'}) + '</small></div>').join('') +
@@ -1511,13 +1511,13 @@ function renderPillar(){
       return '<div class="item" style="grid-template-columns:auto 1fr auto"><span class="ic" style="background:' + p.c + '">' + ic(m.a >= 0 ? 'plus' : 'left') + '</span><span class="t"><b>' + esc(m.n || (m.a >= 0 ? 'Accantonamento' : 'Prelievo')) + '</b><span class="sub">' + dshort(m.d) + (g ? ' · ' + esc(g.name) : '') + '</span></span><span class="amt num" style="color:' + (m.a >= 0 ? IN_COL : OUT_COL) + '">' + (m.a >= 0 ? '+' : '−') + eur2(Math.abs(m.a)) + '</span></div>'; }).join('') + '</div>'
       : '<div class="note">Ancora nessun movimento registrato. Usa "Aggiungi" o "Preleva" qui sopra.</div>') + '</div></div>';
   bindPil(renderPillar);
-  view.querySelectorAll('[data-hdel]').forEach(b => b.onclick = () => { S.hist[p.id] = S.hist[p.id].filter(h => h.ym !== b.dataset.hdel); rebuildHist(p.id); save(); R = {screen:'pillar', id:p.id, hist:1}; renderPillar(); postRender(); });
+  view.querySelectorAll('[data-hdel]').forEach(b => b.onclick = () => { S.hist[p.id] = S.hist[p.id].filter(h => h.ym !== b.dataset.hdel); rebuildHist(p.id); save(); const y = window.scrollY; R = {screen:'pillar', id:p.id, hist:1, hm:R.hm}; renderPillar(); postRender(); window.scrollTo({top:y}); });
   const ho = document.getElementById('h-ok'); if (ho) ho.onclick = () => {
     const ym = val('h-m'), v = parseAmt(val('h-v'));
     if (!ym || ym >= curYM()) return toast('Scegli un mese passato. Per oggi usa "Correggi il saldo"');
     if (!(v >= 0) || val('h-v').trim() === '') return toast('Scrivi il saldo di fine mese');
     S.hist = S.hist || {}; S.hist[p.id] = (S.hist[p.id] || []).filter(h => h.ym !== ym).concat({ym, v}); rebuildHist(p.id);
-    save(); toast('Storico aggiornato'); R = {screen:'pillar', id:p.id, hist:1}; renderPillar(); postRender();
+    save(); toast('Storico aggiornato'); const y = window.scrollY; R = {screen:'pillar', id:p.id, hist:1, hm:ym}; renderPillar(); postRender(); window.scrollTo({top:y}); const hv = document.getElementById('h-v'); if (hv) hv.focus({preventScroll:true});
   };
 }
 

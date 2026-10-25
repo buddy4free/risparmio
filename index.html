@@ -2990,7 +2990,7 @@ function showLock(){
     '<button class="textlink small" id="lk-forgot">Hai dimenticato il PIN?</button></div>';
   document.body.appendChild(o);
   const dots = () => o.querySelectorAll('.lkdots i').forEach((d, i) => d.classList.toggle('on', i < pin.length)), msg = t => o.querySelector('.lkmsg').textContent = t || '';
-  const open = () => { o.remove(); document.body.classList.remove('locked'); LOCK.fails = 0; };
+  const open = () => { o.remove(); document.body.classList.remove('locked'); LOCK.fails = 0; lockSeen(); };
   const check = async () => { if (Date.now() < LOCK.until) { pin = ''; dots(); return msg('Troppi tentativi: riprova tra ' + Math.ceil((LOCK.until - Date.now()) / 1000) + ' secondi'); }
     if (await pinHash(pin, S.lock.salt) === S.lock.hash) return open();
     LOCK.fails++; pin = ''; dots(); o.querySelector('.lkdots').classList.remove('shake'); void o.offsetWidth; o.querySelector('.lkdots').classList.add('shake');
@@ -3003,7 +3003,13 @@ function showLock(){
   document.addEventListener('keydown', function kd(e){ if (!document.getElementById('lock')) return document.removeEventListener('keydown', kd); if (/^\d$/.test(e.key)) o.querySelector('[data-k="' + e.key + '"]').click(); else if (e.key === 'Backspace') o.querySelector('[data-k="del"]').click(); });
   if (S.lock.bio) setTimeout(bio, 350);
 }
-document.addEventListener('visibilitychange', () => { if (!S.lock || !S.lock.on) return; if (document.hidden) LOCK.hidden = Date.now(); else if (LOCK.hidden && Date.now() - LOCK.hidden > (S.lock.after ?? 60) * 1000) showLock(); });
+/* "richiedi il PIN dopo…": ricordo l'ultimo momento in cui l'app era aperta e sbloccata, anche se Android la chiude del tutto */
+const LOCK_KEY = 'b4f-lock-seen';
+function lockSeen(){ if (!document.getElementById('lock')) try { localStorage.setItem(LOCK_KEY, String(Date.now())); } catch (e) {} }
+function lockDue(){ if (!S.lock || !S.lock.on) return false; const after = (S.lock.after ?? 60) * 1000; if (!after) return true; let seen = 0; try { seen = +localStorage.getItem(LOCK_KEY) || 0; } catch (e) {} return !seen || Date.now() - seen > after || Date.now() < seen; }
+document.addEventListener('visibilitychange', () => { if (!S.lock || !S.lock.on) return; if (document.hidden) lockSeen(); else if (lockDue()) showLock(); });
+window.addEventListener('pagehide', lockSeen);
+setInterval(() => { if (!document.hidden) lockSeen(); }, 20000);
 function pinSetup(after){
   catPop('<b style="font-size:1.1rem">Scegli un PIN</b><p class="small muted" style="margin:0">Da 4 a 6 cifre. Te lo chiederò ogni volta che apri l\'app.</p><input id="pn1" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" aria-label="PIN"><input id="pn2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="Ripeti il PIN" aria-label="Ripeti il PIN">' +
     '<p class="small" style="margin:0;color:var(--warn)">Se lo dimentichi non si può recuperare: potrai solo cancellare i dati e ripristinare un backup.</p><div class="row"><button class="btn" id="pn-ok">Salva il PIN</button><button class="btn ghost" data-x>Annulla</button></div>', (o, close) => {
@@ -3777,7 +3783,7 @@ function renderBreath(){
 }
 
 render();
-showLock();
+if (lockDue()) showLock(); else lockSeen();
 </script>
 
 </body>

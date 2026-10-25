@@ -1,7 +1,7 @@
 import math, os, numpy as np, json, base64, io, subprocess
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from concurrent.futures import ProcessPoolExecutor
-W,H,FPS,DUR=1080,1920,30,18.8
+W,H,FPS,DUR=1080,1920,30,24.0
 Y=(255,201,10); WH=(255,255,255); BK=(0,0,0)
 D=os.path.dirname(os.path.abspath(__file__))+'/'
 ST='/home/user/risparmio/store/'
@@ -21,38 +21,52 @@ LOGO=Image.open(io.BytesIO(base64.b64decode(L['full']))).convert('RGBA')
 ENSO=Image.open(io.BytesIO(base64.b64decode(L['enso']))).convert('RGBA')
 def ring(c,cx,cy,r,w,prog,col=Y,a=255):
     d=ImageDraw.Draw(c); d.arc((cx-r,cy-r,cx+r,cy+r),-90,-90+360*prog,fill=col+(a,),width=w)
-shots={k:Image.open(ST+f).convert('RGBA') for k,f in [('home','1-home.png'),('ese','4-ese.png'),('pil','2-pilastri.png')]}
-crops={'home':(0,240,1080,1000),'ese':(0,440,1080,1360),'pil':(0,520,1080,1250)}
+shots={k:Image.open(f).convert('RGBA') for k,f in [('add',D+'add.png'),('home',ST+'1-home.png'),('ese',ST+'4-ese.png'),('gym',ST+'6-palestra.png')]}
+crops={'add':(0,0,1080,1110),'home':(0,370,1080,1745),'ese':(0,440,1080,1360),'gym':(0,390,1080,1730)}
+def tfit(s,name,size,col,maxw=980):
+    while size>40:
+        im=txt(s,F(name,size),col)
+        if im.width<=maxw: return im
+        size-=6
+    return im
 def phone(c,key,t,label):
     im=shots[key].crop(crops[key]); pw=860; ph=int(im.height*pw/im.width); im=im.resize((pw,ph),Image.LANCZOS)
     fr=Image.new('RGBA',(pw+40,ph+40),(0,0,0,0)); d=ImageDraw.Draw(fr); d.rounded_rectangle((0,0,pw+39,ph+39),48,fill=(20,20,20,255),outline=Y+(255,),width=10)
     m=Image.new('L',(pw,ph),0); ImageDraw.Draw(m).rounded_rectangle((0,0,pw-1,ph-1),36,fill=255); fr.paste(im,(20,20),m)
     e=ease(t/0.35); sc=0.86+0.14*e+0.04*t; y=H/2+120+(1-e)*700
     put(c,fr,W/2,y,sc,min(1,t/0.2))
-    put(c,txt(label,F('Anton',190),Y),W/2,330-(1-ease(t/0.3))*80,1,min(1,t/0.15))
+    put(c,tfit(label,'Anton',190,Y),W/2,330-(1-ease(t/0.3))*80,1,min(1,t/0.15))
 def frame(i):
     t=i/FPS; c=Image.new('RGBA',(W,H),BK+(255,))
     if t<2.4:
         ring(c,W/2,H/2,500,24,ease(t/1.0),Y,110)
         put(c,txt('HO CREATO',F('Anton',170),WH),W/2,H/2-130,back((t-0.15)/0.3),min(1,(t-0.15)/0.1))
         put(c,txt("UN'APP",F('Anton',280),Y),W/2,H/2+110,back((t-0.6)/0.3)*(1+0.05*max(0,1-(t-0.6)/0.2)),min(1,(t-0.6)/0.08))
-    elif t<4.6:
+    elif t<5.2:
         u=t-2.4
         if u<0.08: c=Image.new('RGBA',(W,H),(255,255,255,255))
-        put(c,txt('PER IL TUO',F('Anton',150),WH),W/2,H/2-400,ease(u/0.25),min(1,u/0.15))
-        s1=t-2.85; put(c,txt('RISPARMIO PERSONALE.',F('Anton',118),WH),W/2,H/2-240,ease(s1/0.25) if s1>0 else 0,min(1,s1/0.15) if s1>0 else 0)
-        s2=t-3.5; put(c,txt('GRATIS.',F('Anton',360),Y),W/2,H/2+60,(2.2-1.2*ease(s2/0.18)) if s2>=0 else 0,min(1,s2/0.1) if s2>=0 else 0)
-        s3=t-3.85; put(c,txt('niente pubblicità, niente abbonamenti',F('Figtree',54),WH),W/2,H/2+320,1,min(1,s3/0.2) if s3>=0 else 0)
-    elif t<8.8:
-        u=t-4.6; k=min(2,int(u/1.4)); phone(c,['home','ese','pil'][k],u-1.4*k,['RISPARMIA','SOGNA','CRESCI'][k])
-    elif t<11.6:
-        u=t-8.8; n=0 if u<0.2 else min(20,int(1+(u-0.2)/1.2*20)) if u<1.4 else 20
+        put(c,tfit('PER GESTIRE','Anton',150,WH),W/2,H/2-430,ease(u/0.25),min(1,u/0.15))
+        s1=t-2.8; put(c,tfit('ENTRATE E USCITE…','Anton',140,WH),W/2,H/2-260,ease(s1/0.25) if s1>0 else 0,min(1,s1/0.15) if s1>0 else 0)
+        s2=t-3.6; put(c,tfit('…E MOLTO','Anton',250,Y),W/2,H/2+40,(2.0-1.0*ease(s2/0.18)) if s2>=0 else 0,min(1,s2/0.1) if s2>=0 else 0)
+        s3=t-3.85; put(c,tfit('DI PIÙ.','Anton',300,Y),W/2,H/2+330,(2.0-1.0*ease(s3/0.18)) if s3>=0 else 0,min(1,s3/0.1) if s3>=0 else 0)
+    elif t<10.8:
+        u=t-5.2; k=min(3,int(u/1.4)); phone(c,['add','home','ese','gym'][k],u-1.4*k,['SEGNA','CONTROLLA','SOGNA','ALLENATI'][k])
+    elif t<14.0:
+        u=t-10.8
+        if u<0.06: c=Image.new('RGBA',(W,H),(255,255,255,255))
+        put(c,txt('NIENTE TRADING,',F('Anton',122),WH),W/2,H/2-500,back(u/0.3),min(1,u/0.12))
+        s1=u-0.45; put(c,txt('NIENTE INVESTIMENTI.',F('Anton',122),WH),W/2,H/2-340,back(s1/0.3) if s1>0 else 0,min(1,s1/0.12) if s1>0 else 0)
+        s2=u-1.05; put(c,tfit('Solo i tuoi soldi','Figtree',92,WH),W/2,H/2-90,1,min(1,s2/0.2) if s2>0 else 0)
+        put(c,tfit('di tutti i giorni,','Figtree',92,WH),W/2,H/2+30,1,min(1,(s2-0.15)/0.2) if s2>0.15 else 0)
+        s3=u-1.6; put(c,tfit('SOTTO CONTROLLO.','Anton',190,Y),W/2,H/2+280,(1.8-0.8*ease(s3/0.2)) if s3>=0 else 0,min(1,s3/0.1) if s3>=0 else 0)
+    elif t<16.8:
+        u=t-14.0; n=0 if u<0.2 else min(20,int(1+(u-0.2)/1.2*20)) if u<1.4 else 20
         put(c,txt('CERCO',F('Anton',150),WH),W/2,H/2-430,ease(u/0.25),1)
         put(c,txt(str(n),F('Anton',560),Y),W/2,H/2-60,1+0.05*(1-((u-0.2)*16)%1) if 0.2<u<1.4 else (back((u-1.4)/0.25)*0.1+1 if u<1.65 else 1.1),1)
         s=u-1.6; put(c,txt('TESTER',F('Anton',220),WH),W/2,H/2+330,back(s/0.3) if s>0 else 0,1)
         s=u-1.9; put(c,txt('con Android',F('PermanentMarker',90),Y),W/2,H/2+520,1,min(1,s/0.2) if s>0 else 0)
-    elif t<15.0:
-        u=t-11.6
+    elif t<20.2:
+        u=t-16.8
         put(c,txt('COSA CI GUADAGNI',F('Anton',130),Y),W/2,H/2-520,ease(u/0.25),min(1,u/0.15))
         items=[('La provi','prima di tutti'),('Le tue idee','diventano funzioni'),('Gratis,','per sempre')]
         for j,(l1,l2) in enumerate(items):
@@ -64,7 +78,7 @@ def frame(i):
             d.text((185,30),l1,font=F('Anton',100),fill=WH+(255,)); d.text((185,140),l2,font=F('Figtree',62),fill=(225,225,220,255))
             put(c,it,W/2+20+(1-ease(s/0.3))*300,y,1,min(1,s/0.2))
     else:
-        u=t-15.0; lg=LOGO.resize((380,int(380*LOGO.height/LOGO.width)),Image.LANCZOS)
+        u=t-20.2; lg=LOGO.resize((380,int(380*LOGO.height/LOGO.width)),Image.LANCZOS)
         put(c,lg,W/2,H/2-520,ease(u/0.35),min(1,u/0.25))
         put(c,txt('SCRIVIMI',F('Anton',170),WH),W/2,H/2-60,back((u-0.2)/0.3),1 if u>0.2 else 0)
         p=1+0.05*math.sin((u-0.6)*2*math.pi*1.0) if u>0.6 else back((u-0.4)/0.3)
@@ -108,10 +122,12 @@ def music():
     return m
 def mix():
     n=int(DUR*SR); out=np.zeros(n); mu=music(); duck=np.ones(n)
-    ev=[(0.1,whoosh(1),.8),(0.6,hit(),1),(2.4,whoosh(2,.35),.8),(2.5,pop(600),.6),(2.85,pop(750),.5),(3.5,hit(),1),(3.85,pop(900),.4),
-        (4.55,whoosh(3),.8),(5.95,whoosh(4),.8),(7.35,whoosh(5),.8),(8.75,whoosh(6,.3),.7)]
-    ev+=[(9.0+k*0.06,tick(),.6) for k in range(20)]+[(10.2,hit(),1),(10.7,pop(1000),.5),(11.6,whoosh(8,.3),.7)]
-    ev+=[(11.95+0.6*j,pop(700+150*j),.8) for j in range(3)]+[(15.0,whoosh(7),.7),(15.4,chime(),.8)]
+    O=5.2
+    ev=[(0.1,whoosh(1),.8),(0.6,hit(),1),(2.4,whoosh(2,.35),.8),(2.5,pop(600),.6),(2.85,pop(750),.5),(3.6,hit(),1),(3.85,pop(900),.5),
+        (5.15,whoosh(3),.8),(6.55,whoosh(4),.8),(7.95,whoosh(5),.8),(9.35,whoosh(9),.8),
+        (10.75,whoosh(10,.3),.7),(10.85,pop(650),.6),(11.3,pop(650),.6),(11.85,pop(820),.4),(12.4,hit(),1)]
+    ev+=[(9.0+O+k*0.06,tick(),.6) for k in range(20)]+[(10.2+O,hit(),1),(10.7+O,pop(1000),.5),(11.6+O,whoosh(8,.3),.7)]
+    ev+=[(11.95+O+0.6*j,pop(700+150*j),.8) for j in range(3)]+[(15.0+O,whoosh(7),.7),(15.4+O,chime(),.8)]
     for t0,s,g in ev:
         a=int(t0*SR); b=min(n,a+len(s)); out[a:b]+=s[:b-a]*g
         if g>=.9: d=int(0.25*SR); e=min(n,a+d); duck[a:e]=np.minimum(duck[a:e],0.45+0.55*np.linspace(0,1,e-a))

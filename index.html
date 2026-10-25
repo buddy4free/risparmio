@@ -219,6 +219,11 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .welcome img{width:min(290px,72vw);height:auto;margin:4px 0}
 .welcome p{max-width:42ch}
 .supcard p{margin:0}
+.histbox{border:1px solid var(--line);border-radius:14px;padding:0 14px;background:var(--soft)}
+.histbox summary{cursor:pointer;font-weight:800;padding:12px 0;display:flex;gap:8px;align-items:center;list-style:none}
+.histbox summary::-webkit-details-marker{display:none}
+.histbox[open]{padding-bottom:14px}
+.histbox p{margin:0 0 10px}
 .implist{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}
 .improw{display:grid;grid-template-columns:1fr 46%;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
 .improw > div{display:flex;flex-direction:column;min-width:0}
@@ -284,8 +289,8 @@ i.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right
 .pn{min-height:2.4em;align-items:flex-start!important;justify-content:center}
 .pplot{position:relative;width:100%;display:flex;align-items:flex-end;justify-content:center}
 .pbarv{width:68%;max-width:56px;border-radius:6px 6px 2px 2px;position:relative}
-.pbreak::after{content:'';position:absolute;left:-6px;right:-6px;top:34%;height:14px;background:linear-gradient(-8deg,transparent 38%,var(--soft) 40%,var(--soft) 60%,transparent 62%);transform:skewY(-12deg)}
-.brk-key{display:inline-block;width:14px;height:10px;margin-right:6px;vertical-align:-1px;background:linear-gradient(-8deg,var(--muted) 38%,transparent 40%,transparent 60%,var(--muted) 62%);border-radius:2px}
+.pbreak::after{content:'';position:absolute;left:-5px;right:-5px;top:36%;height:5px;background:repeating-linear-gradient(90deg,#fff 0 7px,transparent 7px 11px);transform:skewY(-14deg)}
+.brk-key{display:inline-block;width:16px;height:4px;margin-right:6px;vertical-align:3px;background:repeating-linear-gradient(90deg,#fff 0 5px,transparent 5px 8px);transform:skewY(-14deg)}
 .ptgt{position:absolute;left:8%;right:8%;border-top:2px dashed var(--fg);opacity:.85}
 .pn{font-size:.74rem;font-weight:700;display:flex;align-items:center;gap:5px;text-align:center;line-height:1.15}
 .pn i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
@@ -1484,7 +1489,23 @@ function bindPil(again){
   });
 }
 function addMove(k, a, n, d, x){ if (!a) return; S.moves.push(Object.assign({d:d || today(), k, a:Math.round(a * 100) / 100, n:n || ''}, x ? {x} : {})); if (S.moves.length > 600) S.moves.shift(); }
-function pillarMoves(id){ const gk = m => S.goals.find(g => 'g:' + g.id === m.k); return S.moves.concat(txEffects()).filter(m => { const g = gk(m); if (id === 'goal') return m.k.startsWith('g:') && (!g || g.kind !== 'emergenza'); if (id === 'emerg') return m.k === 'emerg' || !!(g && g.kind === 'emergenza'); return m.k === id; }); }
+function pillarMoves(id){ const gk = m => S.goals.find(g => 'g:' + g.id === m.k); return S.moves.concat(txEffects()).filter(m => { if (m.hx) return false; const g = gk(m); if (id === 'goal') return m.k.startsWith('g:') && (!g || g.kind !== 'emergenza'); if (id === 'emerg') return m.k === 'emerg' || !!(g && g.kind === 'emergenza'); return m.k === id; }); }
+/* storico dei saldi: i saldi di fine mese inseriti a mano diventano movimenti di allineamento.
+   Ognuno sta all'inizio del mese dopo, quindi cambia solo lo storico precedente e mai il saldo di oggi.
+   Si ricalcolano dal più recente al più vecchio, così ogni saldo resta quello inserito. */
+function rebuildHist(k){
+  S.moves = S.moves.filter(m => !(m.hk && m.k === k)); S.moves.forEach(m => { if (m.k === k) delete m.hx; });
+  const A = ((S.hist || {})[k] || []).slice().sort((a, b) => a.ym.localeCompare(b.ym)); if (!A.length) return;
+  /* le correzioni fatte dopo il primo saldo storico coprono un periodo senza dati: per lo storico valgono i saldi inseriti */
+  S.moves.forEach(m => { if (m.k === k && /^Correzione del saldo/.test(m.n) && m.d > addMonths(A[0].ym, 1) + '-00') m.hx = 1; });
+  const P = A.concat(A[A.length - 1].ym < curYM() ? [{ym:curYM(), v:pilBalance(k)}] : []);
+  /* tra due saldi la differenza non spiegata dai movimenti si distribuisce in parti uguali sui mesi in mezzo */
+  for (let i = P.length - 2; i >= 0; i--) {
+    const a = P[i], b = P[i + 1], n = Math.max(1, monthsBetween(a.ym, b.ym)), gap = pilBalanceAt(k, a.ym) - a.v;
+    if (Math.abs(gap) < 0.01) continue;
+    for (let j = 1; j <= n; j++) S.moves.push({d:addMonths(a.ym, j) + '-01', k, a:Math.round(gap / n * 100) / 100, n:'Allineamento allo storico', hk:1});
+  }
+}
 function renderPillar(){
   const p = PILLARS.find(x => x.id === R.id); if (!p) return nav({screen:'pillars'});
   const moves = pillarMoves(p.id).slice().sort((a, b) => a.d.localeCompare(b.d));
@@ -1498,15 +1519,26 @@ function renderPillar(){
     (p.id === 'liq' || p.id === 'emerg' ? targetBox(p.id) : '') +
     (p.id === 'goal' ? '<div class="list">' + S.goals.filter(g => g.kind !== 'emergenza').map(g => { const pl = goalPlan(g), gs = goalStatus(g); return '<button class="item" ' + nav$({screen:'goal', id:g.id}) + '><span class="ic" style="background:' + gs.c + ';color:#000">' + ic(KINDS.find(k => k[0] === g.kind)[2]) + '</span><span class="t"><b>' + esc(g.name) + (S.mainGoal === g.id ? ' <span class="y">★</span>' : '') + '</b><span class="sub">' + eur(goalSaved(g)) + ' di ' + eur(goalTarget(g)) + ' · entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + '</span></span><span class="small num">' + Math.round(pl.pct) + '%</span></button>'; }).join('') + '</div><button class="btn sm" style="align-self:flex-start" ' + nav$({screen:'goal', id:'new'}) + '>' + ic('plus') + 'Nuovo obiettivo</button>' : '') +
     (p.id === 'inv' ? '<button class="readcard" ' + nav$({screen:'sim'}) + '><span class="t"><b>' + ic('chart') + ' Simulatore del futuro</b><span>Prova capitale, risparmio mensile, anni e rendimento</span></span>' + ic('right') + '</button><p class="small muted">Nessun tetto: qui va il denaro che non ti serve per molti anni. Le informazioni nell\'app non sono una consulenza finanziaria.</p>' : '') +
-    (p.id !== 'goal' ? '<div class="row"><button class="btn sm" data-mv="' + p.id + '" data-sign="1">Aggiungi</button><button class="btn ghost sm" data-mv="' + p.id + '" data-sign="-1">Preleva</button><button class="textlink" data-set="' + p.id + '">Correggi il saldo</button></div><div id="mv-' + p.id + '"></div>' : '') +
+    (p.id !== 'goal' ? '<div class="row"><button class="btn sm" data-mv="' + p.id + '" data-sign="1">Aggiungi</button><button class="btn ghost sm" data-mv="' + p.id + '" data-sign="-1">Preleva</button><button class="textlink" data-set="' + p.id + '">Correggi il saldo</button></div><div id="mv-' + p.id + '"></div>' +
+      '<details class="histbox"' + (R.hist ? ' open' : '') + '><summary>' + ic('calendar') + ' Ricostruisci lo storico</summary><p class="small muted">Hai i saldi del passato, per esempio dagli estratti conto o dal vecchio programma? Scrivi quanto c\'era in questo pilastro alla fine di un mese: il grafico qui sotto si aggiorna e il saldo di oggi non cambia. Puoi aggiungerne quanti vuoi, anche uno per anno.</p>' +
+        '<div class="grid2"><div class="field"><label for="h-m">Fine del mese</label><input id="h-m" type="month" max="' + addMonths(curYM(), -1) + '" value="' + addMonths(curYM(), -1) + '"></div><div class="field"><label for="h-v">Saldo</label><div class="eur"><input id="h-v" inputmode="decimal" placeholder="0"></div></div></div><button class="btn sm" id="h-ok" style="align-self:flex-start">Aggiungi al grafico</button>' +
+        (((S.hist || {})[p.id] || []).length ? '<div class="list" style="margin-top:10px">' + S.hist[p.id].slice().sort((a, b) => b.ym.localeCompare(a.ym)).map(h => '<div class="item" style="grid-template-columns:1fr auto auto"><span class="t"><b>Fine ' + ymLabel(h.ym, {month:'long', year:'numeric'}) + '</b></span><span class="num">' + eur(h.v) + '</span><button class="textlink" data-hdel="' + h.ym + '" aria-label="Togli">Togli</button></div>').join('') + '</div>' : '') + '</details>' : '') +
     '<div class="card"><div class="spread"><span class="label">Saldo attuale</span><b class="num" style="font-family:var(--display);font-size:1.6rem">' + eur(bal) + '</b></div>' +
       '<div class="hist" role="img" aria-label="Saldo a fine mese, ultimi 12 mesi">' + series.map(s => '<div title="' + ymLabel(s.ym) + ': ' + eur(s.v) + '"><span style="height:' + Math.max(2, s.v / max * 130) + 'px;background:' + p.c + '"></span><small>' + ymLabel(s.ym, {month:'narrow'}) + '</small></div>').join('') +
       (t ? '<i class="htgt" style="bottom:' + (t / max * 130 + 18) + 'px" title="Obiettivo ' + eur(t) + '"></i>' : '') + '</div>' +
       '<div class="legend small muted"><span><i class="sw" style="background:' + p.c + '"></i>Saldo a fine mese</span>' + (t ? '<span><i class="tgt-key"></i>Obiettivo ' + eur(t) + '</span>' : '') + '</div></div>' +
-    '<div class="sec"><span class="label">Movimenti del pilastro</span>' + (moves.length ? '<div class="list">' + moves.slice().reverse().map(m => { const g = m.k.startsWith('g:') ? S.goals.find(x => 'g:' + x.id === m.k) : null;
+    '<div class="sec"><span class="label">Movimenti del pilastro</span>' + (moves.length ? '<div class="list">' + moves.filter(m => !m.hk).reverse().map(m => { const g = m.k.startsWith('g:') ? S.goals.find(x => 'g:' + x.id === m.k) : null;
       return '<div class="item" style="grid-template-columns:auto 1fr auto"><span class="ic" style="background:' + p.c + '">' + ic(m.a >= 0 ? 'plus' : 'left') + '</span><span class="t"><b>' + esc(m.n || (m.a >= 0 ? 'Accantonamento' : 'Prelievo')) + '</b><span class="sub">' + dshort(m.d) + (g ? ' · ' + esc(g.name) : '') + '</span></span><span class="amt num" style="color:' + (m.a >= 0 ? IN_COL : OUT_COL) + '">' + (m.a >= 0 ? '+' : '−') + eur2(Math.abs(m.a)) + '</span></div>'; }).join('') + '</div>'
       : '<div class="note">Ancora nessun movimento registrato. Usa "Aggiungi" o "Preleva" qui sopra.</div>') + '</div></div>';
   bindPil(renderPillar);
+  view.querySelectorAll('[data-hdel]').forEach(b => b.onclick = () => { S.hist[p.id] = S.hist[p.id].filter(h => h.ym !== b.dataset.hdel); rebuildHist(p.id); save(); R = {screen:'pillar', id:p.id, hist:1}; renderPillar(); postRender(); });
+  const ho = document.getElementById('h-ok'); if (ho) ho.onclick = () => {
+    const ym = val('h-m'), v = parseAmt(val('h-v'));
+    if (!ym || ym >= curYM()) return toast('Scegli un mese passato. Per oggi usa "Correggi il saldo"');
+    if (!(v >= 0) || val('h-v').trim() === '') return toast('Scrivi il saldo di fine mese');
+    S.hist = S.hist || {}; S.hist[p.id] = (S.hist[p.id] || []).filter(h => h.ym !== ym).concat({ym, v}); rebuildHist(p.id);
+    save(); toast('Storico aggiornato'); R = {screen:'pillar', id:p.id, hist:1}; renderPillar(); postRender();
+  };
 }
 
 function goalBack(){ const f = GOAL_FROM || {screen:'pillars'}, P = PILLARS.find(x => x.id === f.id); const n = f.screen === 'pillar' && P ? P.short : (TABS.find(t => t[0] === f.screen) || [0, 'Indietro'])[1]; return backBtn(n, f.id ? {screen:f.screen, id:f.id} : {screen:f.screen}); }

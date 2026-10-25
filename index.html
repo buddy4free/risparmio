@@ -761,7 +761,11 @@ const BREATH = {
   '478':{name:'4-7-8', desc:'Espirazione lunga. Ideale la sera.', ph:[['Inspira',4,'in'],['Trattieni',7,'hold'],['Espira',8,'out']]},
   coerenza:{name:'Coerente', desc:'5 secondi dentro, 5 fuori. Equilibrio durante il giorno.', ph:[['Inspira',5,'in'],['Espira',5,'out']]}
 };
-const catColor = (t, c) => c.col && c.col !== 'g' ? c.col : !c.col && /^c/.test(c.id) ? CAT_COLS[hashN(c.id) % CAT_COLS.length] : t === 'in' ? (IN_GROUPS[c.g] || IN_GROUPS.extra)[1] : (GROUPS[c.g] || GROUPS.altro)[1];
+/* ogni categoria ha il suo colore: quelle di partenza uno scelto qui, quelle nuove uno della tavolozza */
+const DEF_COL = {casa:'#3987e5', bollette:'#0b9fb3', alimentari:'#2f9e00', ristoranti:'#d95926', trasporti:'#199e70', abbigliamento:'#c026d3', shopping:'#c98500', salute:'#e05252', sport:'#7a9a00', cura:'#d55181', figli:'#4f6bed',
+  animali:'#a16207', istruzione:'#0f9d8a', regali_out:'#e0457b', abbonamenti:'#9085e9', svago:'#b05cd1', viaggi:'#2563eb', tabacchi:'#c2410c', assicurazioni:'#199e70', tasse:'#e66767', banca:'#3987e5', altro:'#5f5f5a',
+  stipendio:'#22a45d', tredicesima:'#0f9d8a', bonus:'#c98500', pensione:'#199e70', freelance:'#3987e5', usato:'#d55181', regali:'#e0457b', affitto_in:'#4f6bed', rimborsi:'#2f9e00', interessi:'#a16207', cashback:'#0b9fb3', assegni:'#b05cd1', extra:'#9085e9'};
+const catColor = (t, c) => c.col && c.col !== 'g' ? c.col : DEF_COL[c.id] || CAT_COLS[hashN(c.id) % CAT_COLS.length];
 const catTile = (t, c) => '<span class="ic cat" style="background:' + catColor(t, c) + '">' + ic(c.i) + '</span>';
 
 /* ---------- content: 21 tappe della palestra del risparmio ---------- */
@@ -1673,14 +1677,11 @@ function renderCharts(){
   S.cats.out.forEach(c => { prevAvg[c.id] = [1, 2, 3].reduce((t, k) => t + (stats(addMonths(viewYM, -k)).byCat[c.id] || 0), 0) / 3; });
   const cats = S.cats.out.filter(c => (cur.byCat[c.id] || 0) + prevAvg[c.id] > 0).sort((a, b) => ((cur.byCat[b.id] || 0) - (cur.byCat[a.id] || 0))).slice(0, 8);
   const maxC = Math.max(1, ...cats.map(c => Math.max(cur.byCat[c.id] || 0, prevAvg[c.id])));
-  const groups = {}; Object.entries(cur.byCat).forEach(([c, a]) => { const g = catOf('out', c).g || 'altro'; groups[g] = (groups[g] || 0) + a; });
-  const gl = Object.entries(groups).sort((a, b) => b[1] - a[1]), maxG = Math.max(1, ...gl.map(x => x[1]));
   view.innerHTML = '<div class="sec" style="gap:22px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + txToggle() + monthNav() +
     '<div class="card"><span class="label">Entrate e uscite, ultimi 6 mesi</span><div class="legend small"><span><i class="sw" style="background:' + IN_COL + '"></i>Entrate</span><span><i class="sw" style="background:' + OUT_COL + '"></i>Uscite</span></div>' +
       '<div class="io6" role="img" aria-label="Entrate e uscite degli ultimi 6 mesi">' + data.map(d => '<button data-sel="' + d.ym + '" class="' + (d === sel ? 'on' : '') + '" title="' + ymLabel(d.ym) + ': entrate ' + eur(d.s.inc) + ', uscite ' + eur(d.s.out) + '"><span class="pair"><span style="height:' + Math.max(2, d.s.inc / maxIO * 140) + 'px;background:' + IN_COL + '"></span><span style="height:' + Math.max(2, d.s.out / maxIO * 140) + 'px;background:' + OUT_COL + '"></span></span><small>' + ymLabel(d.ym, {month:'short'}) + '</small></button>').join('') + '</div>' +
       '<div class="selrow num"><b style="text-transform:capitalize">' + ymLabel(sel.ym) + '</b><span style="color:' + IN_COL + '">+' + eur(sel.s.inc) + '</span><span style="color:' + OUT_COL + '">−' + eur(sel.s.out) + '</span><span>' + (sel.s.rate === null ? '–' : Math.round(sel.s.rate) + '%') + ' risparmio</span></div></div>' +
     '<div class="card"><span class="label">Tasso di risparmio, ultimi 6 mesi</span>' + trend() + '<div class="legend small muted"><span><i class="sw" style="background:var(--critical)"></i>fino a 10%</span><span><i class="sw" style="background:var(--serious)"></i>11–25%</span><span><i class="sw" style="background:var(--warn)"></i>26–39%</span><span><i class="sw" style="background:var(--good)"></i>40% e oltre</span></div></div>' +
-    '<div class="card"><span class="label">Spese per gruppo · ' + ymLabel(viewYM, {month:'long'}) + '</span>' + (gl.length ? '<div class="hbars">' + gl.map(([g, a]) => '<div class="hbar" title="' + GROUPS[g][0] + ': ' + eur2(a) + '"><span class="ic" style="background:' + GROUPS[g][1] + '"></span><span class="t"><span>' + GROUPS[g][0] + '</span><span class="track"><i style="width:' + (a / maxG * 100) + '%;background:' + GROUPS[g][1] + '"></i></span></span><span class="v">' + eur(a) + '<small>' + Math.round(a / cur.out * 100) + '%</small></span></div>').join('') + '</div>' : '<p class="small muted">Nessuna uscita in questo mese.</p>') + '</div>' +
     '<div class="card"><span class="label">Questo mese e media dei 3 mesi prima</span><div class="legend small"><span><i class="sw" style="background:' + OUT_COL + '"></i>' + ymLabel(viewYM, {month:'long'}) + '</span><span><i class="tgt-key" style="border-color:var(--fg)"></i>Media 3 mesi</span></div>' +
       (cats.length ? '<div class="hbars">' + cats.map(c => { const a = cur.byCat[c.id] || 0, m = prevAvg[c.id], diff = m ? Math.round((a / m - 1) * 100) : null;
         return '<button class="hbar" ' + nav$({screen:'tx', cat:c.id}) + ' title="' + esc(c.n) + ': ' + eur2(a) + ', media ' + eur2(m) + '">' + catTile('out', c) + '<span class="t"><span>' + esc(c.n) + '</span><span class="track" style="position:relative"><i style="width:' + (a / maxC * 100) + '%;background:' + OUT_COL + '"></i>' + (m ? '<b class="avgm" style="left:' + (m / maxC * 100) + '%"></b>' : '') + '</span></span><span class="v">' + eur(a) + '<small style="color:' + (diff === null ? 'var(--muted)' : diff > 10 ? OUT_COL : diff < -10 ? IN_COL : 'var(--muted)') + '">' + (diff === null ? 'nuova' : (diff > 0 ? '+' : '') + diff + '%') + '</small></span></button>'; }).join('') + '</div>' : '<p class="small muted">Servono almeno un mese di movimenti.</p>') + '</div>' +
@@ -2844,9 +2845,9 @@ function catPop(html, bind){
   bind(o, () => o.remove()); const i = o.querySelector('input'); if (i) i.focus();
 }
 function renderCats(){
-  const t = R.t || 'out', G = t === 'in' ? IN_GROUPS : GROUPS;
+  const t = R.t || 'out';
   if (PREV && PREV.screen !== 'cats') CATX.from = PREV.screen === 'add' ? {screen:'add', type:PREV.type} : {screen:'settings'};
-  if (R.id) return renderCatEdit(t, G);
+  if (R.id) return renderCatEdit(t);
   const L = S.cats[t], from = CATX.from || {screen:'settings'};
   view.innerHTML = '<div class="sec" style="gap:18px">' + backBtn(from.screen === 'add' ? (from.type ? 'Torna al movimento' : 'Indietro') : 'Impostazioni', from) +
     '<div class="intro"><span class="label">Dati</span><h2>Gestisci categorie</h2><p class="muted">Rinomina, cambia icona, aggiungi sottocategorie, sposta o unisci. I movimenti seguono sempre la loro categoria.</p></div>' +
@@ -2854,7 +2855,7 @@ function renderCats(){
     '<div class="spread"><span class="small muted">' + L.length + ' categorie</span><button class="textlink" id="cx-ord">' + (CATX.reorder ? 'Fatto' : 'Riordina') + '</button></div>' +
     '<div class="list">' + L.map((c, i) => { const n = catUse(t, c.id), ns = (c.subs || []).length;
       if (CATX.reorder) return '<div class="item">' + catTile(t, c) + '<span class="t"><b>' + esc(c.n) + '</b></span><span class="cxord"><button data-up="' + i + '"' + (i ? '' : ' disabled') + ' aria-label="Sposta su ' + esc(c.n) + '">↑</button><button data-dn="' + i + '"' + (i < L.length - 1 ? '' : ' disabled') + ' aria-label="Sposta giù ' + esc(c.n) + '">↓</button></span></div>';
-      const sub = [(G[c.g] || G[t === 'in' ? 'extra' : 'altro'])[0], ns ? ns + (ns === 1 ? ' sottocategoria' : ' sottocategorie') : '', n + (n === 1 ? ' movimento' : ' movimenti')].filter(Boolean).join(' · ');
+      const sub = [ns ? ns + (ns === 1 ? ' sottocategoria' : ' sottocategorie') : '', n + (n === 1 ? ' movimento' : ' movimenti')].filter(Boolean).join(' · ');
       return '<button class="item" ' + nav$({screen:'cats', t, id:c.id}) + '>' + catTile(t, c) + '<span class="t"><b>' + esc(c.n) + '</b><span class="sub">' + esc(sub) + '</span></span>' + ic('right') + '</button>'; }).join('') + '</div>' +
     (CATX.reorder ? '<p class="small muted">L\'ordine è quello che vedi quando aggiungi un movimento: metti in alto le categorie che usi di più.</p>' : '<button class="btn" id="cx-new" style="align-self:flex-start">' + ic('plus') + 'Nuova categoria</button>') + '</div>';
   view.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => nav({screen:'cats', t:b.dataset.ct}));
@@ -2867,7 +2868,7 @@ function renderCats(){
       if (S.cats[t].some(c => c.n.toLowerCase() === n.toLowerCase())) return toast('Esiste già una categoria con questo nome');
       const c = {id:'c' + uid(), n, i:iconFor(n), subs:[], g:t === 'in' ? 'extra' : 'altro'}; S.cats[t].push(c); save(); close(); nav({screen:'cats', t, id:c.id}); }; });
 }
-function renderCatEdit(t, G){
+function renderCatEdit(t){
   const c = S.cats[t].find(x => x.id === R.id); if (!c) return nav({screen:'cats', t});
   c.subs = c.subs || []; S.tx.concat(S.rec).forEach(x => { if (x.t === t && x.c === c.id && x.s && !c.subs.includes(x.s)) c.subs.push(x.s); });
   const others = S.cats[t].filter(x => x.id !== c.id), n = catUse(t, c.id), mov = k => k + (k === 1 ? ' movimento' : ' movimenti'), noSub = c.subs.length ? catUse(t, c.id, '') : 0;
@@ -2875,8 +2876,7 @@ function renderCatEdit(t, G){
     '<div class="intro"><span class="label">' + (t === 'in' ? 'Entrata' : 'Uscita') + ' · ' + mov(n) + '</span><h2 style="display:flex;gap:12px;align-items:center">' + catTile(t, c) + esc(c.n) + '</h2></div>' +
     '<div class="card"><div class="field"><label for="ce-n">Nome</label><input id="ce-n" value="' + esc(c.n) + '"></div>' +
       '<span class="label">Icona</span><div class="iconpick">' + PICK_ICONS.map(k => '<button data-ic="' + k + '" aria-pressed="' + (c.i === k) + '" aria-label="' + k + '">' + ic(k) + '</button>').join('') + '</div>' +
-      '<span class="label">Colore</span><div class="colpick">' + CAT_COLS.map(k => '<button data-col="' + k + '" aria-pressed="' + (catColor(t, c) === k && c.col !== 'g') + '" style="background:' + k + '" aria-label="Colore ' + k + '"></button>').join('') + '<button data-col="g" aria-pressed="' + (c.col === 'g' || (!c.col && !/^c/.test(c.id))) + '" class="cg">Del gruppo</button><button data-col="rnd" class="cg">' + ic('repeat') + 'A caso</button></div>' +
-      '<div class="field"><label for="ce-g">Gruppo</label><select id="ce-g">' + Object.entries(G).map(([k, g]) => '<option value="' + k + '"' + (c.g === k ? ' selected' : '') + '>' + g[0] + '</option>').join('') + '</select><span class="small muted">Decide il colore e in quale gruppo la vedi nelle statistiche.</span></div>' +
+      '<span class="label">Colore</span><div class="colpick">' + CAT_COLS.map(k => '<button data-col="' + k + '" aria-pressed="' + (!!c.col && c.col === k) + '" style="background:' + k + '" aria-label="Colore ' + k + '"></button>').join('') + '<button data-col="g" aria-pressed="' + (!c.col || c.col === 'g') + '" class="cg">Originale</button><button data-col="rnd" class="cg">' + ic('repeat') + 'A caso</button></div>' +
       (t === 'out' ? '<label class="check"><input type="checkbox" id="ce-d"' + (c.disc ? ' checked' : '') + '> Spesa non essenziale: conta nei suggerimenti su dove tagliare</label>' : '') +
       '<button class="btn sm" id="ce-ok" style="align-self:flex-start">' + ic('check') + 'Salva</button></div>' +
     '<div class="card"><span class="label">Sottocategorie</span>' + (c.subs.length ? '<div class="list">' + c.subs.map((sb, i) => '<div class="item nt"><span class="t"><b>' + esc(sb) + '</b><span class="sub">' + mov(catUse(t, c.id, sb)) + '</span></span><button class="btn sm ghost" data-sm="' + i + '">Modifica</button></div>').join('') + '</div>' + (noSub ? '<p class="small muted">' + mov(noSub) + ' senza sottocategoria.</p>' : '') : '<p class="small muted">Nessuna sottocategoria. Aggiungile se vuoi più dettaglio, per esempio dentro "Animali": Cibo, Veterinario.</p>') +
@@ -2891,7 +2891,7 @@ function renderCatEdit(t, G){
   view.querySelectorAll('[data-col]').forEach(b => b.onclick = () => { const v = b.dataset.col; c.col = v === 'rnd' ? CAT_COLS.filter(k => k !== catColor(t, c))[Math.floor(Math.random() * (CAT_COLS.length - 1))] : v; save(); const y = window.scrollY; renderCats(); window.scrollTo({top:y}); });
   view.querySelector('#ce-ok').onclick = () => { const nn = val('ce-n').trim(); if (!nn) return toast('Scrivi il nome');
     if (S.cats[t].some(x => x.id !== c.id && x.n.toLowerCase() === nn.toLowerCase())) return toast('Esiste già una categoria con questo nome: per metterle insieme usa Unisci');
-    c.n = nn; if (c.g !== val('ce-g')) { c.g = val('ce-g'); c.gx = 1; } const d = document.getElementById('ce-d'); if (d && !!c.disc !== d.checked) { c.disc = d.checked; c.gx = 1; } save(); toast('Categoria salvata'); renderCats(); };
+    c.n = nn; const d = document.getElementById('ce-d'); if (d && !!c.disc !== d.checked) { c.disc = d.checked; c.gx = 1; } save(); toast('Categoria salvata'); renderCats(); };
   view.querySelector('#ce-sa').onclick = () => { const nn = val('ce-sn').trim(); if (!nn) return; if (c.subs.some(x => x.toLowerCase() === nn.toLowerCase())) return toast('C\'è già'); addSub(t, c, nn); save(); renderCats(); };
   view.querySelectorAll('[data-sm]').forEach(b => b.onclick = () => { const sb = c.subs[+b.dataset.sm], k = catUse(t, c.id, sb);
     catPop('<div class="spread"><b style="font-size:1.1rem">' + esc(sb) + '</b><button class="textlink" data-x>Chiudi</button></div><span class="small muted">Sottocategoria di ' + esc(c.n) + ' · ' + mov(k) + '</span>' +
@@ -2931,8 +2931,6 @@ function renderLegend(){
     '<div class="card"><span class="label">Tasso di risparmio del mese</span><p class="small muted">(Entrate − uscite) ÷ entrate</p>' + sw('var(--critical)', 'Fino al 10%', 'Critico: un imprevisto può metterti in difficoltà') + sw('var(--serious)', 'Dall\'11 al 25%', 'Da migliorare') + sw('var(--warn)', 'Dal 26 al 39%', 'Buono') + sw('var(--good)', 'Dal 40% in su', 'Ottimo') + '</div>' +
     '<div class="card"><span class="label">Colore dell\'obiettivo: la previsione</span><p class="small muted">Confronta il tuo passo (quanto hai accantonato in media negli ultimi 3 mesi) con la scadenza.</p>' + sw('#22A45D', 'In linea', 'A questo ritmo arrivi entro la scadenza') + sw('#e3a008', 'Leggermente in ritardo', 'Fino a 3 mesi oltre la scadenza, oppure obiettivo ancora da avviare') + sw('#d95926', 'In ritardo', 'Da 4 a 12 mesi oltre la scadenza') + sw('#E5484D', 'Molto in ritardo', 'Oltre un anno') +
       '<div class="lg"><span class="ptrack" style="width:56px;flex:0 0 56px;margin:0"><span class="pneed"></span></span><span><b>Il tuo passo</b><br><span class="small muted">La linea bianca è il passo giusto. Il pallino è il tuo passo.</span></span></div></div>' +
-    '<div class="card"><span class="label">Gruppi delle uscite</span>' + Object.values(GROUPS).map(g => sw(g[1], g[0], S.cats.out.filter(c => GROUPS[c.g] === g).map(c => c.n).join(', '))).join('') + '</div>' +
-    '<div class="card"><span class="label">Gruppi delle entrate</span>' + Object.values(IN_GROUPS).map(g => sw(g[1], g[0], S.cats.in.filter(c => IN_GROUPS[c.g] === g).map(c => c.n).join(', '))).join('') + '</div>' +
     '<div class="card"><span class="label">Indice di benessere finanziario (0-100)</span>' + sw('#E5484D', 'Sotto 40: fragile', '') + sw('#d95926', 'Da 40 a 59: in costruzione', '') + sw('#e3a008', 'Da 60 a 79: buono', '') + sw('#22A45D', 'Da 80 in su: solido', '') + '<p class="small muted">Unisce fondo di emergenza, sostenibilità delle spese, avanzamento degli obiettivi e come ti senti.</p></div>' +
     '<div class="card"><span class="label">Scadenze e rinnovi</span>' + sw('#22A45D', 'Oltre 30 giorni', 'Nessuna azione per ora') + sw('#e3a008', 'Entro 30 giorni', 'Decidi: rinnovi, rinegozi, riduci o disdici') + sw('#E5484D', 'Scaduta', '') + '</div>' +
     '<div class="card"><span class="label">Altri segni</span>' +

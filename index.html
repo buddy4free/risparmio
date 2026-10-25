@@ -219,6 +219,11 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .welcome img{width:min(290px,72vw);height:auto;margin:4px 0}
 .welcome p{max-width:42ch}
 .supcard p{margin:0}
+.implist{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}
+.improw{display:grid;grid-template-columns:1fr 46%;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.improw > div{display:flex;flex-direction:column;min-width:0}
+.improw b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.improw select{width:100%;font-size:.85rem;padding:8px}
 .terms{display:flex;flex-direction:column;gap:8px}
 .terms details{border:1px solid var(--line);border-radius:14px;background:var(--soft);padding:0 14px}
 .terms summary{cursor:pointer;font-weight:800;padding:14px 0;list-style:none;display:flex;justify-content:space-between;gap:10px}
@@ -932,7 +937,7 @@ function txEffects(){
   const key = S.savedAt + ':' + S.tx.length + ':' + S.rec.length + ':' + today() + ':' + pilFrom();
   if (_eff && _effKey === key) return _eff;
   const from = pilFrom(), out = [];
-  for (let ym = [ymOf(from)].concat(S.tx.filter(x => x.f).map(x => ymOf(x.d))).sort()[0]; ym <= curYM(); ym = addMonths(ym, 1)) monthTx(ym).forEach(x => { if ((x.d < from && !x.f) || x.d > today()) return; out.push({d:x.d, k:x.p || 'liq', a:x.t === 'in' ? x.a : -x.a, n:(x.t === 'in' ? 'Entrata: ' : 'Uscita: ') + catOf(x.t, x.c).n + (x.n ? ' · ' + x.n : ''), tx:true}); });
+  for (let ym = [ymOf(from)].concat(S.tx.filter(x => x.f).map(x => ymOf(x.d))).sort()[0]; ym <= curYM(); ym = addMonths(ym, 1)) monthTx(ym).forEach(x => { if (x.imp || (x.d < from && !x.f) || x.d > today()) return; out.push({d:x.d, k:x.p || 'liq', a:x.t === 'in' ? x.a : -x.a, n:(x.t === 'in' ? 'Entrata: ' : 'Uscita: ') + catOf(x.t, x.c).n + (x.n ? ' · ' + x.n : ''), tx:true}); });
   _eff = out; _effKey = key; return out;
 }
 const effSum = k => txEffects().filter(e => e.k === k).reduce((t, e) => t + e.a, 0);
@@ -998,7 +1003,7 @@ document.getElementById('gear').innerHTML = ic('gear');
 document.getElementById('gear').onclick = () => nav(S.setup ? {screen:'settings'} : {screen:'welcome'});
 document.getElementById('help').onclick = () => nav({screen:'legend'});
 const TABS = [['home','Home','house'],['tx','Movimenti','list'],['stats','Statistiche','chart'],['pillars','Pilastri','pillars'],['gym','Palestra','dumbbell'],['well','Benessere','leaf']];
-const TAB_OF = {privacy:'home', terms:'home', support:'home', whatif:'pillars', debts:'pillars', missions:'gym', mission:'gym', learn:'gym', lesson:'gym', wbi:'home', dues:'tx', home:'home', tx:'tx', stats:'stats', charts:'stats', add:'tx', review:'stats', pillars:'pillars', pillar:'pillars', goal:'pillars', gtips:'pillars', sim:'pillars', gym:'gym', read:'gym', champ:'gym', well:'well', breath:'well'};
+const TAB_OF = {import:'home', privacy:'home', terms:'home', support:'home', whatif:'pillars', debts:'pillars', missions:'gym', mission:'gym', learn:'gym', lesson:'gym', wbi:'home', dues:'tx', home:'home', tx:'tx', stats:'stats', charts:'stats', add:'tx', review:'stats', pillars:'pillars', pillar:'pillars', goal:'pillars', gtips:'pillars', sim:'pillars', gym:'gym', read:'gym', champ:'gym', well:'well', breath:'well'};
 function backBtn(label, r){ return '<button class="back" ' + nav$(r) + '>' + ic('left') + label + '</button>'; }
 function render(){
   const inApp = S.setup && !['welcome','setup'].includes(R.screen);
@@ -1010,7 +1015,7 @@ function render(){
   document.getElementById('topbar').hidden = R.screen === 'welcome' || R.screen === 'add';
   document.getElementById('gear').hidden = true; document.getElementById('help').hidden = true;
   ({welcome:renderWelcome, setup:renderSetup, home:renderHome, tx:renderTx, charts:renderStats, stats:renderStats, add:renderAdd, pillars:renderPillars, pillar:renderPillar, goal:renderGoal,
-    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, legend:renderLegend, sim:renderSim, dues:renderDues, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
+    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, import:renderImport, legend:renderLegend, sim:renderSim, dues:renderDues, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
   postRender(); bindCarousels();
 }
 function demoBar(){ return S.demo ? '<div class="demo"><span>Stai guardando dati di esempio.</span><button id="demo-end">Inizia con i tuoi dati</button></div>' : ''; }
@@ -2509,6 +2514,142 @@ function renderPrivacy(){
     '<div class="terms">' + PRIVACY().map((t, i) => '<details' + (i === 1 ? ' open' : '') + '><summary>' + t[0] + '</summary><div>' + t[1] + '</div></details>').join('') + '</div></div>';
 }
 
+/* ---------- importazione da altre app (CSV, es. Fast Budget) ---------- */
+let IMP = null;
+const fixText = s => { if (!/Ã|Â|ð/.test(s)) return s; try { return decodeURIComponent(escape(s)); } catch(e) { return s; } };
+function parseCSV(text){
+  text = text.replace(/^﻿/, '');
+  const lines = text.split(/\r?\n/), hi = lines.findIndex(l => /categor/i.test(l) && /(valore|importo|amount)/i.test(l));
+  if (hi < 0) return null;
+  const head = lines[hi], delim = ['\t', ';', ','].map(d => [d, head.split(d).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const body = lines.slice(hi).join('\n'), rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < body.length; i++) { const ch = body[i];
+    if (q) { if (ch === '"') { if (body[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+    else if (ch === '"') q = true; else if (ch === delim) { row.push(cur); cur = ''; } else if (ch === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; } else cur += ch; }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  const H = rows.shift().map(h => h.trim().toLowerCase()), col = (...names) => { for (const n of names) { const i = H.findIndex(h => h === n); if (i >= 0) return i; } for (const n of names) { const i = H.findIndex(h => h.startsWith(n)); if (i >= 0) return i; } return -1; };
+  const cA = col('valore (eur)', 'valore', 'importo', 'amount'), cD = col('data', 'date'), cC = col('categoria', 'category'), cN = col('note', 'descrizione', 'notes', 'description'), cI = col('id');
+  if (cA < 0 || cD < 0 || cC < 0) return null;
+  const num = s => { s = String(s || '').replace(/[€\s]/g, ''); if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.'); return parseFloat(s); };
+  const date = s => { s = String(s || '').trim(); let m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/); if (m) return m[3] + '-' + pad(+m[2]) + '-' + pad(+m[1]); m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[0] : null; };
+  const out = [], skipped = {xfer:0, bad:0};
+  rows.forEach(r => { if (r.length < 3) return; const a = num(r[cA]), d = date(r[cD]), c = fixText((r[cC] || '').trim()), n = cN >= 0 ? fixText((r[cN] || '').trim()) : '';
+    if (!d || !isFinite(a) || !a || !c) { skipped.bad++; return; }
+    if (/trasferimento|addebito mensile carta|giroconto|transfer/i.test(c)) { skipped.xfer++; return; }
+    out.push({ext:(cI >= 0 ? r[cI] : '') + '|' + d + '|' + a + '|' + c, t:a < 0 ? 'out' : 'in', a:Math.round(Math.abs(a) * 100) / 100, d, src:c, n}); });
+  return {rows:out, skipped};
+}
+/* indovina la categoria: [id, sottocategoria] */
+function guessCat(t, name){
+  const s = name.toLowerCase(), has = (...k) => k.some(x => s.includes(x));
+  if (t === 'in') {
+    if (has('salario', 'stipend', 'busta')) return ['stipendio', ''];
+    if (has('tredicesima', 'quattordicesima')) return ['tredicesima', ''];
+    if (has('welfare', 'bonus', 'premio', 'ticket')) return ['bonus', ''];
+    if (has('pension')) return ['pensione', ''];
+    if (has('vendita', 'usato', 'vinted', 'subito', 'ebay')) return ['usato', ''];
+    if (has('affitto', 'casa ')) return ['affitto_in', ''];
+    if (has('utili', 'interess', 'dividend', 'ibkr', 'cfd', 'cedol', 'trading')) return ['interessi', ''];
+    if (has('cashback')) return ['cashback', ''];
+    if (has('rimbors', 'nota spese', '730', 'farmacia', 'visite', 'gas', 'enel')) return ['rimborsi', ''];
+    if (has('regal', 'natale', 'compleann')) return ['regali', ''];
+    if (has('massagg', 'lavoro', 'freelance', 'ripetizion')) return ['freelance', ''];
+    if (has('assegn', 'sussid', 'inps')) return ['assegni', ''];
+    return ['extra', ''];
+  }
+  if (has('alimentar', 'spesa', 'supermerc')) return ['alimentari', 'Supermercato'];
+  if (has('caff', 'bar')) return ['ristoranti', 'Bar e caffè'];
+  if (has('pranzo')) return ['ristoranti', 'Pranzo fuori'];
+  if (has('ristor', 'riator', 'pizz', 'cibo/bevande', 'delivery')) return ['ristoranti', 'Ristorante'];
+  if (has('carburant', 'benzin', 'gasolio')) return ['trasporti', 'Carburante'];
+  if (has('parchegg', 'autostrad', 'telepass', 'pedagg')) return ['trasporti', 'Parcheggi e pedaggi'];
+  if (has('mezzi pubblici', 'treno', 'bus', 'metro')) return ['trasporti', 'Mezzi pubblici'];
+  if (has('viagg', 'alloggio', 'hotel', 'vacanz')) return ['viaggi', ''];
+  if (has('macchina', 'auto', 'meccanic', 'tagliando')) return ['trasporti', 'Manutenzione auto'];
+  if (has('trasport')) return ['trasporti', ''];
+  if (has('condomin')) return ['casa', 'Condominio'];
+  if (has('mutuo')) return ['casa', 'Mutuo'];
+  if (has('affitto')) return ['casa', 'Affitto'];
+  if (has('giardin', 'altre spese', 'manutenz', 'arred', 'ikea')) return ['casa', 'Manutenzione'];
+  if (has('enel', 'luce', 'elettric')) return ['bollette', 'Luce'];
+  if (has('gas')) return ['bollette', 'Gas'];
+  if (has('acqua')) return ['bollette', 'Acqua'];
+  if (has('rifiut')) return ['bollette', 'Rifiuti'];
+  if (has('abbonament', 'streaming', 'netflix', 'sky', 'dazn', 'spotify')) return ['abbonamenti', ''];
+  if (has('telefon', 'internet', 'wind', 'tim ', 'vodafone')) return ['bollette', 'Telefono'];
+  if (has('scarpe')) return ['abbigliamento', 'Scarpe'];
+  if (has('abbigliam', 'vestit')) return ['abbigliamento', 'Vestiti'];
+  if (has('amazon', 'tecnolog', 'elettronic')) return ['shopping', 'Acquisti online'];
+  if (has('farmac')) return ['salute', 'Farmacia'];
+  if (has('dentist')) return ['salute', 'Dentista'];
+  if (has('visit', 'medic', 'ottic')) return ['salute', 'Visite mediche'];
+  if (has('sport', 'piscina', 'palestra', 'gare', 'nuoto')) return ['sport', ''];
+  if (has('vet')) return ['animali', 'Veterinario'];
+  if (has('animal', 'pelosi', 'cane', 'gatto')) return ['animali', 'Cibo'];
+  if (has('tintoria', 'parrucch', 'estetist', 'barbier', 'cosmet')) return ['cura', ''];
+  if (has('formazione', 'corso', 'libri', 'universit', 'scuola')) return ['istruzione', 'Corsi'];
+  if (has('compleann', 'natale', 'regal', 'donazion', 'matrimon')) return ['regali_out', 'Regali'];
+  if (has('cinema', 'teatro', 'divertiment', 'concert', 'svago')) return ['svago', ''];
+  if (has('tabacc', 'sigarett', 'gratta', 'scommess')) return ['tabacchi', ''];
+  if (has('assicuraz')) return ['assicurazioni', ''];
+  if (has('tass', 'impost', 'bollo', 'commercialist', 'contabil', 'f24', 'multa')) return ['tasse', ''];
+  if (has('banca', 'commission', 'loss', 'trading', 'prestit')) return ['banca', ''];
+  return ['altro', ''];
+}
+function renderImport(){
+  const back = backBtn('Impostazioni', {screen:'settings'});
+  if (!IMP) {
+    view.innerHTML = '<div class="sec" style="gap:18px">' + back + '<div class="intro"><span class="label">Dati</span><h2>Importa i tuoi movimenti</h2></div>' +
+      '<div class="card"><p>Arrivi da un\'altra app? Esporta i movimenti in un file <b>CSV</b> e caricalo qui: funziona con <b>Fast Budget</b> e con la maggior parte delle app e dei fogli di calcolo che hanno le colonne <i>Data</i>, <i>Categoria</i> e <i>Valore</i> o <i>Importo</i>.</p>' +
+      '<p class="small muted">In Fast Budget: Impostazioni → Esporta → CSV. Il file resta sul tuo telefono: nessuno lo riceve, nemmeno noi.</p>' +
+      '<label class="btn" for="imp-f" style="align-self:flex-start;cursor:pointer">' + ic('list') + 'Scegli il file CSV</label><input type="file" id="imp-f" accept=".csv,.txt,.tsv,text/csv,text/plain" hidden></div></div>';
+    view.querySelector('#imp-f').onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { const p = parseCSV(String(r.result)); if (!p || !p.rows.length) return toast('Non riconosco il file: servono le colonne Data, Categoria e Valore'); prepImport(p); if (!IMP.rows.length) { IMP = null; return toast('Questi movimenti sono già tutti nell\'app'); } renderImport(); }; r.readAsText(f, 'utf-8'); };
+    return;
+  }
+  const rows = IMP.rows.filter(x => x.d >= IMP.from), groups = {};
+  rows.forEach(x => { const k = x.t + '|' + x.src; (groups[k] = groups[k] || {t:x.t, src:x.src, n:0, a:0}); groups[k].n++; groups[k].a += x.a; });
+  const G = Object.entries(groups).sort((a, b) => b[1].n - a[1].n), inc = rows.filter(x => x.t === 'in').reduce((t, x) => t + x.a, 0), out = rows.filter(x => x.t === 'out').reduce((t, x) => t + x.a, 0);
+  const first = IMP.rows.reduce((m, x) => x.d < m ? x.d : m, '9999'), last = IMP.rows.reduce((m, x) => x.d > m ? x.d : m, '0000');
+  const sel = (k, g) => '<select data-map="' + esc(k) + '">' + S.cats[g.t].map(c => '<option value="' + c.id + '"' + (IMP.map[k] === c.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '<option value="__new"' + (IMP.map[k] === '__new' ? ' selected' : '') + '>+ Nuova categoria "' + esc(g.src) + '"</option><option value="__skip"' + (IMP.map[k] === '__skip' ? ' selected' : '') + '>Non importare</option></select>';
+  const list = t => G.filter(([, g]) => g.t === t).map(([k, g]) => '<div class="improw"><div><b>' + esc(g.src) + '</b><span class="small muted">' + g.n + (g.n === 1 ? ' movimento' : ' movimenti') + ' · ' + eur(Math.round(g.a)) + '</span></div>' + sel(k, g) + '</div>').join('');
+  const nImp = rows.filter(x => IMP.map[x.t + '|' + x.src] !== '__skip').length;
+  view.innerHTML = '<div class="sec" style="gap:18px">' + back + '<div class="intro"><span class="label">Dati</span><h2>Controlla prima di importare</h2></div>' +
+    '<div class="card"><div class="io"><div><span class="label">Movimenti</span><b>' + rows.length + '</b></div><div><span class="label">Periodo nel file</span><b style="font-size:1rem">' + ymLabel(first.slice(0, 7), {month:'short', year:'numeric'}) + ' – ' + ymLabel(last.slice(0, 7), {month:'short', year:'numeric'}) + '</b></div></div>' +
+      '<p class="small">Entrate <b style="color:' + IN_COL + '">' + eur(Math.round(inc)) + '</b> · Uscite <b style="color:' + OUT_COL + '">' + eur(Math.round(out)) + '</b>' + (IMP.skipped.xfer ? ' · ' + IMP.skipped.xfer + ' trasferimenti tra conti ignorati' : '') + (IMP.dup ? ' · ' + IMP.dup + ' già presenti, saltati' : '') + '</p>' +
+      '<div class="field"><label for="imp-from">Importa i movimenti dal</label><input type="month" id="imp-from" value="' + IMP.from.slice(0, 7) + '" min="' + first.slice(0, 7) + '" max="' + last.slice(0, 7) + '"><span class="small muted">Se hai tanti anni di storico puoi partire da una data più recente: l\'app resta più leggera.</span></div>' +
+      (S.demo || S.tx.length ? '<label class="check small"><input type="checkbox" id="imp-wipe"' + (IMP.wipe ? ' checked' : '') + (S.demo ? ' disabled' : '') + '> ' + (S.demo ? 'I dati di esempio verranno tolti' : 'Cancella prima i movimenti già presenti nell\'app (' + S.tx.length + ')') + '</label>' : '') + '</div>' +
+    '<div class="card"><span class="label">Dove vanno le tue categorie</span><p class="small muted">Ho abbinato ogni categoria del file a una di Buddy4Free. Cambia quelle che non ti tornano. Il nome originale resta nella nota del movimento.</p>' +
+      '<b class="small" style="color:' + OUT_COL + '">Uscite</b><div class="implist">' + list('out') + '</div>' +
+      '<b class="small" style="color:' + IN_COL + '">Entrate</b><div class="implist">' + list('in') + '</div></div>' +
+    '<div class="note small">I movimenti importati servono per statistiche e storico: <b>non cambiano i saldi dei pilastri</b>. Dopo l\'importazione, nei Pilastri usa "Correggi il saldo" per mettere i saldi reali di oggi.</div>' +
+    '<div class="row"><button class="btn" id="imp-go">' + ic('check') + 'Importa ' + nImp + ' movimenti</button><button class="btn ghost" id="imp-x">Annulla</button></div></div>';
+  view.querySelectorAll('[data-map]').forEach(s => s.onchange = () => { IMP.map[s.dataset.map] = s.value; const y = window.scrollY; renderImport(); window.scrollTo({top:y}); });
+  view.querySelector('#imp-from').onchange = e => { IMP.from = (e.target.value || first.slice(0, 7)) + '-01'; renderImport(); };
+  const w = view.querySelector('#imp-wipe'); if (w) w.onchange = () => IMP.wipe = w.checked;
+  view.querySelector('#imp-x').onclick = () => { IMP = null; nav({screen:'settings'}); };
+  view.querySelector('#imp-go').onclick = () => doImport(rows);
+}
+function prepImport(p){
+  const have = new Set(S.tx.filter(x => x.ext).map(x => x.ext)), rows = p.rows.filter(x => !have.has(x.ext));
+  IMP = {rows, skipped:p.skipped, dup:p.rows.length - rows.length, map:{}, guess:{}, from:rows.reduce((m, x) => x.d < m ? x.d : m, '9999').slice(0, 7) + '-01', wipe:!!S.demo};
+  rows.forEach(x => { const k = x.t + '|' + x.src; if (IMP.map[k]) return; const g = guessCat(x.t, x.src); IMP.map[k] = S.cats[x.t].some(c => c.id === g[0]) ? g[0] : S.cats[x.t][0].id; IMP.guess[k] = g; });
+}
+function doImport(rows){
+  if (S.demo) { const keepT = S.times, keepTerms = S.terms, keepAt = S.termsAt; S = freshState(); S.times = keepT; S.terms = keepTerms; S.termsAt = keepAt; S.setup = true; S.pilFrom = today(); S.recAsked = true; }
+  else if (IMP.wipe) S.tx = [];
+  const made = {}; let n = 0;
+  rows.forEach(x => { const k = x.t + '|' + x.src; let c = IMP.map[k]; if (c === '__skip') return;
+    if (c === '__new') { if (!made[k]) { const nc = {id:'c' + uid(), n:x.src, i:'dots', subs:[], g:x.t === 'in' ? 'extra' : 'altro'}; S.cats[x.t].push(nc); made[k] = nc.id; } c = made[k]; }
+    const g = IMP.guess[k] || ['', ''], cat = catOf(x.t, c), sub = g[0] === c && g[1] ? g[1] : '';
+    const same = x.src.toLowerCase() === (cat.n || '').toLowerCase() || x.src.toLowerCase() === sub.toLowerCase() || IMP.map[k] === '__new';
+    S.tx.push({id:uid(), t:x.t, c, s:sub, a:x.a, d:x.d, n:[same ? '' : x.src, x.n].filter(Boolean).join(' · '), p:'liq', imp:1, ext:x.ext}); n++; });
+  S.tx.sort((a, b) => a.d.localeCompare(b.d));
+  IMP = null; save(); toast(n + ' movimenti importati');
+  view.innerHTML = '<div class="sec" style="gap:18px"><div class="intro"><span class="marker y" style="font-size:1.2rem">Fatto!</span><h2>' + n + ' movimenti importati</h2></div>' +
+    '<div class="card"><p>Ora trovi tutto lo storico in <b>Movimenti</b> e in <b>Statistiche</b> (prova "Periodo → Tutto").</p><p class="small muted">Ultimo passo: i saldi dei pilastri non sono stati toccati. Apri i Pilastri e, per ognuno, usa "Correggi il saldo" con la cifra reale di oggi.</p>' +
+    '<div class="row"><button class="btn" ' + nav$({screen:'pillar', id:'liq'}) + '>Sistema i saldi</button><button class="btn ghost" ' + nav$({screen:'stats'}) + '>Statistiche</button></div></div></div>';
+}
+
 /* ---------- legenda ---------- */
 function renderLegend(){
   const sw = (c, t, d) => '<div class="lg"><i style="background:' + c + '"></i><span><b>' + t + '</b>' + (d ? '<br><span class="small muted">' + d + '</span>' : '') + '</span></div>';
@@ -2542,6 +2683,7 @@ function renderSettings(){
       (downloads ? '<button class="item" data-pdf="m"><span class="ic">' + ic('book') + '</span><span class="t"><b>Resoconto PDF del mese</b><span class="sub">Riepilogo, categorie, pilastri, obiettivi e movimenti</span></span>' + ic('right') + '</button><button class="item" data-pdf="y"><span class="ic">' + ic('book') + '</span><span class="t"><b>Resoconto PDF dell\'anno</b><span class="sub">Tutto l\'anno in corso</span></span>' + ic('right') + '</button>' +
         '<button class="item" id="s-bk"><span class="ic">' + ic('shield') + '</span><span class="t"><b>Backup completo</b><span class="sub">' + (S.lastBackup ? 'Ultimo il ' + dshort(S.lastBackup) : 'Salva un file con tutti i tuoi dati') + '</span></span>' + ic('right') + '</button>' : '') +
       '<label class="item" for="s-rs" style="cursor:pointer"><span class="ic">' + ic('repeat') + '</span><span class="t"><b>Ripristina da un backup</b><span class="sub">Carica il file .json salvato in precedenza</span></span>' + ic('right') + '</label><input type="file" id="s-rs" accept=".json,application/json" hidden>' +
+      '<button class="item" ' + nav$({screen:'import'}) + '><span class="ic">' + ic('list') + '</span><span class="t"><b>Importa da un\'altra app</b><span class="sub">File CSV, per esempio da Fast Budget</span></span>' + ic('right') + '</button>' +
       (downloads ? '<button class="item" id="s-csv"><span class="ic">' + ic('list') + '</span><span class="t"><b>Esporta i movimenti in CSV</b><span class="sub">Da aprire con Excel o Fogli Google</span></span>' + ic('right') + '</button>' : '') +
       '<button class="item" ' + nav$({screen:'terms'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Termini e condizioni</b><span class="sub">Versione ' + TERMS_V + (S.termsAt ? ', accettata il ' + dshort(S.termsAt) : '') + '</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'privacy'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Informativa sulla privacy</b><span class="sub">I tuoi dati restano sul tuo dispositivo</span></span>' + ic('right') + '</button>' +

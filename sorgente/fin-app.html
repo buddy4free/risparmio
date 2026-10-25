@@ -1113,11 +1113,16 @@ function insights(ym){
 const view = document.getElementById('view');
 const nav$ = r => "data-nav='" + JSON.stringify(r).replace(/'/g, '&#39;') + "'";
 let GOAL_FROM = null, PREV = null, TXBACK = null;
-const NAVSTACK = []; let EXIT_ARMED = 0;
+const NAVSTACK = [];
+/* tappe del tasto indietro del telefono. Chrome salta le tappe aggiunte senza un tocco: per questo ne aggiungo una a ogni passo fatto toccando */
+let HD = 0, HIGN = 0;
+function histPush(){ try { if (navigator.userActivation && !navigator.userActivation.isActive && HD > 0) return; history.pushState({b4f:HD + 1}, ''); HD++; } catch (e) {} }
+function histHome(){ if (HD > 0) { const k = HD; HD = 0; HIGN = 1; try { history.go(-k); } catch (e) { HIGN = 0; } } }
 const GOAL_SCR = ['goal', 'whatif', 'gtips', 'read'];
 const SCROLL = {}, skey = r => r.screen + ':' + (r.id || '');
 function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  if (r.screen === 'home') NAVSTACK.length = 0; else if (!back && R && !same(R, r) && !(R.screen === 'add' && r.screen === 'add') && !['welcome', 'setup'].includes(R.screen)) { NAVSTACK.push(R); if (NAVSTACK.length > 60) NAVSTACK.shift(); } else if (back && NAVSTACK.length && same(NAVSTACK[NAVSTACK.length - 1], r)) NAVSTACK.pop();
+  if (r.screen === 'home') { NAVSTACK.length = 0; histHome(); } else if (!back && R && !same(R, r)) histPush();
+  if (r.screen !== 'home' && !back && R && !same(R, r) && !(R.screen === 'add' && r.screen === 'add') && !['welcome', 'setup'].includes(R.screen)) { NAVSTACK.push(R); if (NAVSTACK.length > 60) NAVSTACK.shift(); } else if (back && NAVSTACK.length && same(NAVSTACK[NAVSTACK.length - 1], r)) NAVSTACK.pop();
   if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; PREV = R; R = r; try { localStorage.setItem('b4f-last', JSON.stringify({r, t:Date.now()})); } catch(e) {} render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
 view.addEventListener('click', e => { const b = e.target.closest('[data-nav]'); if (b) nav(JSON.parse(b.dataset.nav), b.classList.contains('back')); });
 document.getElementById('logo').onclick = () => nav(S.setup ? {screen:'home'} : {screen:'welcome'});
@@ -1129,7 +1134,7 @@ function dialToggle(){
   const fab = document.getElementById('fab'), o = document.createElement('div'); o.id = 'dial';
   const it = (k, l, c, icon) => '<button data-dial="' + k + '" style="--dc:' + c + '"><span class="dl">' + l + '</span><span class="di">' + icon + '</span></button>';
   o.innerHTML = '<div class="dialbg"></div><div class="dialitems">' + it('cats', 'Gestisci categorie', '#5f5f5a', ic('tag')) + it('xfer', 'Trasferimento', '#3987e5', ic('repeat')) + it('in', 'Entrata', '#22A45D', '<b>+</b>') + it('out', 'Uscita', '#E5484D', '<b>−</b>') + '</div>';
-  document.body.appendChild(o); fab.classList.add('open');
+  document.body.appendChild(o); fab.classList.add('open'); histPush();
   o.querySelector('.dialbg').onclick = dialClose;
   o.querySelectorAll('[data-dial]').forEach(b => b.onclick = () => { const k = b.dataset.dial; dialClose(); F = null; nav(k === 'cats' ? {screen:'cats', t:'out'} : {screen:'add', type:k}); });
 }
@@ -1154,12 +1159,14 @@ function phoneBack(){
   if (S.setup && R.screen !== 'home') { nav({screen:'home'}, true); return true; }
   return false;
 }
-try { history.replaceState({b4f:'base'}, ''); history.pushState({b4f:'top'}, ''); } catch (e) {}
+try { history.replaceState({b4f:0}, ''); } catch (e) {}
+if (S.setup && R.screen !== 'home') histPush();
+/* fuori dalla Home deve sempre esserci almeno una tappa: la rimetto al primo tocco */
+document.addEventListener('click', () => { if (S.setup && R.screen !== 'home' && HD === 0) histPush(); }, true);
 window.addEventListener('popstate', () => {
-  const again = () => { try { history.pushState({b4f:'top'}, ''); } catch (e) {} };
-  if (phoneBack()) { EXIT_ARMED = 0; return again(); }
-  if (!EXIT_ARMED) { EXIT_ARMED = 1; toast('Premi ancora indietro per uscire'); setTimeout(() => EXIT_ARMED = 0, 2500); return again(); }
-  try { history.back(); } catch (e) {}
+  if (HIGN) { HIGN = 0; return; }
+  HD = Math.max(0, HD - 1);
+  if (phoneBack() && R.screen === 'home') histHome();
 });
 const TABS = [['home','Home','house'],['tx','Movimenti','list'],['stats','Statistiche','chart'],['pillars','Pilastri','pillars'],['gym','Palestra','dumbbell'],['well','Benessere','leaf']];
 const TAB_OF = {import:'home', privacy:'home', terms:'home', support:'home', whatif:'pillars', debts:'pillars', missions:'gym', mission:'gym', learn:'gym', lesson:'gym', wbi:'home', dues:'tx', an:'stats', home:'home', tx:'tx', stats:'stats', charts:'stats', add:'tx', review:'stats', pillars:'pillars', pillar:'pillars', goal:'pillars', gtips:'pillars', sim:'pillars', gym:'gym', read:'gym', champ:'gym', well:'well', breath:'well'};
@@ -1462,7 +1469,7 @@ function renderAn(){
   const rr = () => renderAn(); bindStPeriod();
   view.querySelectorAll('[data-ant]').forEach(b => b.onclick = () => { AN = {t:b.dataset.ant, c:null, s:null}; rr(); });
   view.querySelectorAll('[data-crumb]').forEach(b => b.onclick = () => { if (b.dataset.crumb === '0') AN.c = null; AN.s = null; rr(); window.scrollTo({top:0}); });
-  view.querySelectorAll('[data-an]').forEach(b => b.onclick = () => { const k = b.dataset.an; if (!AN.c) { AN.c = k; AN.s = null; } else AN.s = k.slice(2); rr(); const c = view.querySelector('.ancrumbs'); if (c) c.scrollIntoView({block:'start'}); });
+  view.querySelectorAll('[data-an]').forEach(b => b.onclick = () => { histPush(); const k = b.dataset.an; if (!AN.c) { AN.c = k; AN.s = null; } else AN.s = k.slice(2); rr(); const c = view.querySelector('.ancrumbs'); if (c) c.scrollIntoView({block:'start'}); });
   const al = view.querySelector('#an-list'); if (al) al.onclick = () => { TXC = {t:AN.t, c:AN.c, s:AN.s}; TXBACK = {screen:'an'};
     if (ST.mode === 'm') { TXP = 'm'; viewYM = ST.ym; } else if (ST.mode === 'y') { TXP = 'y'; TXY = ST.y; } else { TXP = 'p'; TXFR = ST.from; TXTO = ST.to; } nav({screen:'tx'}); };
 }
@@ -1532,7 +1539,7 @@ function renderTx(){
   bindDemo();
   const rr = () => { TXLIM = 300; renderTx(); }, keepY = () => { const y = window.scrollY; renderTx(); window.scrollTo({top:y}); };
   bindTxPeriod(rr);
-  const sb = view.querySelector('#tx-sel'); if (sb) sb.onclick = () => { TXSEL = TXSEL ? null : new Set(); keepY(); };
+  const sb = view.querySelector('#tx-sel'); if (sb) sb.onclick = () => { TXSEL = TXSEL ? null : new Set(); if (TXSEL) histPush(); keepY(); };
   const sa = view.querySelector('#tx-sall'); if (sa) sa.onclick = () => { const ids = selectable.map(x => x.id); if (ids.every(id => TXSEL.has(id))) ids.forEach(id => TXSEL.delete(id)); else ids.forEach(id => TXSEL.add(id)); keepY(); };
   view.querySelectorAll('[data-tsel]').forEach(cb => cb.onchange = () => { cb.checked ? TXSEL.add(cb.dataset.tsel) : TXSEL.delete(cb.dataset.tsel); keepY(); });
   const mc = view.querySelector('#mv-c'); if (mc) { mc.onchange = () => { TXMV.c = mc.value; TXMV.s = ''; keepY(); }; view.querySelector('#mv-s').onchange = e => { TXMV.s = e.target.value; if (TXMV.s === '__new') { TXMV.s = ''; catPop('<b style="font-size:1.1rem">Nuova sottocategoria di ' + esc(catOf(selT, TXMV.c).n) + '</b><input id="cp-n" placeholder="Nome"><div class="row"><button class="btn" id="cp-ok">Crea</button><button class="btn ghost" data-x>Annulla</button></div>', (o, close) => { o.querySelector('#cp-ok').onclick = () => { const n = o.querySelector('#cp-n').value.trim(); if (!n) return; addSub(selT, catOf(selT, TXMV.c), n); TXMV.s = n; save(); close(); keepY(); }; }); } else keepY(); }; }
@@ -1653,7 +1660,7 @@ function renderAdd(){
   const saveBtn = document.getElementById('f-save'); saveBtn.hidden = F.step !== 'amt';
   const keep = () => { if (F.step !== 'amt') return; F.a = val('f-a'); F.d = val('f-d') || today(); F.n = val('f-n'); F.rec = document.getElementById('f-rec').checked;
     if (F.rec && document.getElementById('r-ev')) { F.every = Math.max(1, +val('r-ev') || 1); F.unit = val('r-un'); if (document.getElementById('r-ct')) F.count = Math.max(1, +val('r-ct') || 1); if (document.getElementById('r-ut')) F.until = val('r-ut'); } };
-  const go = st => { keep(); F.step = st; renderAdd(); window.scrollTo({top:0}); };
+  const go = st => { keep(); const O = {cat:0, sub:1, dest:2, amt:3}; if (O[st] > O[F.step]) histPush(); F.step = st; renderAdd(); window.scrollTo({top:0}); };
   view.querySelectorAll('[data-step]').forEach(b => b.onclick = () => go(b.dataset.step));
   const rfc = document.getElementById('f-rf'); if (rfc) rfc.onchange = () => { F.rf = rfc.checked; F.c = null; F.s = ''; F.p = 'liq'; F.rec = false; renderAdd(); };
   view.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { if (b.dataset.c === '__new') { F.newCat = !F.newCat; return renderAdd(); } F.c = b.dataset.c; F.newCat = false; if ((catOf(CT, F.c).subs || []).length) { F.s = ''; go('sub'); } else go(R.edit ? 'amt' : 'dest'); });
@@ -1958,7 +1965,7 @@ function stPeriodHTML(){
 function bindStPeriod(){
   const {first, canNext} = stPeriod();
   view.querySelectorAll('[data-mode]').forEach(x => x.onclick = () => { ST.mode = x.dataset.mode; ST.sheet = ST.mode === 'p'; render(); });
-  const pe = document.getElementById('p-edit'); if (pe) pe.onclick = () => { ST.sheet = true; render(); };
+  const pe = document.getElementById('p-edit'); if (pe) pe.onclick = () => { ST.sheet = true; histPush(); render(); };
   const px = document.getElementById('ps-x'); if (px) px.onclick = () => { ST.sheet = false; render(); };
   const pso = document.getElementById('ps-ok'); if (pso) pso.onclick = () => { ST.from = val('st-f') || ST.from; ST.to = val('st-t') || ST.to; ST.sheet = false; render(); };
   const psb = document.getElementById('psheet'); if (psb) psb.onclick = e => { if (e.target === psb) { ST.sheet = false; render(); } };
@@ -3102,7 +3109,7 @@ function dropCat(t, c, to){
 }
 function catPop(html, bind){
   const o = document.createElement('div'); o.className = 'psheet pcenter'; o.id = 'catpop';
-  o.innerHTML = '<div class="pin">' + html + '</div>'; document.body.appendChild(o);
+  o.innerHTML = '<div class="pin">' + html + '</div>'; document.body.appendChild(o); histPush();
   o.onclick = e => { if (e.target === o || e.target.closest('[data-x]')) o.remove(); };
   bind(o, () => o.remove()); const i = o.querySelector('input'); if (i) i.focus();
 }
@@ -3179,8 +3186,8 @@ function renderCats(){
     confirmDo(list + (v === '__own' ? ' diventano categorie a sé' : ' passano in <b>' + esc(d.n) + '</b>') + (lselN ? ', con i loro ' + movN(lselN) : '') + '.', 'Sposta', () => { lsel.forEach(q => { if (q.c.id !== v) opSubMove(t, q.c, q.sb, v); }); CATX.lsel.clear(); if (d) CATX.open.add(d.id); toast(v === '__own' ? 'Ora sono categorie' : 'Spostate in ' + d.n); keepY(); }); };
   const ld = view.querySelector('#ls-del'); if (ld) ld.onclick = () => confirmDo('Elimini ' + lsel.map(q => '"' + esc(q.sb) + '"').join(', ') + '.' + (lselN ? ' I loro ' + movN(lselN) + ' restano nella loro categoria senza sottocategoria.' : ''), 'Elimina', () => { lsel.forEach(q => opSubDel(t, q.c, q.sb)); CATX.lsel.clear(); toast('Sottocategorie eliminate'); keepY(); });
   const lx = view.querySelector('#ls-x'); if (lx) lx.onclick = () => { CATX.lsel.clear(); keepY(); };
-  const so = view.querySelector('#cx-ord'); if (so) so.onclick = () => { CATX.mode = M === 'ord' ? '' : 'ord'; renderCats(); };
-  const ss = view.querySelector('#cx-sel'); if (ss) ss.onclick = () => { CATX.mode = M === 'sel' ? '' : 'sel'; CATX.sel.clear(); renderCats(); };
+  const so = view.querySelector('#cx-ord'); if (so) so.onclick = () => { CATX.mode = M === 'ord' ? '' : 'ord'; if (CATX.mode) histPush(); renderCats(); };
+  const ss = view.querySelector('#cx-sel'); if (ss) ss.onclick = () => { CATX.mode = M === 'sel' ? '' : 'sel'; CATX.sel.clear(); if (CATX.mode) histPush(); renderCats(); };
   const sa = view.querySelector('#cx-all'); if (sa) sa.onclick = () => { if (selC.length === L.length) CATX.sel.clear(); else L.forEach(c => CATX.sel.add(c.id)); keepY(); };
   view.querySelectorAll('[data-pick]').forEach(cb => cb.onchange = () => { cb.checked ? CATX.sel.add(cb.dataset.pick) : CATX.sel.delete(cb.dataset.pick); keepY(); });
   const mv = (i, d) => { const y = window.scrollY, a = S.cats[t]; [a[i], a[i + d]] = [a[i + d], a[i]]; save(); renderCats(); window.scrollTo({top:y}); };

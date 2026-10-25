@@ -355,7 +355,19 @@ i.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right
 .goal8{position:absolute;left:0;right:0;border-top:2px dashed var(--fg);opacity:.6}
 
 /* v3: stats, goal stages, pace */
-.daily{display:flex;gap:2px;align-items:flex-end;height:124px}
+.daily{display:flex;gap:2px;align-items:flex-end;height:124px;position:relative}
+.daily .avgline{position:absolute;left:0;right:0;height:0;border-top:2px dashed #fff;pointer-events:none}
+.daily .avgline em{position:absolute;right:0;bottom:3px;font-style:normal;font-size:.68rem;font-weight:800;background:var(--bg);padding:1px 5px;border-radius:6px}
+.avgline-key{display:inline-block;width:16px;border-top:2px dashed #fff;vertical-align:middle;margin-right:5px}
+.synth{display:flex;flex-direction:column;gap:8px}
+.synth p{margin:0;font-size:.92rem}
+.stack{display:flex;height:14px;border-radius:7px;overflow:hidden;gap:2px}
+.stack i{display:block;height:100%}
+.stackl{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.78rem;color:var(--muted)}
+.stackl i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px}
+.stackl b{color:var(--fg)}
+.chg{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.chg li{display:flex;justify-content:space-between;gap:10px;font-size:.88rem;border-bottom:1px solid var(--line);padding:4px 0}
 .daily span{flex:1;border-radius:2px 2px 1px 1px;min-width:0}
 .io12{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;align-items:end;height:150px}
 .io12 div{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
@@ -1842,9 +1854,25 @@ function donutHTML(rows, total){
   const arcs = segs.map(sg => { const len = sg.v / total * C, gap = segs.length > 1 ? Math.min(3, len * .3) : 0; const el = '<circle r="' + R0 + '" cx="90" cy="90" fill="none" stroke="' + sg.c + '" stroke-width="26" stroke-dasharray="' + Math.max(0, len - gap) + ' ' + C + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 90 90)"><title>' + esc(sg.n) + ': ' + eur2(sg.v) + '</title></circle>'; off += len; return el; }).join('');
   return '<div class="donut"><svg viewBox="0 0 180 180" role="img" aria-label="Grafico circolare">' + arcs + '<text x="90" y="86" text-anchor="middle" font-size="12" fill="var(--muted)">Totale</text><text x="90" y="106" text-anchor="middle" font-size="18" font-weight="800" fill="var(--fg)">' + eur(total) + '</text></svg><div class="dlegend">' + segs.map(sg => '<span><i style="background:' + sg.c + '"></i>' + esc(sg.n) + ' <b>' + Math.round(sg.v / total * 100) + '%</b></span>').join('') + '</div></div>';
 }
-function slideCard(title, rows, total, empty){
+/* al posto del cerchio, quando le voci sono tante: una lettura in poche righe */
+function synthHTML(t, rows, total, prev, prevLabel){
+  if (!(total > 0)) return '<p class="small muted">Niente da analizzare nel periodo.</p>';
+  const pos = rows.filter(r => r.v > 0), top = pos.slice(0, 3), topV = top.reduce((a, r) => a + r.v, 0), rest = Math.max(0, total - topV), pc = v => Math.round(v / total * 100);
+  const stack = segs => '<div class="stack">' + segs.filter(g => g.v > 0).map(g => '<i style="width:' + (g.v / segs.reduce((a, x) => a + Math.max(0, x.v), 0) * 100) + '%;background:' + g.c + '" title="' + esc(g.n) + '"></i>').join('') + '</div><div class="stackl">' + segs.filter(g => g.v > 0).map(g => '<span><i style="background:' + g.c + '"></i>' + esc(g.n) + ' <b>' + pc(g.v) + '%</b></span>').join('') + '</div>';
+  let h = '<div class="synth"><p><b>' + (top.length === 1 ? esc(top[0].n) + '</b> è tutto: ' : (top.length < 3 ? 'Le prime ' + top.length : 'Le prime 3') + ' voci</b> valgono <b>il ' + pc(topV) + '%</b> ') + (t === 'out' ? 'delle spese.' : 'delle entrate.') + '</p>' + stack(top.map(r => ({n:r.n, v:r.v, c:r.c})).concat(rest > 0 ? [{n:'Le altre ' + (pos.length - top.length), v:rest, c:'#5f5f5a'}] : []));
+  if (t === 'out') { const nd = rows.filter(r => r.disc).reduce((a, r) => a + r.v, 0);
+    h += '<p><b>Non essenziali: ' + eur(nd) + '</b> (' + pc(nd) + '%). È la parte su cui è più facile intervenire.</p>' + stack([{n:'Essenziali', v:total - nd, c:'#3987e5'}, {n:'Non essenziali', v:nd, c:OUT_COL}]); }
+  else if (top[0]) h += '<p><b>' + esc(top[0].n) + '</b> porta il ' + pc(top[0].v) + '% delle entrate' + (pos.length > 1 ? ' su ' + pos.length + ' fonti.' : '.') + (pc(top[0].v) >= 80 ? ' Dipendi quasi tutto da una sola fonte: il fondo di emergenza conta ancora di più.' : '') + '</p>';
+  const pt = Object.values(prev).reduce((a, v) => a + v, 0);
+  if (pt > 0) { const ch = rows.map(r => ({n:r.n, d:r.v - (prev[r.id] || 0), p:prev[r.id] || 0})).concat(Object.keys(prev).filter(id => !rows.some(r => r.id === id)).map(id => ({n:catOf(t, id).n, d:-prev[id], p:prev[id]}))).sort((a, b) => b.d - a.d);
+    const up = ch[0], dn = ch[ch.length - 1], tch = Math.round((total / pt - 1) * 100), good = d => t === 'out' ? d < 0 : d > 0, col = d => good(d) ? IN_COL : d ? '#E5484D' : 'var(--muted)';
+    const line = q => '<li><span>' + esc(q.n) + '</span><b style="color:' + col(q.d) + '">' + (q.d > 0 ? '+' : '−') + eur(Math.abs(q.d)) + (q.p > 0 ? ' (' + (q.d > 0 ? '+' : '') + Math.round(q.d / q.p * 100) + '%)' : ' (nuova)') + '</b></li>';
+    h += '<p>Rispetto a ' + prevLabel + ': <b style="color:' + col(tch) + '">' + (tch > 0 ? '+' : '') + tch + '%</b> in totale.</p><ul class="chg">' + (up && up.d > 0 ? line(up) : '') + (dn && dn.d < 0 && dn !== up ? line(dn) : '') + '</ul>'; }
+  return h + '</div>';
+}
+function slideCard(title, rows, total, empty, synth){
   if (!rows.length) return '<div class="card"><span class="label">' + title + '</span><p class="small muted">' + empty + '</p></div>';
-  return '<div class="card"><div class="spread"><span class="label">' + title + '</span><span class="small muted">barre ↔ cerchio</span></div><div class="carousel">' + '<div class="slide">' + (rows.length > 6 ? '<div class="catscroll catscroll6">' + hbarsHTML(rows, total) + '</div><span class="small muted" style="text-align:center">' + rows.length + ' voci · scorri ↓</span>' : hbarsHTML(rows, total)) + '</div><div class="slide">' + donutHTML(rows, total) + '</div></div><div class="dots"><i class="on"></i><i></i></div></div>';
+  return '<div class="card"><div class="spread"><span class="label">' + title + '</span><span class="small muted">' + (synth ? 'barre ↔ sintesi' : 'barre ↔ cerchio') + '</span></div><div class="carousel">' + '<div class="slide">' + (rows.length > 6 ? '<div class="catscroll catscroll6">' + hbarsHTML(rows, total) + '</div><span class="small muted" style="text-align:center">' + rows.length + ' voci · scorri ↓</span>' : hbarsHTML(rows, total)) + '</div><div class="slide">' + (synth || donutHTML(rows, total)) + '</div></div><div class="dots"><i class="on"></i><i></i></div></div>';
 }
 function renderStats(){
   if (!ST.ym) { ST.ym = curYM(); ST.y = +curYM().slice(0, 4); }
@@ -1865,8 +1893,8 @@ function renderStats(){
   if (ST.mode === 'm') {
     const [y, m] = ST.ym.split('-').map(Number), nd = new Date(y, m, 0).getDate(), daily = Array(nd).fill(0);
     per[0].s.L.filter(x => x.t === 'out').forEach(x => daily[+x.d.slice(8) - 1] += x.a);
-    const mx = Math.max(1, ...daily);
-    trendHTML = '<div class="card"><span class="label">Spese giorno per giorno</span><div class="daily" role="img" aria-label="Spese giornaliere del mese">' + daily.map((a, i) => '<span title="' + (i + 1) + ' ' + ymLabel(ST.ym, {month:'short'}) + ': ' + eur2(a) + '" style="height:' + Math.max(a ? 3 : 1, a / mx * 120) + 'px;background:' + (a ? OUT_COL : 'var(--soft2)') + '"></span>').join('') + '</div><div class="spread small muted"><span>1</span><span>' + Math.ceil(nd / 2) + '</span><span>' + nd + '</span></div>' +
+    const mx = Math.max(1, ...daily), top = daily.indexOf(Math.max(...daily)), avgD = out / Math.max(1, ST.ym === curYM() ? new Date().getDate() : nd);
+    trendHTML = '<div class="card"><span class="label">Spese giorno per giorno</span><div class="legend small"><span><i class="sw" style="background:' + OUT_COL + '"></i>Spese</span><span><i class="sw" style="background:#E5484D"></i>Giorno più caro</span><span><i class="avgline-key"></i>Media al giorno</span></div><div class="daily" role="img" aria-label="Spese giornaliere del mese">' + daily.map((a, i) => '<span title="' + (i + 1) + ' ' + ymLabel(ST.ym, {month:'short'}) + ': ' + eur2(a) + '" style="height:' + Math.max(a > 0 ? 3 : 1, Math.max(0, a) / mx * 120) + 'px;background:' + (a > 0 ? (i === top ? '#E5484D' : OUT_COL) : 'var(--soft2)') + '"></span>').join('') + (avgD > 0 ? '<b class="avgline" style="bottom:' + Math.min(120, avgD / mx * 120) + 'px"><em>' + eur(avgD) + '</em></b>' : '') + '</div><div class="spread small muted"><span>1</span><span>' + Math.ceil(nd / 2) + '</span><span>' + nd + '</span></div>' +
       '<p class="small muted">Giorno più costoso: <b style="color:var(--fg)">' + (Math.max(...daily) ? (daily.indexOf(Math.max(...daily)) + 1) + ' ' + ymLabel(ST.ym, {month:'long'}) + ', ' + eur2(Math.max(...daily)) : '–') + '</b> · media ' + eur2(out / Math.max(1, ST.ym === curYM() ? new Date().getDate() : nd)) + ' al giorno</p></div>';
   } else {
     /* oltre i 12 mesi le barre si raggruppano: per trimestre fino a 3 anni, poi per anno */
@@ -1896,8 +1924,12 @@ function renderStats(){
       (cats.length ? '<div class="hbars">' + cats.map(c => { const a = byCat[c.id] || 0, m = avg[c.id], diff = m ? Math.round((a / m - 1) * 100) : null;
         return '<button class="hbar" ' + nav$({screen:'tx', cat:c.id}) + ' title="' + esc(c.n) + ': ' + eur2(a) + ', media ' + eur2(m) + '">' + catTile('out', c) + '<span class="t"><span>' + esc(c.n) + '</span><span class="track" style="position:relative"><i style="width:' + (a / mx * 100) + '%;background:' + OUT_COL + '"></i>' + (m ? '<b class="avgm" style="left:' + (m / mx * 100) + '%"></b>' : '') + '</span></span><span class="v">' + eur(a) + '<small style="color:' + (diff === null ? 'var(--muted)' : diff > 10 ? OUT_COL : diff < -10 ? IN_COL : 'var(--muted)') + '">' + (diff === null ? 'nuova' : (diff > 0 ? '+' : '') + diff + '%') + '</small></span></button>'; }).join('') + '</div>' : '<p class="small muted">Servono almeno un mese di movimenti.</p>') + '</div>';
   }
-  const outRows = Object.entries(byCat).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('out', c); return {n:k.n, v:a, c:catColor('out', k), tile:catTile('out', k), go:ST.mode === 'm' ? {screen:'tx', cat:c} : null}; });
-  const inRows = Object.entries(byIn).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('in', c); return {n:k.n, v:a, c:catColor('in', k), tile:catTile('in', k), go:ST.mode === 'm' ? {screen:'tx', cat:c, ct:'in'} : null}; });
+  /* stesso periodo, appena prima: per dire cosa è cambiato */
+  const prevOut = {}, prevIn = {}, prevM = months.map(m => addMonths(m, -months.length));
+  prevM.forEach(ym => stats(ym).L.forEach(x => { if (x.plan) return; const o = x.t === 'in' ? prevIn : prevOut; o[x.c] = (o[x.c] || 0) + x.a; }));
+  const prevLabel = ST.mode === 'm' ? ymLabel(prevM[0], {month:'long'}) : ST.mode === 'y' ? 'gli stessi mesi del ' + (ST.y - 1) : 'i ' + months.length + ' mesi prima';
+  const outRows = Object.entries(byCat).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('out', c); return {id:c, disc:!!k.disc, n:k.n, v:a, c:catColor('out', k), tile:catTile('out', k), go:ST.mode === 'm' ? {screen:'tx', cat:c} : null}; });
+  const inRows = Object.entries(byIn).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('in', c); return {id:c, n:k.n, v:a, c:catColor('in', k), tile:catTile('in', k), go:ST.mode === 'm' ? {screen:'tx', cat:c, ct:'in'} : null}; });
   view.innerHTML = '<div class="sec" style="gap:20px">' + demoBar() + '<div class="intro"><h2>Statistiche</h2></div>' +
     '<div class="seg3"><button data-mode="m" aria-pressed="' + (ST.mode === 'm') + '">Mese</button><button data-mode="y" aria-pressed="' + (ST.mode === 'y') + '">Anno</button><button data-mode="p" aria-pressed="' + (ST.mode === 'p') + '">Periodo</button></div>' +
     (ST.mode === 'p' ? '<div class="month"><span></span><b>' + label + ' · ' + months.length + (months.length === 1 ? ' mese' : ' mesi') + '</b><button id="p-edit" aria-label="Cambia periodo">' + ic('calendar') + '</button></div>' +
@@ -1908,8 +1940,8 @@ function renderStats(){
     '<div class="card"><div class="spread"><span class="label">Patrimonio nei 4 pilastri</span><b class="num" style="font-family:var(--display);font-size:1.3rem">' + eur(totP) + '</b></div>' +
       '<div class="carousel"><div class="slide">' + hbarsHTML(pil.map(x => ({n:x.p.n, v:x.v, c:x.p.c, tile:'<span class="ic" style="background:' + x.p.c + '">' + ic(x.p.i) + '</span>', sub:(x.v - x.v0 >= 0 ? '+' : '−') + eur(Math.abs(x.v - x.v0)), go:{screen:'pillar', id:x.p.id}}))) + '</div><div class="slide">' + (totP > 0 ? donutHTML(pil.filter(x => x.v > 0).map(x => ({n:x.p.short || x.p.n, v:x.v, c:x.p.c})), pil.reduce((t, x) => t + Math.max(0, x.v), 0)) : '<p class="small muted">Ancora nessun saldo nei pilastri.</p>') + '</div></div><div class="dots"><i class="on"></i><i></i></div>' +
       '<p class="small muted">Saldi a fine ' + (ST.mode === 'm' ? ymLabel(ST.ym, {month:'long'}) : 'periodo') + '. Sotto ogni cifra la variazione nel periodo: <b style="color:var(--fg)">' + (totP - totP0 >= 0 ? '+' : '−') + eur(Math.abs(totP - totP0)) + '</b> in totale.</p></div>' +
-    slideCard('Quanto hai speso · ' + eur(out), outRows, out, 'Nessuna uscita nel periodo.') +
-    slideCard('Da dove arrivano le entrate · ' + eur(inc), inRows, inc, 'Nessuna entrata nel periodo.') +
+    slideCard('Quanto hai speso · ' + eur(out), outRows, out, 'Nessuna uscita nel periodo.', synthHTML('out', outRows, out, prevOut, prevLabel)) +
+    slideCard('Da dove arrivano le entrate · ' + eur(inc), inRows, inc, 'Nessuna entrata nel periodo.', synthHTML('in', inRows, inc, prevIn, prevLabel)) +
     trendHTML + cmp +
     (!S.reviews[addMonths(curYM(), -1)] ? '<button class="readcard" ' + nav$({screen:'review'}) + '><span class="t"><b>' + ic('calendar') + ' Revisione mensile di ' + ymLabel(addMonths(curYM(), -1), {month:'long'}) + '</b><span>15 minuti per tenere la rotta</span></span>' + ic('right') + '</button>' : '') +
   '</div>';

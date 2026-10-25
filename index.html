@@ -852,6 +852,8 @@ function migrate(){
 }
 try { const raw = localStorage.getItem(LS_KEY); if (raw) { S = Object.assign(freshState(), JSON.parse(raw)); migrate(); } } catch(e) {}
 let R = S.setup ? {screen:'home'} : {screen:'welcome'};
+/* riaprendo l'app torni dove eri (entro 2 ore) */
+try { const L = JSON.parse(localStorage.getItem('b4f-last') || 'null'); if (S.setup && L && Date.now() - L.t < 72e5 && L.r && !['welcome', 'setup', 'add', 'import', 'breath'].includes(L.r.screen)) R = L.r; } catch(e) {}
 let viewYM = curYM();
 
 let remote = null, writing = false, pending = false, saveTimer = null, downloads = {save:async ({filename, data}) => {
@@ -995,7 +997,7 @@ const nav$ = r => "data-nav='" + JSON.stringify(r).replace(/'/g, '&#39;') + "'";
 let GOAL_FROM = null;
 const GOAL_SCR = ['goal', 'whatif', 'gtips', 'read'];
 const SCROLL = {}, skey = r => r.screen + ':' + (r.id || '');
-function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; R = r; render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
+function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; R = r; try { localStorage.setItem('b4f-last', JSON.stringify({r, t:Date.now()})); } catch(e) {} render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
 view.addEventListener('click', e => { const b = e.target.closest('[data-nav]'); if (b) nav(JSON.parse(b.dataset.nav), b.classList.contains('back')); });
 document.getElementById('logo').onclick = () => nav(S.setup ? {screen:'home'} : {screen:'welcome'});
 document.getElementById('fab').onclick = () => { F = null; nav({screen:'add'}); };

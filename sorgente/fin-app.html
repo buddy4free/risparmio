@@ -2812,7 +2812,7 @@ async function exportPDF(mode, withTx){
   h1('Dove vanno i soldi');
   const rows = Object.entries(byCat).filter(([, a]) => a > 0).sort((a, b) => b[1] - a[1]), top = rows.slice(0, 12), restV = rows.slice(12).reduce((t, r) => t + r[1], 0), mxc = Math.max(1, ...top.map(r => r[1]));
   top.concat(restV > 0 ? [['__rest', restV]] : []).forEach(([c, a]) => { need(8); const k = c === '__rest' ? {n:'Le altre ' + (rows.length - 12), id:'x'} : catOf('out', c), col = c === '__rest' ? '#9a9a9a' : catColor('out', k);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); txt('#222222', k.n.slice(0, 30), M, y + 3); bar(M + 52, y, (Wd - 52 - 42) * a / mxc, 4, col);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); txt('#222222', k.n.slice(0, 30), M, y + 3); bar(M + 52, y, (Wd - 52 - 42) * Math.min(1, a / mxc), 4, col);
     txt('#222222', E(a).replace(' EUR', ' €'), M + Wd - 12, y + 3.2, {align:'right'}); doc.setFontSize(7.5); txt('#888888', Math.round(a / out * 100) + '%', M + Wd, y + 3.2, {align:'right'}); y += 7; });
   /* in sintesi */
   if (out > 0) { const t3 = rows.slice(0, 3).reduce((t, r) => t + r[1], 0), nd = rows.filter(([c]) => catOf('out', c).disc).reduce((t, r) => t + r[1], 0);
@@ -2821,6 +2821,41 @@ async function exportPDF(mode, withTx){
     txt('#333333', '- Le prime 3 voci valgono il ' + Math.round(t3 / out * 100) + '% delle spese (' + rows.slice(0, 3).map(r => catOf('out', r[0]).n).join(', ') + ').', M + 4, y + 12);
     txt('#333333', '- Spese non essenziali: ' + E(nd).replace(' EUR', ' €') + ' (' + Math.round(nd / out * 100) + '%): è la parte su cui è più facile intervenire.', M + 4, y + 17.5); y += 27; }
   line();
+  /* da dove arrivano i soldi */
+  const byInc = {}; months.forEach(ym => monthTx(ym).forEach(x => { if (x.t === 'in' && !x.plan) byInc[x.c] = (byInc[x.c] || 0) + x.a; }));
+  const inRows = Object.entries(byInc).filter(([, a]) => a > 0).sort((a, b) => b[1] - a[1]);
+  if (inRows.length) { h1('Da dove arrivano i soldi'); const topI = inRows.slice(0, 8), restI = inRows.slice(8).reduce((t, r) => t + r[1], 0), mxi = Math.max(1, ...topI.map(r => r[1]));
+    topI.concat(restI > 0 ? [['__rest', restI]] : []).forEach(([c, a]) => { need(8); const k = c === '__rest' ? {n:'Le altre ' + (inRows.length - 8), id:'x'} : catOf('in', c), col = c === '__rest' ? '#9a9a9a' : catColor('in', k);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); txt('#222222', k.n.slice(0, 30), M, y + 3); bar(M + 52, y, (Wd - 52 - 42) * Math.min(1, a / mxi), 4, col);
+      txt('#222222', E(a).replace(' EUR', ' €'), M + Wd - 12, y + 3.2, {align:'right'}); doc.setFontSize(7.5); txt('#888888', Math.round(a / inc * 100) + '%', M + Wd, y + 3.2, {align:'right'}); y += 7; });
+    const t1 = inRows[0], p1 = Math.round(t1[1] / inc * 100); need(8); doc.setFontSize(8.8); txt('#333333', catOf('in', t1[0]).n + ' porta il ' + p1 + '% delle entrate' + (inRows.length > 1 ? ' su ' + inRows.length + ' fonti.' : '.') + (p1 >= 80 ? ' Dipendi quasi tutto da una fonte: il fondo di emergenza conta ancora di più.' : ''), M, y + 3); y += 9; line(); }
+  /* mini analisi: mesi migliori e peggiori, voci che crescono e calano */
+  const span = mode === 'y' ? months : Array.from({length:12}, (_, i) => addMonths(curYM(), -11 + i)), sp = span.map(ym => ({ym, s:stats(ym)})).filter(q => q.s.inc > 0 || q.s.out > 0);
+  const ins = [], dot = (c, t2) => ins.push([c, t2]), ml = ym => ymLabel(ym, {month:'long', year:'numeric'});
+  if (sp.length > 1) { const hi = sp.slice().sort((a, b) => b.s.out - a.s.out)[0], best = sp.slice().sort((a, b) => b.s.save - a.s.save)[0], worst = sp.slice().sort((a, b) => a.s.save - b.s.save)[0], avgO = sp.reduce((t, q) => t + q.s.out, 0) / sp.length, avgI = sp.reduce((t, q) => t + q.s.inc, 0) / sp.length;
+    const lab = mode === 'y' ? '' : ' (ultimi 12 mesi)';
+    dot('#C98500', 'Mese con più spese' + lab + ': ' + ml(hi.ym) + ', ' + E(hi.s.out).replace(' EUR', ' €') + ' (media ' + E(avgO).replace(' EUR', ' €') + ' al mese).');
+    dot('#22A45D', 'Mese con più risparmio' + lab + ': ' + ml(best.ym) + ', ' + E(best.s.save).replace(' EUR', ' €') + (best.s.rate !== null ? ' (' + Math.round(best.s.rate) + '% delle entrate).' : '.'));
+    if (worst.ym !== best.ym) dot(worst.s.save < 0 ? '#e5484d' : '#ec835a', 'Mese più difficile' + lab + ': ' + ml(worst.ym) + ', ' + (worst.s.save < 0 ? 'hai speso ' + E(-worst.s.save).replace(' EUR', ' €') + ' più di quanto è entrato.' : 'risparmio di ' + E(worst.s.save).replace(' EUR', ' €') + '.'));
+    dot('#3987e5', 'In media entrano ' + E(avgI).replace(' EUR', ' €') + ' ed escono ' + E(avgO).replace(' EUR', ' €') + ' al mese.'); }
+  if (mode !== 'y') { const [yy, mm] = curYM().split('-').map(Number), nd = curYM() === curYM() ? new Date().getDate() : new Date(yy, mm, 0).getDate(), daily = {}; monthTx(curYM()).forEach(x => { if (x.t === 'out' && !x.plan && x.a > 0) daily[x.d] = (daily[x.d] || 0) + x.a; });
+    const top = Object.entries(daily).sort((a, b) => b[1] - a[1])[0]; if (top) dot('#e5484d', 'Giorno più costoso: ' + new Date(top[0] + 'T12:00:00').toLocaleDateString('it-IT', {day:'numeric', month:'long'}) + ', ' + E(top[1]).replace(' EUR', ' €') + '. In media spendi ' + E(out / Math.max(1, nd)).replace(' EUR', ' €') + ' al giorno.'); }
+  const prevM = months.map(m => addMonths(m, mode === 'y' ? -12 : -1)), pOut = {}; let pTot = 0; prevM.forEach(ym => monthTx(ym).forEach(x => { if (x.t === 'out' && !x.plan) { pOut[x.c] = (pOut[x.c] || 0) + x.a; pTot += x.a; } }));
+  if (pTot > 0) { const ids = new Set(Object.keys(byCat).concat(Object.keys(pOut))), ch = [...ids].map(id => ({n:catOf('out', id).n, d:(byCat[id] || 0) - (pOut[id] || 0), p:pOut[id] || 0})).sort((a, b) => b.d - a.d), up = ch[0], dn = ch[ch.length - 1];
+    const pl = mode === 'y' ? 'agli stessi mesi del ' + (+curYM().slice(0, 4) - 1) : 'a ' + ymLabel(prevM[0], {month:'long'}), pc = q => q.p > 0 ? ' (' + (q.d > 0 ? '+' : '') + Math.round(q.d / q.p * 100) + '%)' : ' (nuova)';
+    const tch = Math.round((out / pTot - 1) * 100); dot(tch > 0 ? '#e5484d' : '#22A45D', 'Rispetto ' + pl + ' le spese sono ' + (tch > 0 ? 'cresciute del ' + tch + '%' : tch < 0 ? 'calate del ' + (-tch) + '%' : 'rimaste uguali') + '.');
+    if (up && up.d > 0) dot('#e5484d', 'Voce cresciuta di più: ' + up.n + ', +' + E(up.d).replace(' EUR', ' €') + pc(up) + '.');
+    if (dn && dn.d < 0) dot('#22A45D', 'Voce calata di più: ' + dn.n + ', -' + E(-dn.d).replace(' EUR', ' €') + pc(dn) + '.'); }
+  if (ins.length) { h1('La tua mini analisi'); doc.setFont('helvetica', 'normal'); doc.setFontSize(9.2);
+    ins.forEach(([c, t2]) => { const lines = doc.splitTextToSize(t2, Wd - 8); need(lines.length * 4.6 + 2); fill(c); doc.circle(M + 1.6, y - 1.2, 1.4, 'F'); txt('#262626', lines, M + 6, y); y += lines.length * 4.6 + 1.8; }); y += 2; line(); }
+  /* bilancio finanziario: quanto hai, quanto devi, quanto sei coperto */
+  h1('Il tuo bilancio finanziario');
+  const totPil = PILLARS.reduce((t, q) => t + pilBalance(q.id), 0), debt = (S.debts || []).reduce((t, d) => t + (debtInfo(d).pv || 0), 0), ess = avgEssential(), emo = ess > 0 ? pilBalance('emerg') / ess : null, wb = typeof wbIndex === 'function' ? wbIndex() : null;
+  kv('Patrimonio nei 4 pilastri', E(totPil)); if (debt > 0) kv('Debiti e finanziamenti da restituire', '-' + E(debt)); kv('Patrimonio netto', E(totPil - debt), true);
+  if (emo !== null) { need(7); kv('Il fondo di emergenza copre', emo.toFixed(1).replace('.', ',') + ' mesi di spese essenziali'); doc.setFontSize(7.8); txt(emo >= S.emergMonths ? '#0ca30c' : emo >= 3 ? '#e3a008' : '#e5484d', emo >= S.emergMonths ? 'In linea con il tuo obiettivo di ' + S.emergMonths + ' mesi.' : 'Il tuo obiettivo è di ' + S.emergMonths + ' mesi: mancano ' + E(Math.max(0, ess * S.emergMonths - pilBalance('emerg'))).replace(' EUR', ' €') + '.', M, y - 1.5); y += 3.5; }
+  if (rate !== null) kv('Tasso di risparmio del periodo', Math.round(rate) + '% (' + bd.l.toLowerCase() + ')');
+  if (wb && wb.score != null) { const wbb = wbBand(wb.score); need(8); kv('Indice di benessere finanziario', wb.score + '/100 · ' + wbb[1]); }
+  y += 1; line();
   /* pilastri: barra unica divisa per colore */
   h1('I 4 pilastri'); const pv = PILLARS.map(p => ({p, v:pilBalance(p.id)})), pt = pv.reduce((t, x) => t + Math.max(0, x.v), 0);
   if (pt > 0) { need(10); let x = M; pv.forEach(({p, v}) => { if (v > 0) { const w = v / pt * Wd; fill(p.c); doc.rect(x, y, w, 6, 'F'); x += w; } }); y += 10; }

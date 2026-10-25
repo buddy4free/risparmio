@@ -215,6 +215,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .welcome{display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px;padding-top:6px}
 .welcome{min-height:calc(100dvh - 120px);justify-content:center}
 .welcome h1{margin:0}
+.wtitle{font-family:var(--display);font-weight:900;font-size:clamp(2.3rem,11vw,3.2rem);line-height:1.02;letter-spacing:-.01em}
 .welcome img{width:min(220px,58vw);height:auto;margin:6px 0}
 .welcome p{max-width:42ch}
 .supcard p{margin:0}
@@ -1055,7 +1056,7 @@ function freePopup(go){
   o.onclick = e => { if (e.target === o) o.remove(); };
 }
 function renderWelcome(){
-  view.innerHTML = '<div class="welcome"><h1>I tuoi soldi, <span class="hl">sotto controllo</span>.</h1>' +
+  view.innerHTML = '<div class="welcome"><h1 class="wtitle">I tuoi soldi,<br><span class="y">sotto controllo.</span></h1>' +
     '<img src="' + LOGO + '" alt="Buddy4Free">' +
     '<p class="muted">Traccia entrate e uscite, scopri dove sprechi, riempi i 4 pilastri della finanza personale e raggiungi il tuo obiettivo: un viaggio, un\'auto, la casa o la cifra che vuoi tu.</p>' +
     '<label class="check small wterms"><input type="checkbox" id="w-terms"' + (termsOK() ? ' checked' : '') + '> <span>Ho letto e accetto i <button class="textlink" ' + nav$({screen:'terms'}) + '>Termini e condizioni</button>, ho letto l\'<button class="textlink" ' + nav$({screen:'privacy'}) + '>Informativa sulla privacy</button> e so che l\'app non fornisce consulenza finanziaria.</span></label>' +

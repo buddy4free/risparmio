@@ -1081,26 +1081,27 @@ function renderSetup(){
     const pl = id => { const p = PILLARS.find(x => x.id === id); return '<i class="dot" style="background:' + p.c + '"></i>' + p.n; };
     body = '<div class="intro"><h2>Da dove parti</h2><p class="muted">I tuoi soldi stanno in 4 contenitori, i pilastri. Scrivi quanto hai oggi in ognuno: una stima basta.</p></div>' +
       money('su-liq', pl('liq'), SU.liq, 'Quanto hai sul conto corrente per le spese di tutti i giorni.') + money('su-em', pl('emerg'), SU.em, 'Quanto hai già messo da parte solo per gli imprevisti.') +
-      (SU.kind !== 'emergenza' ? money('su-gs', pl('goal'), SU.gs, 'Quanto hai già messo da parte per il tuo obiettivo: ' + esc(SU.gname || '') + '.') : '') + money('su-inv', pl('inv'), SU.inv, 'Fondo pensione, ETF, altri investimenti a lungo termine.');
+      (SU.kind !== 'emergenza' && !SU.noGoal ? money('su-gs', pl('goal'), SU.gs, 'Quanto hai già messo da parte per il tuo obiettivo: ' + esc(SU.gname || '') + '.') : '') + money('su-inv', pl('inv'), SU.inv, 'Fondo pensione, ETF, altri investimenti a lungo termine.');
     next = () => { SU.liq = parseAmt(val('su-liq')); SU.em = parseAmt(val('su-em')); SU.gs = parseAmt(val('su-gs')); SU.inv = parseAmt(val('su-inv')); return true; };
   } else {
     body = '<div class="intro"><h2>I tuoi promemoria</h2><p class="muted">Scegli gli orari. Dopo potrai aggiungerli al calendario del telefono, dalle Impostazioni e dalla sezione Benessere, per ricevere le notifiche.</p></div>' +
       '<div>' + WELL.map(w => '<div class="rem"><span><b>' + w.n + '</b><br><span class="small muted">' + w.d + '</span></span><span></span><input type="time" id="t-' + w.id + '" value="' + S.times[w.id] + '"></div>').join('') + '</div>';
     next = () => { WELL.forEach(w => S.times[w.id] = val('t-' + w.id) || w.time); finishSetup(); return false; };
   }
-  view.innerHTML = '<div class="sec" style="gap:22px">' + top + body + '<button class="btn wide" id="next">' + (i === SETUP_STEPS - 1 ? 'Inizia' : 'Avanti') + '</button>' + (i === 1 || i === 2 ? '<button class="textlink" style="align-self:center" id="skip">Salta</button>' : '') + '</div>';
+  view.innerHTML = '<div class="sec" style="gap:22px">' + top + body + '<button class="btn wide" id="next">' + (i === SETUP_STEPS - 1 ? 'Inizia' : 'Avanti') + '</button>' + (i === 1 || i === 2 ? '<button class="textlink" style="align-self:center" id="skip">Salta</button>' : '') + (i === 0 ? '<button class="textlink" style="align-self:center" id="nogoal">Non ho ancora un obiettivo: lo scelgo dopo</button>' : '') + '</div>';
   view.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { SU.gname = val('su-gn'); SU.gt = val('su-gt'); SU.date = val('su-gd'); SU.kind = b.dataset.k; renderSetup(); });
-  view.querySelector('#next').onclick = () => { if (next()) nav({screen:'setup', i:i + 1}); };
+  view.querySelector('#next').onclick = () => { if (i === 0) SU.noGoal = false; if (next()) nav({screen:'setup', i:i + 1}); };
   const sk = view.querySelector('#skip'); if (sk) sk.onclick = () => nav({screen:'setup', i:i + 1});
+  const ng = view.querySelector('#nogoal'); if (ng) ng.onclick = () => { SU.noGoal = true; nav({screen:'setup', i:1}); };
 }
 const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
 function finishSetup(){
-  const keepTimes = S.times;
-  S = freshState(); S.times = keepTimes; S.est = {out:SU.est || 0}; S.recAsked = true; S.pilFrom = today();
+  const keepTimes = S.times, keepTerms = [S.terms, S.termsAt];
+  S = freshState(); S.times = keepTimes; S.terms = keepTerms[0]; S.termsAt = keepTerms[1]; S.est = {out:SU.est || 0}; S.recAsked = true; S.pilFrom = today();
   S.pil = {liq:SU.liq || 0, emerg:SU.em || 0, inv:SU.inv || 0};
-  const g = {id:uid(), kind:SU.kind, name:SU.gname, target:SU.gt || 0, date:SU.date, saved:SU.kind === 'emergenza' ? 0 : (SU.gs || 0)};
-  S.goals = [g]; S.mainGoal = g.id;
-  addMove('liq', S.pil.liq, 'Saldo iniziale'); addMove('emerg', S.pil.emerg, 'Saldo iniziale'); addMove('inv', S.pil.inv, 'Saldo iniziale'); if (g.saved) addMove('g:' + g.id, g.saved, 'Saldo iniziale');
+  const g = SU.noGoal ? null : {id:uid(), kind:SU.kind, name:SU.gname, target:SU.gt || 0, date:SU.date, saved:SU.kind === 'emergenza' ? 0 : (SU.gs || 0)};
+  S.goals = g ? [g] : []; S.mainGoal = g ? g.id : null;
+  addMove('liq', S.pil.liq, 'Saldo iniziale'); addMove('emerg', S.pil.emerg, 'Saldo iniziale'); addMove('inv', S.pil.inv, 'Saldo iniziale'); if (g && g.saved) addMove('g:' + g.id, g.saved, 'Saldo iniziale');
   S.setup = true; S.gym.start = today();
   save(); toast('Fatto. Registra entrate e spese con il tasto +'); nav({screen:'home'});
 }
@@ -1164,7 +1165,7 @@ function bindOldRec(){
   document.getElementById('or-no').onclick = () => { S.recAsked = true; save(); renderHome(); };
 }
 function goalCard(g){
-  if (!g) return '<div class="goal"><span class="label">Obiettivo</span><h3>Non hai ancora un obiettivo</h3><button class="btn" ' + nav$({screen:'goal', id:'new'}) + '>Crea il tuo obiettivo</button></div>';
+  if (!g) return '<div class="card"><span class="label">Il tuo obiettivo</span><h3>Nessun obiettivo, per ora</h3><p class="small muted">Va benissimo: intanto registra entrate e uscite. Tra qualche settimana vedrai quanto riesci a mettere da parte, e scegliere un obiettivo sarà più facile.</p><button class="btn sm" style="align-self:flex-start" ' + nav$({screen:'goal', id:'new'}) + '>' + ic('plus') + 'Crea un obiettivo</button></div>';
   const p = goalPlan(g), sv = avgSave();
   const onTrack = sv >= p.need;
   return '<div class="goal"><div class="spread"><span class="label">Il tuo obiettivo · entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + '</span>' + ic(KINDS.find(k => k[0] === g.kind)[2]) + '</div>' +

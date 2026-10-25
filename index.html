@@ -2800,7 +2800,7 @@ async function exportPDF(mode, withTx){
   const E = n => (n < 0 ? '-' : '') + fmtN(n, 2) + ' EUR';
   const line = () => { doc.setDrawColor(220); doc.line(M, y, 210 - M, y); y += 4; };
   const need = h => { if (y + h > 285) { doc.addPage(); y = 18; } };
-  const h1 = t => { need(14); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(0); doc.text(t, M, y); y += 7; };
+  const h1 = t => { need(30); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(0); doc.text(t, M, y); y += 7; };
   const kv = (k, v, bold) => { need(7); doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(10); doc.setTextColor(40); doc.text(k, M, y); doc.text(v, 210 - M, y, {align:'right'}); y += 6; };
   const months = mode === 'y' ? Array.from({length:12}, (_, i) => curYM().slice(0, 4) + '-' + pad(i + 1)).filter(m => m <= curYM()) : [curYM()];
   const per = months.map(ym => stats(ym)); let inc = 0, out = 0; const byCat = {};
@@ -2811,6 +2811,30 @@ async function exportPDF(mode, withTx){
   const fill = c => doc.setFillColor(...rgb(c)), txt = (c, t, x, yy, o) => { doc.setTextColor(...rgb(c)); doc.text(t, x, yy, o); };
   const bar = (x, yy, w, h, c) => { if (w > 0.2) { fill(c); doc.roundedRect(x, yy, w, h, Math.min(1, h / 2), Math.min(1, h / 2), 'F'); } };
   const sv = inc - out, rate = inc > 0 ? sv / inc * 100 : null, bd = band(rate);
+  const EU = v => E(v).replace(' EUR', ' €');
+  /* grafico a ciambella: spicchi fatti di piccoli triangoli, poi il buco bianco al centro */
+  const donut = (cx, cy, r, segs, center) => { const tot = segs.reduce((t2, g) => t2 + Math.max(0, g.v), 0); if (!(tot > 0)) return; let a0 = -Math.PI / 2; doc.setLineWidth(0.2);
+    segs.forEach(g => { if (!(g.v > 0)) return; const a1 = a0 + g.v / tot * 2 * Math.PI; fill(g.c); doc.setDrawColor(...rgb(g.c));
+      for (let a = a0; a < a1 - 1e-6; a += 0.06) { const b2 = Math.min(a1, a + 0.06); doc.triangle(cx, cy, cx + r * Math.cos(a), cy + r * Math.sin(a), cx + r * Math.cos(b2), cy + r * Math.sin(b2), 'FD'); } a0 = a1; });
+    doc.setFillColor(255, 255, 255); doc.setDrawColor(255, 255, 255); doc.circle(cx, cy, r * 0.58, 'F');
+    if (center) { doc.setFont('helvetica', 'bold'); doc.setFontSize(9); txt('#222222', center[0], cx, cy + 0.5, {align:'center'}); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); txt('#888888', center[1], cx, cy + 4, {align:'center'}); }
+    doc.setDrawColor(220); };
+  const legend = (x, yy, segs, w) => { const tot = segs.reduce((t2, g) => t2 + Math.max(0, g.v), 0); segs.forEach((g, i) => { const ly = yy + i * 6; fill(g.c); doc.rect(x, ly - 2.6, 3, 3, 'F'); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.8);
+    txt('#262626', String(g.n).slice(0, 34), x + 5, ly); txt('#262626', EU(g.v), x + w - 11, ly, {align:'right'}); doc.setFontSize(7.5); txt('#888888', (tot ? Math.round(g.v / tot * 100) : 0) + '%', x + w, ly, {align:'right'}); }); };
+  const pieBlock = (title, segs, center) => { const h = Math.max(40, segs.length * 6 + 6); need(h + (title ? 8 : 0)); if (title) { doc.setFont('helvetica', 'bold'); doc.setFontSize(10); txt('#222222', title, M, y); y += 4; }
+    donut(M + 19, y + 18, 18, segs, center); legend(M + 46, y + Math.max(6, 20 - segs.length * 3), segs, Wd - 46); y += h; };
+  /* linea del patrimonio nel tempo */
+  const lineChart = (title, pts, note) => { if (pts.length < 2) return; need(52); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); txt('#222222', title, M, y); y += 4;
+    const ch = 32, x0 = M + 18, w = Wd - 20, vs = pts.map(q => q.v), mn = Math.min(0, ...vs), mx = Math.max(1, ...vs), X = i => x0 + i / (pts.length - 1) * w, Y = v => y + ch - (v - mn) / (mx - mn) * ch;
+    doc.setLineWidth(0.15); doc.setDrawColor(225); doc.setFontSize(6.5); doc.setFont('helvetica', 'normal');
+    [0, 0.5, 1].forEach(f => { const v = mn + (mx - mn) * f, yy = Y(v); doc.line(x0, yy, x0 + w, yy); txt('#999999', Math.abs(v) >= 1000 ? fmtN(v / 1000, 1).replace(/,0$/, '') + 'k' : fmtN(v), x0 - 2, yy + 1, {align:'right'}); });
+    const segs = pts.slice(1).map((q, i) => [X(i + 1) - X(i), Y(q.v) - Y(pts[i].v)]); doc.setFillColor(255, 236, 170);
+    doc.lines(segs.concat([[0, Y(mn) - Y(pts[pts.length - 1].v)], [X(0) - X(pts.length - 1), 0], [0, Y(pts[0].v) - Y(mn)]]), X(0), Y(pts[0].v), [1, 1], 'F', true);
+    doc.setDrawColor(201, 133, 0); doc.setLineWidth(0.7); doc.lines(segs, X(0), Y(pts[0].v), [1, 1], 'S', false); doc.setLineWidth(0.2);
+    const last = pts[pts.length - 1]; fill('#C98500'); doc.circle(X(pts.length - 1), Y(last.v), 1, 'F');
+    const step = Math.max(1, Math.ceil(pts.length / 6)); doc.setFontSize(6.5); pts.forEach((q, i) => { if (i % step && i !== pts.length - 1) return; txt('#888888', ymLabel(q.ym, {month:'short', year:'2-digit'}), X(i), y + ch + 4, {align:i === 0 ? 'left' : i === pts.length - 1 ? 'right' : 'center'}); });
+    const d0 = last.v - pts[0].v; doc.setFontSize(8.5); txt(d0 >= 0 ? '#0ca30c' : '#e5484d', (d0 >= 0 ? '+' : '-') + EU(Math.abs(d0)) + ' nel periodo', x0 + w, y - 1, {align:'right'}); y += ch + 8;
+    if (note) { doc.setFontSize(7.5); txt('#888888', note, M, y); y += 5; } doc.setDrawColor(220); };
   doc.setFillColor(0, 0, 0); doc.rect(0, 0, 210, 30, 'F'); doc.setTextColor(255, 201, 10); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text('Buddy4Free Risparmio', M, 14);
   doc.setTextColor(255); doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('Resoconto ' + (mode === 'y' ? 'anno ' + curYM().slice(0, 4) : ymLabel(curYM())) + ' · generato il ' + new Date().toLocaleDateString('it-IT'), M, 22); y = 40;
   /* tre riquadri: entrate, uscite, risparmio */
@@ -2823,6 +2847,8 @@ async function exportPDF(mode, withTx){
   [[0, 10, '#e5484d'], [10, 25, '#ec835a'], [25, 40, '#fab219'], [40, 100, '#0ca30c']].forEach(([a0, a1, c]) => { fill(c); doc.rect(M + a0 / 100 * Wd, y, (a1 - a0) / 100 * Wd, 4, 'F'); });
   if (rate !== null) { const mx = M + Math.max(0, Math.min(100, rate)) / 100 * Wd; doc.setFillColor(0, 0, 0); doc.triangle(mx - 2, y - 2.2, mx + 2, y - 2.2, mx, y + 0.6, 'F'); doc.rect(mx - 0.4, y, 0.8, 4, 'F'); }
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7); [0, 10, 25, 40, 100].forEach(v => txt('#888888', v + '%', M + v / 100 * Wd, y + 8, {align:v === 0 ? 'left' : v === 100 ? 'right' : 'center'})); y += 14;
+  if (inc > 0) { const ndA = Object.entries(byCat).filter(([c]) => catOf('out', c).disc).reduce((t2, r2) => t2 + r2[1], 0);
+    pieBlock('Come usi le entrate', sv >= 0 ? [{n:'Spese essenziali', v:out - ndA, c:'#3987e5'}, {n:'Spese non essenziali', v:ndA, c:'#C98500'}, {n:'Risparmio', v:sv, c:'#22A45D'}] : [{n:'Spese essenziali', v:out - ndA, c:'#3987e5'}, {n:'Spese non essenziali', v:ndA, c:'#C98500'}], [rate === null ? '-' : Math.round(rate) + '%', 'risparmiato']); y += 2; }
   /* anno: entrate e uscite mese per mese */
   if (mode === 'y' && per.length > 1) { h1('Entrate e uscite mese per mese'); const ch = 38, mxv = Math.max(1, ...per.map(s => Math.max(s.inc, s.out))), cw = Wd / 12;
     need(ch + 14); doc.setDrawColor(225); doc.line(M, y + ch, M + Wd, y + ch);
@@ -2836,6 +2862,7 @@ async function exportPDF(mode, withTx){
   top.concat(restV > 0 ? [['__rest', restV]] : []).forEach(([c, a]) => { need(8); const k = c === '__rest' ? {n:'Le altre ' + (rows.length - 12), id:'x'} : catOf('out', c), col = c === '__rest' ? '#9a9a9a' : catColor('out', k);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); txt('#222222', k.n.slice(0, 30), M, y + 3); bar(M + 52, y, (Wd - 52 - 42) * Math.min(1, a / mxc), 4, col);
     txt('#222222', E(a).replace(' EUR', ' €'), M + Wd - 12, y + 3.2, {align:'right'}); doc.setFontSize(7.5); txt('#888888', Math.round(a / out * 100) + '%', M + Wd, y + 3.2, {align:'right'}); y += 7; });
+  if (rows.length > 2) { y += 2; pieBlock('', rows.slice(0, 5).map(([c, a]) => ({n:catOf('out', c).n, v:a, c:catColor('out', catOf('out', c))})).concat(rows.length > 5 ? [{n:'Le altre ' + (rows.length - 5), v:rows.slice(5).reduce((t2, r2) => t2 + r2[1], 0), c:'#9a9a9a'}] : []), [EU(out).replace(/,\d\d €/, ' €'), 'uscite']); }
   /* in sintesi */
   if (out > 0) { const t3 = rows.slice(0, 3).reduce((t, r) => t + r[1], 0), nd = rows.filter(([c]) => catOf('out', c).disc).reduce((t, r) => t + r[1], 0);
     need(26); y += 2; doc.setFillColor(255, 248, 220); doc.roundedRect(M, y, Wd, 22, 3, 3, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); txt('#222222', 'In sintesi', M + 4, y + 6);
@@ -2850,6 +2877,7 @@ async function exportPDF(mode, withTx){
     topI.concat(restI > 0 ? [['__rest', restI]] : []).forEach(([c, a]) => { need(8); const k = c === '__rest' ? {n:'Le altre ' + (inRows.length - 8), id:'x'} : catOf('in', c), col = c === '__rest' ? '#9a9a9a' : catColor('in', k);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9); txt('#222222', k.n.slice(0, 30), M, y + 3); bar(M + 52, y, (Wd - 52 - 42) * Math.min(1, a / mxi), 4, col);
       txt('#222222', E(a).replace(' EUR', ' €'), M + Wd - 12, y + 3.2, {align:'right'}); doc.setFontSize(7.5); txt('#888888', Math.round(a / inc * 100) + '%', M + Wd, y + 3.2, {align:'right'}); y += 7; });
+    if (inRows.length > 1) { y += 2; pieBlock('', inRows.slice(0, 4).map(([c, a]) => ({n:catOf('in', c).n, v:a, c:catColor('in', catOf('in', c))})).concat(inRows.length > 4 ? [{n:'Le altre ' + (inRows.length - 4), v:inRows.slice(4).reduce((t2, r2) => t2 + r2[1], 0), c:'#9a9a9a'}] : []), [EU(inc).replace(/,\d\d €/, ' €'), 'entrate']); }
     const t1 = inRows[0], p1 = Math.round(t1[1] / inc * 100); need(8); doc.setFontSize(8.8); txt('#333333', catOf('in', t1[0]).n + ' porta il ' + p1 + '% delle entrate' + (inRows.length > 1 ? ' su ' + inRows.length + ' fonti.' : '.') + (p1 >= 80 ? ' Dipendi quasi tutto da una fonte: il fondo di emergenza conta ancora di più.' : ''), M, y + 3); y += 9; line(); }
   /* mini analisi: mesi migliori e peggiori, voci che crescono e calano */
   const span = mode === 'y' ? months : Array.from({length:12}, (_, i) => addMonths(curYM(), -11 + i)), sp = span.map(ym => ({ym, s:stats(ym)})).filter(q => q.s.inc > 0 || q.s.out > 0);
@@ -2879,10 +2907,18 @@ async function exportPDF(mode, withTx){
   if (wb && wb.score != null) { const wbb = wbBand(wb.score); need(8); kv('Indice di benessere finanziario', wb.score + '/100 · ' + wbb[1]); }
   y += 1; line();
   /* pilastri: barra unica divisa per colore */
-  h1('I 4 pilastri'); const pv = PILLARS.map(p => ({p, v:pilBalance(p.id)})), pt = pv.reduce((t, x) => t + Math.max(0, x.v), 0);
-  if (pt > 0) { need(10); let x = M; pv.forEach(({p, v}) => { if (v > 0) { const w = v / pt * Wd; fill(p.c); doc.rect(x, y, w, 6, 'F'); x += w; } }); y += 10; }
-  pv.forEach(({p, v}) => { need(7); fill(p.c); doc.rect(M, y - 3, 3, 3, 'F'); doc.setFont('helvetica', 'normal'); doc.setFontSize(10); txt('#282828', p.n, M + 5, y); txt('#282828', E(v), 210 - M, y, {align:'right'}); y += 6; });
-  kv('Totale', E(pv.reduce((t, x) => t + x.v, 0)), true); line();
+  need(55); h1('I 4 pilastri'); const pv = PILLARS.map(p => ({p, v:pilBalance(p.id)})), pt = pv.reduce((t, x) => t + Math.max(0, x.v), 0);
+  if (pt > 0) pieBlock('', pv.map(({p, v}) => ({n:p.n, v:Math.max(0, v), c:p.c})), [EU(pt).replace(/,\d\d €/, ' €'), 'totale']);
+  else pv.forEach(({p, v}) => kv(p.n, E(v)));
+  const pilAt = ym => PILLARS.reduce((t2, q) => t2 + pilBalanceAt(q.id, ym), 0), yr = curYM().slice(0, 4);
+  const firstYM = [...S.tx.filter(x => !x.imp).map(x => ymOf(x.d)), ...(S.moves || []).map(m => ymOf(m.d)), ...Object.values(S.hist || {}).flat().map(a => a.ym), ymOf(pilFrom())].filter(Boolean).sort()[0] || curYM();
+  const rng = (a, b) => { const o2 = []; for (let m2 = a; m2 <= b; m2 = addMonths(m2, 1)) o2.push(m2); return o2; };
+  const yPts = rng(yr + '-01' < firstYM ? firstYM : yr + '-01', curYM()).map(ym => ({ym, v:pilAt(ym)}));
+  let allM = rng(firstYM, curYM()); if (allM.length > 48) { const st = Math.ceil(allM.length / 48); allM = allM.filter((m2, i) => i % st === 0 || i === allM.length - 1); }
+  y += 2; lineChart('Patrimonio nel ' + yr, yPts.length > 1 ? yPts : [{ym:addMonths(curYM(), -1), v:pilAt(addMonths(curYM(), -1))}, {ym:curYM(), v:pilAt(curYM())}]);
+  if (allM.length > yPts.length) lineChart('Patrimonio da sempre', allM.map(ym => ({ym, v:pilAt(ym)})), 'Dal ' + ymLabel(firstYM, {month:'long', year:'numeric'}) + ': i saldi a fine mese di tutti e 4 i pilastri.');
+  else { doc.setFontSize(7.5); txt('#888888', 'Lo storico parte da ' + ymLabel(firstYM, {month:'long', year:'numeric'}) + ': con il passare dei mesi qui comparirà anche la linea "da sempre".', M, y); y += 5; }
+  line();
   if (S.goals.length) { h1('Obiettivi'); S.goals.forEach(g => { const pl = goalPlan(g), pc = Math.max(0, Math.min(100, pl.pct)); need(14);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(10); txt('#282828', g.name + ' (entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + ')', M, y); txt('#282828', E(goalSaved(g)) + ' di ' + E(goalTarget(g)), 210 - M, y, {align:'right'}); y += 2.5;
       doc.setFillColor(235, 235, 232); doc.roundedRect(M, y, Wd, 3.5, 1.5, 1.5, 'F'); bar(M, y, Wd * pc / 100, 3.5, VAR[goalStatus(g).c] || goalStatus(g).c || '#199e70'); doc.setFontSize(7.5); txt('#666666', Math.round(pl.pct) + '%', 210 - M, y + 7.5, {align:'right'}); y += 11; }); line(); }

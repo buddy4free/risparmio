@@ -1240,11 +1240,12 @@ function renderHome(){
 /* ---------- movimenti ---------- */
 let txFilter = 'all';
 function renderTx(){
+  if (R.cat && PREV && PREV.screen !== 'tx') { TXBACK = {screen:PREV.screen}; if (PREV.screen === 'stats' && ST.mode === 'm' && ST.ym) viewYM = ST.ym; } if (!R.cat) TXBACK = null;
   const s = stats(viewYM);
   let L = s.L;
   const XF = (S.xfers || []).filter(x => ymOf(x.d) === viewYM).map(x => Object.assign({xfer:true}, x));
-  if (R.cat && PREV && PREV.screen !== 'tx') TXBACK = {screen:PREV.screen}; if (!R.cat) TXBACK = null;
-  if (R.cat) L = L.filter(x => x.c === R.cat && x.t === 'out');
+  const CT = R.ct || 'out';
+  if (R.cat) L = L.filter(x => x.c === R.cat && x.t === CT);
   else if (txFilter === 'xfer') L = XF;
   else if (txFilter !== 'all') L = L.filter(x => x.t === txFilter);
   else L = L.concat(XF);
@@ -1252,7 +1253,7 @@ function renderTx(){
   view.innerHTML = '<div class="sec" style="gap:20px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + '<button class="readcard" ' + nav$({screen:'dues'}) + '><span class="t"><b>' + ic('calendar') + ' Scadenze e rinnovi</b><span>' + ((S.dues || []).length ? (S.dues || []).length + ' in calendario' + (upcomingDues().length ? ' · <span style="color:var(--yellow);font-weight:700">' + upcomingDues().length + ' da decidere</span>' : '') : 'Assicurazioni, abbonamenti, bollo: ti avviso un mese prima') + '</span></span>' + ic('right') + '</button>' + monthNav() +
     '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur2(s.inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur2(s.out) + '</b></div></div>' +
     (R.cat && TXBACK ? backBtn((TABS.find(t => t[0] === TXBACK.screen) || [0, TXBACK.screen === 'charts' ? 'Grafici' : 'Indietro'])[1], TXBACK) : '') +
-    (R.cat ? '<div class="spread"><span class="chip">' + ic(catOf('out', R.cat).i) + esc(catOf('out', R.cat).n) + '</span><button class="textlink" ' + nav$({screen:'tx'}) + '>Mostra tutto</button></div>'
+    (R.cat ? '<div class="spread"><span class="chip">' + ic(catOf(CT, R.cat).i) + esc(catOf(CT, R.cat).n) + '</span><button class="textlink" ' + nav$({screen:'tx'}) + '>Mostra tutto</button></div>'
       : '<div class="filters">' + [['all','Tutti'],['out','Uscite'],['in','Entrate'],['xfer','Trasferimenti']].map(f => '<button data-f="' + f[0] + '" aria-pressed="' + (txFilter === f[0]) + '">' + f[1] + '</button>').join('') + '</div>') +
     (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => '<div class="dayhead">' + dLabel(d) + '</div><div class="list">' + groups[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
       const c = catOf(x.t, x.c);
@@ -1666,7 +1667,7 @@ function renderStats(){
         return '<button class="hbar" ' + nav$({screen:'tx', cat:c.id}) + ' title="' + esc(c.n) + ': ' + eur2(a) + ', media ' + eur2(m) + '">' + catTile('out', c) + '<span class="t"><span>' + esc(c.n) + '</span><span class="track" style="position:relative"><i style="width:' + (a / mx * 100) + '%;background:' + OUT_COL + '"></i>' + (m ? '<b class="avgm" style="left:' + (m / mx * 100) + '%"></b>' : '') + '</span></span><span class="v">' + eur(a) + '<small style="color:' + (diff === null ? 'var(--muted)' : diff > 10 ? OUT_COL : diff < -10 ? IN_COL : 'var(--muted)') + '">' + (diff === null ? 'nuova' : (diff > 0 ? '+' : '') + diff + '%') + '</small></span></button>'; }).join('') + '</div>' : '<p class="small muted">Servono almeno un mese di movimenti.</p>') + '</div>';
   }
   const outRows = Object.entries(byCat).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('out', c); return {n:k.n, v:a, c:catColor('out', k), tile:catTile('out', k), go:ST.mode === 'm' ? {screen:'tx', cat:c} : null}; });
-  const inRows = Object.entries(byIn).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('in', c); return {n:k.n, v:a, c:catColor('in', k), tile:catTile('in', k)}; });
+  const inRows = Object.entries(byIn).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('in', c); return {n:k.n, v:a, c:catColor('in', k), tile:catTile('in', k), go:ST.mode === 'm' ? {screen:'tx', cat:c, ct:'in'} : null}; });
   view.innerHTML = '<div class="sec" style="gap:20px">' + demoBar() + '<div class="intro"><h2>Statistiche</h2></div>' +
     '<div class="seg3"><button data-mode="m" aria-pressed="' + (ST.mode === 'm') + '">Mese</button><button data-mode="y" aria-pressed="' + (ST.mode === 'y') + '">Anno</button><button data-mode="p" aria-pressed="' + (ST.mode === 'p') + '">Periodo</button></div>' +
     (ST.mode === 'p' ? '<div class="month"><span></span><b>' + label + ' · ' + months.length + (months.length === 1 ? ' mese' : ' mesi') + '</b><button id="p-edit" aria-label="Cambia periodo">' + ic('calendar') + '</button></div>' +
@@ -2586,11 +2587,12 @@ function guessCat(t, name){
     if (has('affitto', 'casa ')) return ['affitto_in', ''];
     if (has('utili', 'interess', 'dividend', 'ibkr', 'cfd', 'cedol', 'trading')) return ['interessi', ''];
     if (has('cashback')) return ['cashback', ''];
-    if (has('rimbors', 'nota spese', '730', 'farmacia', 'visite', 'gas', 'enel')) return ['rimborsi', ''];
+    if (has('rimbors', 'nota spese', '730', 'farmacia', 'visite', 'gas', 'enel', 'acqua', 'cibo', 'animal', 'vet', 'riator', 'ristor', 'condomin', 'bollett', 'amazon')) return ['rimborsi', ''];
     if (has('regal', 'natale', 'compleann')) return ['regali', ''];
     if (has('massagg', 'lavoro', 'freelance', 'ripetizion')) return ['freelance', ''];
     if (has('assegn', 'sussid', 'inps')) return ['assegni', ''];
-    return ['extra', ''];
+    if (has('altr', 'vari')) return ['extra', ''];
+    return ['__new', ''];
   }
   if (has('alimentar', 'spesa', 'supermerc')) return ['alimentari', 'Supermercato'];
   if (has('caff', 'bar')) return ['ristoranti', 'Bar e caffè'];
@@ -2629,7 +2631,8 @@ function guessCat(t, name){
   if (has('assicuraz')) return ['assicurazioni', ''];
   if (has('tass', 'impost', 'bollo', 'commercialist', 'contabil', 'f24', 'multa')) return ['tasse', ''];
   if (has('banca', 'commission', 'loss', 'trading', 'prestit')) return ['banca', ''];
-  return ['altro', ''];
+  if (has('altr', 'vari')) return ['altro', ''];
+  return ['__new', ''];
 }
 function renderImport(){
   const back = backBtn('Impostazioni', {screen:'settings'});
@@ -2654,7 +2657,7 @@ function renderImport(){
       (IMP.impCount ? '<label class="check small"><input type="checkbox" id="imp-rep"' + (IMP.replace ? ' checked' : '') + '> Sostituisci i ' + IMP.impCount + ' movimenti importati in precedenza. Utile per rifare l\'importazione con altre categorie; quelli inseriti a mano restano.</label>' : '') +
       '<div class="field"><label for="imp-from">Importa i movimenti dal</label><input type="month" id="imp-from" value="' + IMP.from.slice(0, 7) + '" min="' + first.slice(0, 7) + '" max="' + last.slice(0, 7) + '"><span class="small muted">Se hai tanti anni di storico puoi partire da una data più recente: l\'app resta più leggera.</span></div>' +
       (S.demo || S.tx.length ? '<label class="check small"><input type="checkbox" id="imp-wipe"' + (IMP.wipe ? ' checked' : '') + (S.demo ? ' disabled' : '') + '> ' + (S.demo ? 'I dati di esempio verranno tolti' : 'Cancella prima i movimenti già presenti nell\'app (' + S.tx.length + ')') + '</label>' : '') + '</div>' +
-    '<div class="card"><span class="label">Dove vanno le tue categorie</span><p class="small muted">Ho abbinato ogni categoria del file a una di Buddy4Free. Cambia quelle che non ti tornano. Il nome originale resta nella nota del movimento.</p>' +
+    '<div class="card"><span class="label">Dove vanno le tue categorie</span><p class="small muted">Ho abbinato ogni categoria del file a una di Buddy4Free; quelle che non hanno un equivalente diventano nuove categorie con lo stesso nome. Cambia quelle che non ti tornano: il nome originale resta comunque nella nota del movimento.</p>' +
       '<b class="small" style="color:' + OUT_COL + '">Uscite</b><div class="implist">' + list('out') + '</div>' +
       '<b class="small" style="color:' + IN_COL + '">Entrate</b><div class="implist">' + list('in') + '</div></div>' +
     '<div class="note small">I movimenti importati servono per statistiche e storico: <b>non cambiano i saldi dei pilastri</b>. Dopo l\'importazione, nei Pilastri usa "Correggi il saldo" per mettere i saldi reali di oggi.</div>' +
@@ -2670,7 +2673,7 @@ function prepImport(p){
   const have = new Set(S.tx.filter(x => x.ext).map(x => x.ext)), fresh = p.rows.filter(x => !have.has(x.ext)), impCount = S.tx.filter(x => x.imp).length, dup = p.rows.length - fresh.length;
   const replace = impCount > 0 && dup > 0, rows = replace ? p.rows : fresh;
   IMP = {rows, all:p.rows, fresh, impCount, replace, skipped:p.skipped, dup, map:{}, guess:{}, from:rows.reduce((m, x) => x.d < m ? x.d : m, '9999').slice(0, 7) + '-01', wipe:!!S.demo};
-  p.rows.forEach(x => { const k = x.t + '|' + x.src; if (IMP.map[k]) return; const g = guessCat(x.t, x.src); IMP.map[k] = S.cats[x.t].some(c => c.id === g[0]) ? g[0] : S.cats[x.t][0].id; IMP.guess[k] = g; });
+  p.rows.forEach(x => { const k = x.t + '|' + x.src; if (IMP.map[k]) return; const g = guessCat(x.t, x.src); IMP.map[k] = g[0] === '__new' ? (S.cats[x.t].find(c => c.n.toLowerCase() === x.src.toLowerCase()) || {id:'__new'}).id : S.cats[x.t].some(c => c.id === g[0]) ? g[0] : S.cats[x.t][0].id; IMP.guess[k] = g; });
 }
 function doImport(rows){
   if (S.demo) { const keepT = S.times, keepTerms = S.terms, keepAt = S.termsAt; S = freshState(); S.times = keepT; S.terms = keepTerms; S.termsAt = keepAt; S.setup = true; S.pilFrom = today(); S.recAsked = true; }

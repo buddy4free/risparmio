@@ -507,6 +507,19 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .infobtn.on{background:var(--yellow);color:#000}
 .fab{transition:transform .25s ease, opacity .25s}
 .fab.away{transform:translateY(140px);opacity:0;pointer-events:none}
+.fab.open{transform:rotate(45deg);z-index:31}
+#dial .dialbg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:29;animation:dfade .15s ease}
+#dial .dialitems{position:fixed;right:max(22px, calc(env(safe-area-inset-right, 0px) + 22px));bottom:calc(156px + env(safe-area-inset-bottom, 0px));z-index:30;display:flex;flex-direction:column;align-items:flex-end;gap:14px}
+@media (min-width:640px){#dial .dialitems{right:calc(50% - 276px)}}
+#dial [data-dial]{display:flex;align-items:center;gap:12px;border:0;background:none;color:var(--fg);padding:0;animation:dpop .18s ease both}
+#dial [data-dial]:nth-child(1){animation-delay:.09s}#dial [data-dial]:nth-child(2){animation-delay:.06s}#dial [data-dial]:nth-child(3){animation-delay:.03s}
+#dial .dl{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-weight:800;font-size:.95rem}
+#dial .di{width:50px;height:50px;border-radius:50%;background:var(--dc);color:#fff;display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+#dial .di b{font-size:1.9rem;line-height:1;font-weight:800;margin-top:-3px}
+#dial [data-dial="cats"] .di{width:40px;height:40px;margin-right:5px}
+#dial [data-dial="cats"] .dl{font-size:.82rem;font-weight:700;color:var(--muted)}
+@keyframes dpop{from{opacity:0;transform:translateY(14px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes dfade{from{opacity:0}}
 
 .carousel{align-items:flex-start;transition:height .25s ease;display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .carousel::-webkit-scrollbar{display:none}
@@ -1108,19 +1121,31 @@ function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); const sam
   if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; PREV = R; R = r; try { localStorage.setItem('b4f-last', JSON.stringify({r, t:Date.now()})); } catch(e) {} render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
 view.addEventListener('click', e => { const b = e.target.closest('[data-nav]'); if (b) nav(JSON.parse(b.dataset.nav), b.classList.contains('back')); });
 document.getElementById('logo').onclick = () => nav(S.setup ? {screen:'home'} : {screen:'welcome'});
-document.getElementById('fab').onclick = () => { F = null; nav({screen:'add'}); };
+/* tasto +: si aprono tre scorciatoie sopra il tasto, invece di una schermata intera */
+function dialOpen(){ return !!document.getElementById('dial'); }
+function dialClose(){ const d = document.getElementById('dial'); if (d) d.remove(); document.getElementById('fab').classList.remove('open'); }
+function dialToggle(){
+  if (dialOpen()) return dialClose();
+  const fab = document.getElementById('fab'), o = document.createElement('div'); o.id = 'dial';
+  const it = (k, l, c, icon) => '<button data-dial="' + k + '" style="--dc:' + c + '"><span class="dl">' + l + '</span><span class="di">' + icon + '</span></button>';
+  o.innerHTML = '<div class="dialbg"></div><div class="dialitems">' + it('cats', 'Gestisci categorie', '#5f5f5a', ic('tag')) + it('xfer', 'Trasferimento', '#3987e5', ic('repeat')) + it('in', 'Entrata', '#22A45D', '<b>+</b>') + it('out', 'Uscita', '#E5484D', '<b>−</b>') + '</div>';
+  document.body.appendChild(o); fab.classList.add('open');
+  o.querySelector('.dialbg').onclick = dialClose;
+  o.querySelectorAll('[data-dial]').forEach(b => b.onclick = () => { const k = b.dataset.dial; dialClose(); F = null; nav(k === 'cats' ? {screen:'cats', t:'out'} : {screen:'add', type:k}); });
+}
+document.getElementById('fab').onclick = dialToggle;
 document.getElementById('gear').innerHTML = ic('gear');
 document.getElementById('gear').onclick = () => nav(S.setup ? {screen:'settings'} : {screen:'welcome'});
 document.getElementById('help').onclick = () => nav({screen:'legend'});
 /* tasto indietro del telefono: torna al passo o alla schermata di prima, invece di chiudere l'app */
 function phoneBack(){
+  if (dialOpen()) { dialClose(); return true; }
   const pop = document.querySelector('.psheet');
   if (pop) { if (pop.id === 'psheet') { ST.sheet = false; render(); } else pop.remove(); return true; }
   if (R.screen === 'add' && F && !R.edit && !R.editX && F.t !== 'xfer' && F.step && F.step !== 'cat') {
     const CT = F.rf ? 'out' : F.t, hasSub = F.c && (catOf(CT, F.c).subs || []).length, fa = document.getElementById('f-a');
     if (fa) { F.a = fa.value; F.d = val('f-d') || F.d; F.n = val('f-n'); }
     F.step = F.step === 'amt' ? 'dest' : F.step === 'dest' && hasSub ? 'sub' : 'cat'; render(); window.scrollTo({top:0}); return true; }
-  if (R.screen === 'add' && (R.type || R.xfer) && !R.edit && !R.editX) { nav({screen:'add'}, true); return true; }
   if (R.screen === 'an' && AN.c) { if (AN.s !== null) AN.s = null; else AN.c = null; render(); return true; }
   if (R.screen === 'tx' && TXSEL) { TXSEL = null; render(); return true; }
   if (R.screen === 'cats' && !R.id && CATX.mode) { CATX.mode = ''; render(); return true; }
@@ -1144,7 +1169,7 @@ function render(){
   const tabs = document.getElementById('tabs'); tabs.hidden = !inApp || R.screen === 'add';
   tabs.firstElementChild.innerHTML = TABS.map(t => '<button data-tab="' + t[0] + '" aria-current="' + (TAB_OF[R.screen] === t[0]) + '">' + ic(t[2]) + t[1] + '</button>').join('');
   tabs.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => nav({screen:b.dataset.tab}));
-  document.getElementById('fab').hidden = !inApp || ['add', 'breath'].includes(R.screen);
+  document.getElementById('fab').hidden = !inApp || ['add', 'breath'].includes(R.screen); dialClose();
   document.getElementById('fab').innerHTML = ic('plus');
   document.getElementById('topbar').hidden = R.screen === 'welcome' || R.screen === 'add';
   document.getElementById('gear').hidden = true; document.getElementById('help').hidden = true;

@@ -860,7 +860,8 @@ let viewYM = curYM();
 let remote = null, writing = false, pending = false, saveTimer = null, downloads = {save:async ({filename, data}) => {
   const blob = data instanceof Blob ? data : new Blob([data], {type:/\.json$/.test(filename) ? 'application/json' : /\.csv$/.test(filename) ? 'text/csv' : 'application/octet-stream'});
   const f = new File([blob], filename, {type:blob.type});
-  if (navigator.canShare && navigator.canShare({files:[f]}) && /Android|iPhone|iPad/.test(navigator.userAgent)) { try { await navigator.share({files:[f], title:filename}); return; } catch(e) { if (e && e.name === 'AbortError') throw {code:'declined'}; } }
+  const mob = /Android|iPhone|iPad/.test(navigator.userAgent), alt = /\.json$/.test(filename) ? new File([blob], filename.replace(/\.json$/, '.txt'), {type:'text/plain'}) : null;
+  for (const ff of [f, alt]) if (ff && mob && navigator.canShare && navigator.canShare({files:[ff]})) { try { await navigator.share({files:[ff], title:filename}); return; } catch(e) { if (e && e.name === 'AbortError') throw {code:'declined'}; } }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }};
 function save(){
@@ -1173,6 +1174,17 @@ function rateHero(s){
     '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur(s.inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur(s.out) + '</b></div></div></div>';
 }
 function oldSetupRecs(){ return S.rec.filter(r => /\(stima\)$/.test(r.n) || r.n === 'Affitto o mutuo' || (r.n === '' && ['stipendio','affitto_in'].includes(r.c))); }
+/* promemoria backup: una volta al mese, rimandabile */
+function backupNotice(){
+  if (S.demo || !S.setup || S.tx.length < 10) return '';
+  const last = S.lastBackup, days = last ? daysBetween(last, today()) : 999;
+  if (days < 30 || (S.bkSnooze && S.bkSnooze > today())) return '';
+  return '<div class="card" id="bknote" style="border-color:var(--yellow)"><b>' + ic('shield') + ' Metti al sicuro i tuoi dati</b><p class="small muted">' + (last ? 'L\'ultimo backup è del ' + dshort(last) + '.' : 'Non hai ancora fatto un backup.') + ' I dati stanno solo su questo telefono: salva una copia su Google Drive, via email o dove preferisci.</p><div class="row"><button class="btn sm" id="bk-go">Fai il backup</button><button class="textlink" id="bk-later">Più tardi</button></div></div>';
+}
+function bindBackupNotice(){
+  const g = document.getElementById('bk-go'); if (g) g.onclick = async () => { await exportBackup(); renderHome(); };
+  const l = document.getElementById('bk-later'); if (l) l.onclick = () => { S.bkSnooze = dayOffset(today(), 7); save(); renderHome(); };
+}
 function oldRecNotice(){
   if (S.recAsked || S.demo) return '';
   const L = oldSetupRecs(); if (!L.length) { S.recAsked = true; return ''; }
@@ -1223,7 +1235,7 @@ function renderHome(){
   const s = stats(viewYM), mv = nextMove(), ins = insights(viewYM);
   const sp = viewYM === curYM() ? splitPlan() : [];
   const nCat = Object.keys(s.byCat).length;
-  view.innerHTML = '<div class="sec" style="gap:24px">' + demoBar() + monthNav() + rateHero(s) + oldRecNotice() +
+  view.innerHTML = '<div class="sec" style="gap:24px">' + demoBar() + monthNav() + rateHero(s) + oldRecNotice() + backupNotice() +
     '<div class="card"><div class="spread"><span class="label">Dove vanno i tuoi soldi</span>' + (nCat > 4 ? '<span class="small muted">scorri ↓</span>' : '') + '</div><div class="catscroll">' + catBars(s, 99) + '</div><button class="textlink small" data-allout style="align-self:flex-start">Vedi tutte le uscite del mese</button></div>' +
     goalsCarousel() + wbCard() + coachHTML() +
     '<div class="card"><span class="label">La tua prossima mossa</span><h3>' + mv.t + '</h3><p class="muted">' + mv.d + '</p>' +
@@ -1231,7 +1243,7 @@ function renderHome(){
       '<button class="btn sm" style="align-self:flex-start" ' + nav$(mv.go) + '>Apri</button></div>' +
     '<div class="sec"><span class="label">Oggi</span>' + todayList() + '</div>' +
   '</div>';
-  bindMonth(); bindDemo(); bindOldRec();
+  bindMonth(); bindDemo(); bindOldRec(); bindBackupNotice();
   view.querySelectorAll('.catscroll .hbar, [data-allout]').forEach(b => { b.removeAttribute('data-nav'); b.onclick = () => { txFilter = 'out'; nav({screen:'tx'}); }; });
   supportPopup();
   const spg = document.getElementById('sp-go'); if (spg) spg.onclick = () => { sp.forEach(x => transfer('liq', x.k, x.v)); save(); toast('Fatto: soldi spostati nei pilastri'); renderHome(); };
@@ -2699,8 +2711,8 @@ function renderSettings(){
     '<div class="sec"><span class="label">Controllo salvataggio</span><div class="card" id="s-diag" style="gap:6px"><p class="small muted">Verifico…</p></div></div>' +
     '<div class="sec"><span class="label">Dati</span><div class="list">' +
       (downloads ? '<button class="item" data-pdf="m"><span class="ic">' + ic('book') + '</span><span class="t"><b>Resoconto PDF del mese</b><span class="sub">Riepilogo, categorie, pilastri, obiettivi e movimenti</span></span>' + ic('right') + '</button><button class="item" data-pdf="y"><span class="ic">' + ic('book') + '</span><span class="t"><b>Resoconto PDF dell\'anno</b><span class="sub">Tutto l\'anno in corso</span></span>' + ic('right') + '</button>' +
-        '<button class="item" id="s-bk"><span class="ic">' + ic('shield') + '</span><span class="t"><b>Backup completo</b><span class="sub">' + (S.lastBackup ? 'Ultimo il ' + dshort(S.lastBackup) : 'Salva un file con tutti i tuoi dati') + '</span></span>' + ic('right') + '</button>' : '') +
-      '<label class="item" for="s-rs" style="cursor:pointer"><span class="ic">' + ic('repeat') + '</span><span class="t"><b>Ripristina da un backup</b><span class="sub">Carica il file .json salvato in precedenza</span></span>' + ic('right') + '</label><input type="file" id="s-rs" accept=".json,application/json" hidden>' +
+        '<button class="item" id="s-bk"><span class="ic">' + ic('shield') + '</span><span class="t"><b>Backup completo</b><span class="sub">' + (S.lastBackup ? 'Ultimo il ' + dshort(S.lastBackup) : 'Sul telefono puoi mandarlo a Google Drive, email o dove vuoi') + '</span></span>' + ic('right') + '</button>' : '') +
+      '<label class="item" for="s-rs" style="cursor:pointer"><span class="ic">' + ic('repeat') + '</span><span class="t"><b>Ripristina da un backup</b><span class="sub">Carica il file .json salvato in precedenza</span></span>' + ic('right') + '</label><input type="file" id="s-rs" accept=".json,.txt,application/json,text/plain" hidden>' +
       '<button class="item" ' + nav$({screen:'import'}) + '><span class="ic">' + ic('list') + '</span><span class="t"><b>Importa da un\'altra app</b><span class="sub">File CSV, per esempio da Fast Budget</span></span>' + ic('right') + '</button>' +
       (downloads ? '<button class="item" id="s-csv"><span class="ic">' + ic('list') + '</span><span class="t"><b>Esporta i movimenti in CSV</b><span class="sub">Da aprire con Excel o Fogli Google</span></span>' + ic('right') + '</button>' : '') +
       '<button class="item" ' + nav$({screen:'terms'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Termini e condizioni</b><span class="sub">Versione ' + TERMS_V + (S.termsAt ? ', accettata il ' + dshort(S.termsAt) : '') + '</span></span>' + ic('right') + '</button>' +

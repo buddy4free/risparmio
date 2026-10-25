@@ -24,7 +24,8 @@ rep("let remote = null, writing = false, pending = false, saveTimer = null, down
 """let remote = null, writing = false, pending = false, saveTimer = null, downloads = {save:async ({filename, data}) => {
   const blob = data instanceof Blob ? data : new Blob([data], {type:/\\.json$/.test(filename) ? 'application/json' : /\\.csv$/.test(filename) ? 'text/csv' : 'application/octet-stream'});
   const f = new File([blob], filename, {type:blob.type});
-  if (navigator.canShare && navigator.canShare({files:[f]}) && /Android|iPhone|iPad/.test(navigator.userAgent)) { try { await navigator.share({files:[f], title:filename}); return; } catch(e) { if (e && e.name === 'AbortError') throw {code:'declined'}; } }
+  const mob = /Android|iPhone|iPad/.test(navigator.userAgent), alt = /\\.json$/.test(filename) ? new File([blob], filename.replace(/\\.json$/, '.txt'), {type:'text/plain'}) : null;
+  for (const ff of [f, alt]) if (ff && mob && navigator.canShare && navigator.canShare({files:[ff]})) { try { await navigator.share({files:[ff], title:filename}); return; } catch(e) { if (e && e.name === 'AbortError') throw {code:'declined'}; } }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }};""")
 head='''<!doctype html>

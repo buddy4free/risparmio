@@ -163,6 +163,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .item.selrow{grid-template-columns:auto 1fr auto;cursor:pointer}
 .item.subrow{grid-template-columns:auto 1fr auto}
 .item.selrow input,.item.subrow input{width:22px;height:22px;margin:0;accent-color:var(--yellow)}
+.txfilt{display:flex;flex-direction:column;gap:8px}
+.txfilt select{width:100%}
 .item.nt{grid-template-columns:1fr auto}
 .cxord{display:flex;gap:4px}
 .cxord button{width:40px;height:40px;border:1px solid var(--line);background:var(--soft);border-radius:10px;font-weight:800;font-size:1.05rem}
@@ -336,9 +338,15 @@ i.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right
 .daily{display:flex;gap:2px;align-items:flex-end;height:124px}
 .daily span{flex:1;border-radius:2px 2px 1px 1px;min-width:0}
 .io12{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;align-items:end;height:150px}
-.io12 div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
+.io12 div{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
 .io12 .pair{display:flex;gap:1px;align-items:flex-end}
-.io12 .pair span{width:7px;border-radius:3px 3px 1px 1px}
+.io12 .pair span{width:var(--bw,7px);border-radius:3px 3px 1px 1px}
+.io12 em{font-style:normal;font-size:.6rem;color:var(--muted);height:.8rem}
+.yhead{font-weight:800;font-size:.8rem;color:var(--muted);letter-spacing:.06em;margin:10px 0 2px}
+.ytot{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.ytot.big{border-top:2px dashed var(--line);border-bottom:0;margin-bottom:6px;padding:10px 0}
+.ytot .num{font-weight:800}
+.ytot .status{font-size:.75rem}
 .io12 small{font-size:.66rem;color:var(--muted);text-transform:uppercase}
 .avgkey{display:inline-block;width:3px;height:12px;border-radius:2px;background:var(--fg)}
 .goal2{background:var(--soft);border:2px solid var(--gc);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:12px}
@@ -478,7 +486,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .esebtn.sm{width:auto;flex:1;padding:8px 12px;border-width:2px;gap:8px}
 .esebtn.sm .marker{font-size:1rem}
 .catscroll6{max-height:318px}
-.catscroll{max-height:212px;overflow-y:auto;overscroll-behavior:contain;padding-right:4px}
+.catscroll{max-height:212px;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;padding-right:4px}
 .addgoal{align-items:center;justify-content:center;color:var(--muted);min-height:200px;background:none;border-style:dashed}
 .donut{display:flex;flex-direction:column;align-items:center;gap:12px}
 .donut svg{width:200px;height:200px}
@@ -1309,32 +1317,66 @@ function renderHome(){
 
 /* ---------- movimenti ---------- */
 let txFilter = 'all';
+/* filtri dei movimenti: categoria (TXC = {t, c, s}), periodo (mese, anno, tutto) */
+let TXC = null, TXP = 'm', TXY = +curYM().slice(0, 4), TXLIM = 300, TXREF = null;
 function renderTx(){
-  if (R.cat && PREV && PREV.screen !== 'tx') { TXBACK = {screen:PREV.screen}; if (PREV.screen === 'stats' && ST.mode === 'm' && ST.ym) viewYM = ST.ym; } if (!R.cat) TXBACK = null;
-  const s = stats(viewYM);
-  let L = s.L;
-  const XF = (S.xfers || []).filter(x => ymOf(x.d) === viewYM).map(x => Object.assign({xfer:true}, x));
-  const CT = R.ct || 'out';
-  if (R.cat) L = L.filter(x => x.c === R.cat && x.t === CT);
+  const fresh = TXREF !== PREV; TXREF = PREV;
+  if (R.cat) { TXBACK = PREV && PREV.screen !== 'tx' ? {screen:PREV.screen} : null; if (PREV && PREV.screen === 'stats' && ST.mode === 'm' && ST.ym) viewYM = ST.ym;
+    TXC = {t:R.ct || 'out', c:R.cat, s:R.sub}; TXP = 'm'; R = {screen:'tx'}; }
+  else if (fresh && PREV && !['tx', 'add', 'cats'].includes(PREV.screen)) { TXC = null; TXBACK = null; }
+  if (TXC && !S.cats[TXC.t].some(c => c.id === TXC.c)) TXC = null;
+  if (!TXC) TXBACK = null;
+  const first = [...S.tx.map(x => ymOf(x.d)), ...S.rec.map(r => r.from)].sort()[0] || curYM();
+  const range = (a, b) => { const o = []; for (let m = a; m <= b; m = addMonths(m, 1)) o.push(m); return o; };
+  const months = TXP === 'm' ? [viewYM] : TXP === 'y' ? range(TXY + '-01', TXY + '-12').filter(m => m <= curYM()) : range(first < curYM() ? first : curYM(), curYM());
+  let L = [].concat(...months.map(ym => monthTx(ym)));
+  const XF = (S.xfers || []).filter(x => months.includes(ymOf(x.d))).map(x => Object.assign({xfer:true}, x));
+  const inc = L.filter(x => x.t === 'in').reduce((t, x) => t + x.a, 0), out = L.filter(x => x.t === 'out').reduce((t, x) => t + x.a, 0);
+  const cat = TXC && catOf(TXC.t, TXC.c);
+  if (TXC) { L = L.filter(x => x.t === TXC.t && x.c === TXC.c); if (TXC.s !== undefined && TXC.s !== null) L = L.filter(x => (x.s || '') === TXC.s); }
   else if (txFilter === 'xfer') L = XF;
   else if (txFilter !== 'all') L = L.filter(x => x.t === txFilter);
   else L = L.concat(XF);
-  const groups = {}; L.forEach(x => (groups[x.d] = groups[x.d] || []).push(x));
-  const bySub = {}; if (R.cat) L.filter(x => !x.plan).forEach(x => { const k = x.s || 'Senza sottocategoria'; bySub[k] = (bySub[k] || 0) + x.a; });
-  const subRows = Object.entries(bySub).sort((a, b) => b[1] - a[1]), subTot = subRows.reduce((t, r) => t + r[1], 0);
-  view.innerHTML = '<div class="sec" style="gap:20px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + '<button class="readcard" ' + nav$({screen:'dues'}) + '><span class="t"><b>' + ic('calendar') + ' Scadenze e rinnovi</b><span>' + ((S.dues || []).length ? (S.dues || []).length + ' in calendario' + (upcomingDues().length ? ' · <span style="color:var(--yellow);font-weight:700">' + upcomingDues().length + ' da decidere</span>' : '') : 'Assicurazioni, abbonamenti, bollo: ti avviso un mese prima') + '</span></span>' + ic('right') + '</button>' + monthNav() +
-    '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur2(s.inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur2(s.out) + '</b></div></div>' +
-    (R.cat && TXBACK ? backBtn((TABS.find(t => t[0] === TXBACK.screen) || [0, TXBACK.screen === 'charts' ? 'Grafici' : 'Indietro'])[1], TXBACK) : '') +
-    (R.cat ? '<div class="spread"><span class="chip">' + ic(catOf(CT, R.cat).i) + esc(catOf(CT, R.cat).n) + '</span><button class="textlink" ' + nav$({screen:'tx'}) + '>Mostra tutto</button></div>' + (subRows.length > 1 || (subRows[0] && subRows[0][0] !== 'Senza sottocategoria') ? '<div class="card"><span class="label">Sottocategorie</span>' + (subRows.length > 6 ? '<div class="catscroll catscroll6">' : '<div>') + hbarsHTML(subRows.map(r => ({n:r[0], v:r[1], c:CT === 'in' ? IN_COL : OUT_COL})), subTot) + '</div></div>' : '')
+  L.sort((a, b) => b.d.localeCompare(a.d));
+  const shown = L.slice(0, TXLIM), groups = {}; shown.forEach(x => (groups[x.d] = groups[x.d] || []).push(x));
+  const perLabel = TXP === 'm' ? ymLabel(viewYM) : TXP === 'y' ? 'Anno ' + TXY : 'Da ' + ymLabel(months[0], {month:'short', year:'numeric'});
+  const period = '<div class="seg3">' + [['m', 'Mese'], ['y', 'Anno'], ['a', 'Tutto']].map(q => '<button data-mode="' + q[0] + '" data-per="' + q[0] + '" aria-pressed="' + (TXP === q[0]) + '">' + q[1] + '</button>').join('') + '</div>' +
+    (TXP === 'm' ? monthNav() : TXP === 'y' ? '<div class="month"><button id="y-prev" aria-label="Anno precedente">' + ic('left') + '</button><b>' + TXY + '</b><button id="y-next" aria-label="Anno successivo"' + (TXY >= +curYM().slice(0, 4) ? ' disabled style="opacity:.3"' : '') + '>' + ic('right') + '</button></div>' : '<div class="month"><span></span><b>' + ymLabel(months[0], {month:'short', year:'numeric'}) + ' – oggi</b><span></span></div>');
+  const catSel = '<div class="txfilt"><select id="tx-c" aria-label="Filtra per categoria"><option value="">Tutte le categorie</option>' + [['out', 'Uscite'], ['in', 'Entrate']].map(([t, n]) => '<optgroup label="' + n + '">' + S.cats[t].map(c => '<option value="' + t + ':' + c.id + '"' + (TXC && TXC.t === t && TXC.c === c.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</optgroup>').join('') + '</select>' +
+    (cat && (cat.subs || []).length ? '<select id="tx-s" aria-label="Filtra per sottocategoria"><option value="__all">Tutte le sottocategorie</option>' + cat.subs.map(sb => '<option value="' + esc(sb) + '"' + (TXC.s === sb ? ' selected' : '') + '>' + esc(sb) + '</option>').join('') + '<option value=""' + (TXC.s === '' ? ' selected' : '') + '>Senza sottocategoria</option></select>' : '') + '</div>';
+  let summary;
+  if (TXC) { const tot = L.filter(x => !x.plan).reduce((t, x) => t + x.a, 0), real = L.filter(x => !x.plan).length, col = TXC.t === 'in' ? IN_COL : OUT_COL;
+    const bySub = {}; if (TXC.s === undefined || TXC.s === null) L.filter(x => !x.plan).forEach(x => { const k = x.s || ''; bySub[k] = (bySub[k] || 0) + x.a; });
+    const subRows = Object.entries(bySub).sort((a, b) => b[1] - a[1]);
+    summary = '<div class="card"><div class="spread"><span class="label">' + esc(cat.n) + (TXC.s ? ' › ' + esc(TXC.s) : TXC.s === '' ? ' › senza sottocategoria' : '') + '</span><span class="small muted">' + perLabel + '</span></div>' +
+      '<div class="io"><div><span class="label">Totale</span><b style="color:' + col + '">' + eur2(tot) + '</b></div><div><span class="label">' + (months.length > 1 ? 'Media al mese' : 'Movimenti') + '</span><b>' + (months.length > 1 ? eur(tot / months.length) : real) + '</b></div></div>' +
+      (months.length > 1 ? '<span class="small muted">' + movN(real) + ' in ' + months.length + ' mesi</span>' : '') +
+      (subRows.length > 1 || (subRows[0] && subRows[0][0]) ? '<span class="label" style="margin-top:6px">Per sottocategoria · tocca per filtrare</span><div' + (subRows.length > 6 ? ' class="catscroll catscroll6"' : '') + '>' + hbarsHTML(subRows.map(r => ({n:r[0] || 'Senza sottocategoria', v:r[1], c:catColor(TXC.t, cat), go:null, sk:r[0]})), tot) + '</div>' : '') + '</div>';
+  } else summary = '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur2(inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur2(out) + '</b></div></div>';
+  const withY = TXP !== 'm', dl = d => dLabel(d) + (withY ? ' ' + d.slice(0, 4) : '');
+  view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + '<button class="readcard" ' + nav$({screen:'dues'}) + '><span class="t"><b>' + ic('calendar') + ' Scadenze e rinnovi</b><span>' + ((S.dues || []).length ? (S.dues || []).length + ' in calendario' + (upcomingDues().length ? ' · <span style="color:var(--yellow);font-weight:700">' + upcomingDues().length + ' da decidere</span>' : '') : 'Assicurazioni, abbonamenti, bollo: ti avviso un mese prima') + '</span></span>' + ic('right') + '</button>' +
+    (TXC && TXBACK ? backBtn((TABS.find(t => t[0] === TXBACK.screen) || [0, TXBACK.screen === 'charts' ? 'Grafici' : 'Indietro'])[1], TXBACK) : '') +
+    period + catSel +
+    (TXC ? '<div class="spread"><span class="chip" style="background:' + catColor(TXC.t, cat) + ';color:#fff">' + ic(cat.i) + esc(cat.n) + (TXC.s ? ' › ' + esc(TXC.s) : '') + '</span><button class="textlink" id="tx-clr">Togli il filtro</button></div>'
       : '<div class="filters">' + [['all','Tutti'],['out','Uscite'],['in','Entrate'],['xfer','Trasferimenti']].map(f => '<button data-f="' + f[0] + '" aria-pressed="' + (txFilter === f[0]) + '">' + f[1] + '</button>').join('') + '</div>') +
-    (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => '<div class="dayhead">' + dLabel(d) + '</div><div class="list">' + groups[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
+    summary +
+    (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => '<div class="dayhead">' + dl(d) + '</div><div class="list">' + groups[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
       const c = catOf(x.t, x.c);
-      return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan ? ' · previsto' : x.rec ? ' · ogni mese' : '') + '</span></span><span class="amt num" style="color:' + (x.t === 'in' ? IN_COL : OUT_COL) + '">' + (x.t === 'in' ? '+' : '−') + eur2(x.a).replace('−', '') + '</span></button>'; }).join('') + '</div>').join('') + '</div>'
-      : '<div class="note">Nessun movimento' + (R.cat ? ' in questa categoria' : '') + ' a ' + ymLabel(viewYM, {month:'long'}) + '. Tocca + per aggiungere il primo.</div>') +
+      return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan ? ' · previsto' : x.rec ? ' · ogni mese' : '') + '</span></span><span class="amt num" style="color:' + (x.t === 'in' ? IN_COL : OUT_COL) + '">' + (x.t === 'in' ? '+' : '−') + eur2(x.a).replace('−', '') + '</span></button>'; }).join('') + '</div>').join('') + '</div>' +
+      (L.length > shown.length ? '<button class="btn ghost" id="tx-more">Mostra altri ' + Math.min(300, L.length - shown.length) + ' (' + (L.length - shown.length) + ' in tutto)</button>' : '')
+      : '<div class="note">Nessun movimento' + (TXC ? ' con questo filtro' : '') + (TXP === 'm' ? ' a ' + ymLabel(viewYM, {month:'long'}) : TXP === 'y' ? ' nel ' + TXY : '') + '.' + (TXP === 'm' ? ' Prova "Anno" o "Tutto" per vedere un periodo più lungo.' : '') + '</div>') +
     (downloads && S.tx.length + S.rec.length ? '<button class="textlink" id="csv">Esporta tutti i movimenti in CSV</button>' : '') +
   '</div>';
-  bindMonth(); bindDemo();
-  view.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { txFilter = b.dataset.f; renderTx(); });
+  if (TXP === 'm') bindMonth(); bindDemo();
+  const rr = () => { TXLIM = 300; renderTx(); };
+  view.querySelectorAll('[data-per]').forEach(b => b.onclick = () => { TXP = b.dataset.per; if (TXP === 'y') TXY = +viewYM.slice(0, 4); rr(); });
+  const yp = view.querySelector('#y-prev'); if (yp) { yp.onclick = () => { TXY--; rr(); }; view.querySelector('#y-next').onclick = () => { if (TXY < +curYM().slice(0, 4)) { TXY++; rr(); } }; }
+  view.querySelector('#tx-c').onchange = e => { const v = e.target.value; if (!v) TXC = null; else { const [t, c] = v.split(':'); TXC = {t, c}; } rr(); };
+  const ts = view.querySelector('#tx-s'); if (ts) ts.onchange = e => { TXC.s = e.target.value === '__all' ? undefined : e.target.value; rr(); };
+  const tc = view.querySelector('#tx-clr'); if (tc) tc.onclick = () => { TXC = null; TXBACK = null; rr(); };
+  if (TXC) { const subs = [...view.querySelectorAll('.card .hbars > .hbar')]; subs.forEach(h => { h.style.cursor = 'pointer'; h.onclick = () => { const n = h.querySelector('.t > span').textContent; TXC.s = n === 'Senza sottocategoria' ? '' : n; rr(); }; }); }
+  const mo = view.querySelector('#tx-more'); if (mo) mo.onclick = () => { const y = window.scrollY; TXLIM += 300; renderTx(); window.scrollTo({top:y}); };
+  view.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { txFilter = b.dataset.f; rr(); });
   const c = view.querySelector('#csv'); if (c) c.onclick = exportCSV;
 }
 async function exportCSV(){
@@ -1685,8 +1727,8 @@ function pilBalanceAt(id, ym){
   const moves = pillarMoves(id), base = pilBalance(id) - moves.reduce((t, m) => t + m.a, 0);
   return base + moves.filter(m => ymOf(m.d) <= ym).reduce((t, m) => t + m.a, 0);
 }
-function hbarsHTML(rows, total){
-  const max = Math.max(1, ...rows.map(r => Math.abs(r.v)));
+function hbarsHTML(rows, total, mx){
+  const max = mx || Math.max(1, ...rows.map(r => Math.abs(r.v)));
   return '<div class="hbars">' + rows.map(r => '<' + (r.go ? 'button ' + nav$(r.go) : 'div') + ' class="hbar" title="' + esc(r.n) + ': ' + eur2(r.v) + '">' + (r.tile || '<span class="ic" style="background:' + r.c + '"></span>') +
     '<span class="t"><span>' + esc(r.n) + '</span><span class="track"><i style="width:' + (Math.abs(r.v) / max * 100) + '%;background:' + r.c + '"></i></span></span><span class="v">' + eur(r.v) + (total ? '<small>' + Math.round(r.v / total * 100) + '%</small>' : (r.sub ? '<small>' + r.sub + '</small>' : '')) + '</span></' + (r.go ? 'button' : 'div') + '>').join('') + '</div>';
 }
@@ -1723,10 +1765,23 @@ function renderStats(){
     trendHTML = '<div class="card"><span class="label">Spese giorno per giorno</span><div class="daily" role="img" aria-label="Spese giornaliere del mese">' + daily.map((a, i) => '<span title="' + (i + 1) + ' ' + ymLabel(ST.ym, {month:'short'}) + ': ' + eur2(a) + '" style="height:' + Math.max(a ? 3 : 1, a / mx * 120) + 'px;background:' + (a ? OUT_COL : 'var(--soft2)') + '"></span>').join('') + '</div><div class="spread small muted"><span>1</span><span>' + Math.ceil(nd / 2) + '</span><span>' + nd + '</span></div>' +
       '<p class="small muted">Giorno più costoso: <b style="color:var(--fg)">' + (Math.max(...daily) ? (daily.indexOf(Math.max(...daily)) + 1) + ' ' + ymLabel(ST.ym, {month:'long'}) + ', ' + eur2(Math.max(...daily)) : '–') + '</b> · media ' + eur2(out / Math.max(1, ST.ym === curYM() ? new Date().getDate() : nd)) + ' al giorno</p></div>';
   } else {
-    const mx = Math.max(1, ...per.map(d => Math.max(d.s.inc, d.s.out)));
-    trendHTML = '<div class="card"><span class="label">Entrate e uscite mese per mese</span><div class="legend small"><span><i class="sw" style="background:' + IN_COL + '"></i>Entrate</span><span><i class="sw" style="background:' + OUT_COL + '"></i>Uscite</span></div>' +
-      '<div class="io12" role="img" aria-label="Entrate e uscite per mese">' + per.map(d => '<div title="' + ymLabel(d.ym) + ': entrate ' + eur(d.s.inc) + ', uscite ' + eur(d.s.out) + '"><span class="pair"><span style="height:' + Math.max(2, d.s.inc / mx * 130) + 'px;background:' + IN_COL + '"></span><span style="height:' + Math.max(2, d.s.out / mx * 130) + 'px;background:' + OUT_COL + '"></span></span><small>' + ymLabel(d.ym, {month:'narrow'}) + '</small></div>').join('') + '</div></div>' +
-      '<div class="card"><span class="label">Risparmio mese per mese</span>' + hbarsHTML(per.slice().reverse().map(d => ({n:ymLabel(d.ym, {month:'long'}), v:d.s.save, c:band(d.s.rate).c, sub:d.s.rate === null ? '–' : Math.round(d.s.rate) + '%'}))) + '</div>';
+    /* oltre i 12 mesi le barre si raggruppano: per trimestre fino a 3 anni, poi per anno */
+    const n = per.length, unit = n <= 12 ? 'm' : n <= 36 ? 'q' : 'y', B = [];
+    per.forEach(d => { const y = d.ym.slice(0, 4), q = Math.ceil(+d.ym.slice(5) / 3), k = unit === 'm' ? d.ym : unit === 'q' ? y + 'T' + q : y;
+      let b = B[B.length - 1]; if (!b || b.k !== k) B.push(b = {k, y, q, ym:d.ym, inc:0, out:0, n:0}); b.inc += d.s.inc; b.out += d.s.out; b.n++; });
+    const lab = b => unit === 'm' ? ymLabel(b.ym, {month:'narrow'}) : unit === 'q' ? 'T' + b.q : b.y, top = b => unit === 'q' && (b.q === 1 || b === B[0]) ? "'" + b.y.slice(2) : '';
+    const tip = b => (unit === 'm' ? ymLabel(b.ym) : unit === 'q' ? b.q + '° trimestre ' + b.y : b.y + (b.n < 12 ? ' (' + b.n + ' mesi)' : '')) + ': entrate ' + eur(b.inc) + ', uscite ' + eur(b.out);
+    const mx = Math.max(1, ...B.map(b => Math.max(b.inc, b.out))), bw = Math.max(4, Math.min(24, Math.floor((290 / Math.max(6, B.length) - 6) / 2)));
+    const yearRows = unit === 'y' ? '<div class="hbars">' + B.slice().reverse().map(b => '<div class="ytot"><b>' + b.y + (b.n < 12 ? ' <small class="muted">' + b.n + ' mesi</small>' : '') + '</b><span style="color:' + IN_COL + '">+' + eur(b.inc) + '</span><span style="color:' + OUT_COL + '">−' + eur(b.out) + '</span></div>').join('') + '</div>' : '';
+    trendHTML = '<div class="card"><span class="label">Entrate e uscite ' + {m:'mese per mese', q:'trimestre per trimestre', y:'anno per anno'}[unit] + '</span><div class="legend small"><span><i class="sw" style="background:' + IN_COL + '"></i>Entrate</span><span><i class="sw" style="background:' + OUT_COL + '"></i>Uscite</span></div>' +
+      '<div class="io12" style="grid-template-columns:repeat(' + Math.max(6, B.length) + ',1fr);--bw:' + bw + 'px" role="img" aria-label="Entrate e uscite">' + B.map(b => '<div title="' + tip(b) + '"><em>' + top(b) + '</em><span class="pair"><span style="height:' + Math.max(2, b.inc / mx * 120) + 'px;background:' + IN_COL + '"></span><span style="height:' + Math.max(2, b.out / mx * 120) + 'px;background:' + OUT_COL + '"></span></span><small>' + lab(b) + '</small></div>').join('') + '</div>' +
+      (unit !== 'm' ? '<span class="small muted">Con ' + n + ' mesi le barre sono raggruppate per ' + (unit === 'q' ? 'trimestre' : 'anno') + '.</span>' : '') + yearRows + '</div>';
+    /* risparmio mese per mese, con il totale di ogni anno quando il periodo ne copre più di uno */
+    const years = [...new Set(per.map(d => d.ym.slice(0, 4)))].sort().reverse(), smx = Math.max(1, ...per.map(d => Math.abs(d.s.save)));
+    const mrow = d => ({n:ymLabel(d.ym, {month:'long'}), v:d.s.save, c:band(d.s.rate).c, sub:d.s.rate === null ? '–' : Math.round(d.s.rate) + '%'});
+    const savBody = years.length < 2 ? hbarsHTML(per.slice().reverse().map(mrow), 0, smx) : years.map(y => { const ms = per.filter(d => d.ym.startsWith(y)), yi = ms.reduce((t, d) => t + d.s.inc, 0), ys = ms.reduce((t, d) => t + d.s.save, 0), yr = yi > 0 ? ys / yi * 100 : null;
+      return '<div class="yhead">' + y + '</div>' + hbarsHTML(ms.slice().reverse().map(mrow), 0, smx) + '<div class="ytot big"><b>Totale ' + y + (ms.length < 12 ? ' <small class="muted">' + ms.length + ' mesi</small>' : '') + '</b><span class="num" style="color:' + (ys >= 0 ? IN_COL : '#E5484D') + '">' + (ys >= 0 ? '+' : '−') + eur(Math.abs(ys)) + '</span><span class="status" style="background:' + band(yr).c + '">' + (yr === null ? '–' : Math.round(yr) + '%') + '</span></div>'; }).join('');
+    trendHTML += '<div class="card"><span class="label">Risparmio mese per mese</span>' + (per.length > 8 ? '<div class="catscroll catscroll6">' + savBody + '</div><span class="small muted" style="text-align:center">' + per.length + ' mesi' + (years.length > 1 ? ' · totale a fine di ogni anno' : '') + ' · scorri ↓</span>' : savBody) + '</div>';
   }
   let cmp = '';
   if (ST.mode === 'm') {

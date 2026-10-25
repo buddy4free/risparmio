@@ -512,6 +512,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .infobtn.on{background:var(--yellow);color:#000}
 .fab{transition:transform .25s ease, opacity .25s}
 .fab.away{transform:translateY(140px);opacity:0;pointer-events:none}
+.btn.savebig{width:100%;justify-content:center;font-size:1.05rem;padding:14px;margin-top:-4px}
+.fab.bulkhide{opacity:0;pointer-events:none;transform:scale(.6)}
 .fab.open{transform:rotate(45deg);z-index:31}
 #dial .dialbg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:29;animation:dfade .15s ease}
 #dial .dialitems{position:fixed;right:max(22px, calc(env(safe-area-inset-right, 0px) + 22px));bottom:calc(156px + env(safe-area-inset-bottom, 0px));z-index:30;display:flex;flex-direction:column;align-items:flex-end;gap:14px}
@@ -1119,7 +1121,7 @@ const view = document.getElementById('view');
 /* riquadri delle azioni sulla selezione: ridotti a una riga finché selezioni, si aprono con "Azioni" */
 let BULKOPEN = false;
 function compactBulk(){
-  const cards = view.querySelectorAll('.impbulk'); if (!cards.length) { BULKOPEN = false; return; }
+  const cards = view.querySelectorAll('.impbulk'); document.getElementById('fab').classList.toggle('bulkhide', cards.length > 0); if (!cards.length) { BULKOPEN = false; return; }
   cards.forEach(c => { if (c.querySelector('.bkhead')) return; const first = c.firstElementChild; if (!first || !c.querySelector('button, select, input')) return;
     const h = document.createElement('div'); h.className = 'bkhead'; c.insertBefore(h, first); h.appendChild(first);
     const t = document.createElement('button'); t.className = 'bktog'; t.type = 'button'; h.appendChild(t);
@@ -1143,7 +1145,7 @@ function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); const sam
   if (r.screen === 'home') { NAVSTACK.length = 0; histHome(); } else if (!back && R && !same(R, r)) histPush();
   if (r.screen !== 'home' && !back && R && !same(R, r) && !(R.screen === 'add' && r.screen === 'add') && !['welcome', 'setup'].includes(R.screen)) { NAVSTACK.push(R); if (NAVSTACK.length > 60) NAVSTACK.shift(); } else if (back && NAVSTACK.length && same(NAVSTACK[NAVSTACK.length - 1], r)) NAVSTACK.pop();
   if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; PREV = R; R = r; try { localStorage.setItem('b4f-last', JSON.stringify({r, t:Date.now()})); } catch(e) {} render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
-view.addEventListener('click', e => { const b = e.target.closest('[data-nav]'); if (b) nav(JSON.parse(b.dataset.nav), b.classList.contains('back')); });
+view.addEventListener('click', e => { if (e.target.closest('[data-savebig]')) { const s = document.getElementById('f-save'); if (s) s.click(); return; } const b = e.target.closest('[data-nav]'); if (b) nav(JSON.parse(b.dataset.nav), b.classList.contains('back')); });
 document.getElementById('logo').onclick = () => nav(S.setup ? {screen:'home'} : {screen:'welcome'});
 /* tasto +: si aprono tre scorciatoie sopra il tasto, invece di una schermata intera */
 function dialOpen(){ return !!document.getElementById('dial'); }
@@ -1602,7 +1604,7 @@ function renderXfer(){
   if (!opts.includes(F.to) || F.to === F.from) F.to = opts.find(k => k.startsWith('g:') && k !== F.from) || opts.find(k => k !== F.from);
   const chips = (side, cur) => '<div class="subs">' + opts.map(k => '<button data-' + side + '="' + k + '" aria-pressed="' + (cur === k) + '"' + (side === 'to' && k === F.from ? ' disabled' : '') + '><i class="dot" style="background:' + destColor(k) + '"></i>' + esc(destLabel(k)) + ' <span class="muted" style="font-weight:500;margin-left:4px">' + eur(destBal(k)) + '</span></button>').join('') + '</div>';
   view.innerHTML = '<div class="sec" style="gap:18px">' + formBar('Trasferimento') +
-    '<label class="amount t-xfer"><span>€</span><input id="f-a" inputmode="decimal" placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"></label>' +
+    '<label class="amount t-xfer"><span>€</span><input id="f-a" inputmode="decimal" placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"></label><button class="btn savebig" type="button" data-savebig>' + ic('check') + 'Salva</button>' +
     '<div class="sec" style="gap:8px"><span class="label">Da</span>' + chips('from', F.from) + '</div>' +
     '<div class="sec" style="gap:8px"><span class="label">A</span>' + chips('to', F.to) + '</div>' +
     '<div class="grid2"><div class="field"><label for="f-d">Data</label><input id="f-d" type="date" value="' + F.d + '" max="' + today() + '"></div><div class="field"><label for="f-n">Nota</label><input id="f-n" placeholder="Facoltativa" value="' + esc(F.n) + '"></div></div>' +
@@ -1667,7 +1669,7 @@ function renderAdd(){
       '<span class="label">Fino a</span><div class="bigchips">' + [['never', 'Sempre'], ['count', 'Un numero di volte'], ['until', 'Una data']].map(o => '<button data-end="' + o[0] + '" aria-pressed="' + (F.end === o[0]) + '">' + o[1] + '</button>').join('') + '</div>' +
       (F.end === 'count' ? '<div class="row"><input id="r-ct" type="number" min="1" max="520" value="' + F.count + '" style="width:90px"><span>volte</span></div>' : '') +
       (F.end === 'until' ? '<input id="r-ut" type="date" value="' + (F.until || dayOffset(F.d, 365)) + '">' : '') + '</div>' : '';
-    body = (F.rf ? '<p class="small muted" style="margin:0">Rimborso di <b style="color:var(--fg)">' + esc(cur.n + (F.s ? ' › ' + F.s : '')) + '</b>: scrivi solo quanto ti è tornato.</p>' : '') + '<label class="amount t-' + F.t + '"><span>€</span><input id="f-a" inputmode="decimal" placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"></label>' +
+    body = (F.rf ? '<p class="small muted" style="margin:0">Rimborso di <b style="color:var(--fg)">' + esc(cur.n + (F.s ? ' › ' + F.s : '')) + '</b>: scrivi solo quanto ti è tornato.</p>' : '') + '<label class="amount t-' + F.t + '"><span>€</span><input id="f-a" inputmode="decimal" placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"></label><button class="btn savebig" type="button" data-savebig>' + ic('check') + 'Salva</button>' +
       '<div class="grid2"><div class="field"><label for="f-d">Data</label><input id="f-d" type="date" value="' + F.d + '"' + (F.rec ? '' : ' max="' + today() + '"') + '></div><div class="field"><label for="f-n">Nota</label><input id="f-n" placeholder="Facoltativa" value="' + esc(F.n) + '"></div></div>' +
       (F.rf ? '<input type="checkbox" id="f-rec" hidden>' : '<label class="check"><input type="checkbox" id="f-rec"' + (F.rec ? ' checked' : '') + (R.edit && !F.recId ? ' disabled' : '') + '> Si ripete</label>' + opt) +
       (R.edit ? '<div id="delwrap" class="sec">' + (F.recId ? '<button class="btn danger" data-del="one">Elimina solo questa volta</button><button class="btn danger" data-del="stop">Interrompi da qui in poi</button>' : '<button class="btn danger" data-del="one">Elimina</button>') + '</div>' : '');
@@ -2746,12 +2748,52 @@ async function exportPDF(mode){
   const months = mode === 'y' ? Array.from({length:12}, (_, i) => curYM().slice(0, 4) + '-' + pad(i + 1)).filter(m => m <= curYM()) : [curYM()];
   const per = months.map(ym => stats(ym)); let inc = 0, out = 0; const byCat = {};
   per.forEach(s => { inc += s.inc; out += s.out; Object.entries(s.byCat).forEach(([c, a]) => byCat[c] = (byCat[c] || 0) + a); });
+  /* disegni del PDF: colori come nell'app */
+  const VAR = {'var(--good)':'#0ca30c', 'var(--warn)':'#fab219', 'var(--serious)':'#ec835a', 'var(--critical)':'#e5484d', 'var(--soft2)':'#bbbbbb'};
+  const rgb = c => { c = VAR[c] || c || '#888888'; const h = c.replace('#', ''); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16) || 0); };
+  const fill = c => doc.setFillColor(...rgb(c)), txt = (c, t, x, yy, o) => { doc.setTextColor(...rgb(c)); doc.text(t, x, yy, o); };
+  const bar = (x, yy, w, h, c) => { if (w > 0.2) { fill(c); doc.roundedRect(x, yy, w, h, Math.min(1, h / 2), Math.min(1, h / 2), 'F'); } };
+  const sv = inc - out, rate = inc > 0 ? sv / inc * 100 : null, bd = band(rate);
   doc.setFillColor(0, 0, 0); doc.rect(0, 0, 210, 30, 'F'); doc.setTextColor(255, 201, 10); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text('Buddy4Free Risparmio', M, 14);
-  doc.setTextColor(255); doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('Resoconto ' + (mode === 'y' ? 'anno ' + curYM().slice(0, 4) : ymLabel(curYM())) + ' · generato il ' + new Date().toLocaleDateString('it-IT'), M, 22); y = 42;
-  h1('Riepilogo'); kv('Entrate', E(inc)); kv('Uscite', E(out)); kv('Risparmio', E(inc - out), true); kv('Tasso di risparmio', inc > 0 ? Math.round((inc - out) / inc * 100) + '%' : '-'); line();
-  h1('Spese per categoria'); Object.entries(byCat).sort((a, b) => b[1] - a[1]).forEach(([c, a]) => kv(catOf('out', c).n, E(a) + '  (' + Math.round(a / out * 100) + '%)')); line();
-  h1('I 4 pilastri'); PILLARS.forEach(p => kv(p.n, E(pilBalance(p.id)))); kv('Totale', E(PILLARS.reduce((t, p) => t + pilBalance(p.id), 0)), true); line();
-  if (S.goals.length) { h1('Obiettivi'); S.goals.forEach(g => { const pl = goalPlan(g); kv(g.name + ' (entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + ')', E(goalSaved(g)) + ' di ' + E(goalTarget(g)) + ' · ' + Math.round(pl.pct) + '%'); }); line(); }
+  doc.setTextColor(255); doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('Resoconto ' + (mode === 'y' ? 'anno ' + curYM().slice(0, 4) : ymLabel(curYM())) + ' · generato il ' + new Date().toLocaleDateString('it-IT'), M, 22); y = 40;
+  /* tre riquadri: entrate, uscite, risparmio */
+  const bw = (Wd - 8) / 3; [['Entrate', inc, '#22A45D'], ['Uscite', out, '#C98500'], ['Risparmio', sv, VAR[bd.c] || '#888888']].forEach(([l, v, c], i) => { const x = M + i * (bw + 4);
+    doc.setFillColor(246, 246, 243); doc.roundedRect(x, y, bw, 22, 3, 3, 'F'); fill(c); doc.rect(x, y + 3, 1.6, 16, 'F');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); txt('#666666', l.toUpperCase(), x + 5, y + 7); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); txt(c, E(v).replace(' EUR', ' €'), x + 5, y + 16); });
+  y += 30;
+  /* tasso di risparmio sulla scala a colori */
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(10); txt('#222222', 'Tasso di risparmio: ' + (rate === null ? '-' : Math.round(rate) + '% · ' + bd.l), M, y); y += 3;
+  [[0, 10, '#e5484d'], [10, 25, '#ec835a'], [25, 40, '#fab219'], [40, 100, '#0ca30c']].forEach(([a0, a1, c]) => { fill(c); doc.rect(M + a0 / 100 * Wd, y, (a1 - a0) / 100 * Wd, 4, 'F'); });
+  if (rate !== null) { const mx = M + Math.max(0, Math.min(100, rate)) / 100 * Wd; doc.setFillColor(0, 0, 0); doc.triangle(mx - 2, y - 2.2, mx + 2, y - 2.2, mx, y + 0.6, 'F'); doc.rect(mx - 0.4, y, 0.8, 4, 'F'); }
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7); [0, 10, 25, 40, 100].forEach(v => txt('#888888', v + '%', M + v / 100 * Wd, y + 8, {align:v === 0 ? 'left' : v === 100 ? 'right' : 'center'})); y += 14;
+  /* anno: entrate e uscite mese per mese */
+  if (mode === 'y' && per.length > 1) { h1('Entrate e uscite mese per mese'); const ch = 38, mxv = Math.max(1, ...per.map(s => Math.max(s.inc, s.out))), cw = Wd / 12;
+    need(ch + 14); doc.setDrawColor(225); doc.line(M, y + ch, M + Wd, y + ch);
+    per.forEach((s2, i) => { const x = M + i * cw + cw * 0.18, w = cw * 0.3; bar(x, y + ch - s2.inc / mxv * ch, w, s2.inc / mxv * ch, '#22A45D'); bar(x + w + 0.6, y + ch - s2.out / mxv * ch, w, s2.out / mxv * ch, '#C98500');
+      doc.setFontSize(7); txt('#666666', ymLabel(months[i], {month:'short'}).slice(0, 3), M + i * cw + cw / 2, y + ch + 4, {align:'center'});
+      if (s2.rate !== null) { doc.setFontSize(6.5); txt(VAR[band(s2.rate).c] || '#666666', Math.round(s2.rate) + '%', M + i * cw + cw / 2, y + ch + 8, {align:'center'}); } });
+    y += ch + 11; doc.setFontSize(7.5); fill('#22A45D'); doc.rect(M, y - 2.4, 3, 3, 'F'); txt('#444444', 'Entrate', M + 4.5, y); fill('#C98500'); doc.rect(M + 22, y - 2.4, 3, 3, 'F'); txt('#444444', 'Uscite', M + 26.5, y); txt('#888888', 'sotto ogni mese: tasso di risparmio', M + 44, y); y += 6; line(); }
+  /* spese per categoria, con barre colorate */
+  h1('Dove vanno i soldi');
+  const rows = Object.entries(byCat).filter(([, a]) => a > 0).sort((a, b) => b[1] - a[1]), top = rows.slice(0, 12), restV = rows.slice(12).reduce((t, r) => t + r[1], 0), mxc = Math.max(1, ...top.map(r => r[1]));
+  top.concat(restV > 0 ? [['__rest', restV]] : []).forEach(([c, a]) => { need(8); const k = c === '__rest' ? {n:'Le altre ' + (rows.length - 12), id:'x'} : catOf('out', c), col = c === '__rest' ? '#9a9a9a' : catColor('out', k);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); txt('#222222', k.n.slice(0, 30), M, y + 3); bar(M + 52, y, (Wd - 52 - 42) * a / mxc, 4, col);
+    txt('#222222', E(a).replace(' EUR', ' €'), M + Wd - 12, y + 3.2, {align:'right'}); doc.setFontSize(7.5); txt('#888888', Math.round(a / out * 100) + '%', M + Wd, y + 3.2, {align:'right'}); y += 7; });
+  /* in sintesi */
+  if (out > 0) { const t3 = rows.slice(0, 3).reduce((t, r) => t + r[1], 0), nd = rows.filter(([c]) => catOf('out', c).disc).reduce((t, r) => t + r[1], 0);
+    need(26); y += 2; doc.setFillColor(255, 248, 220); doc.roundedRect(M, y, Wd, 22, 3, 3, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); txt('#222222', 'In sintesi', M + 4, y + 6);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.8);
+    txt('#333333', '- Le prime 3 voci valgono il ' + Math.round(t3 / out * 100) + '% delle spese (' + rows.slice(0, 3).map(r => catOf('out', r[0]).n).join(', ') + ').', M + 4, y + 12);
+    txt('#333333', '- Spese non essenziali: ' + E(nd).replace(' EUR', ' €') + ' (' + Math.round(nd / out * 100) + '%): è la parte su cui è più facile intervenire.', M + 4, y + 17.5); y += 27; }
+  line();
+  /* pilastri: barra unica divisa per colore */
+  h1('I 4 pilastri'); const pv = PILLARS.map(p => ({p, v:pilBalance(p.id)})), pt = pv.reduce((t, x) => t + Math.max(0, x.v), 0);
+  if (pt > 0) { need(10); let x = M; pv.forEach(({p, v}) => { if (v > 0) { const w = v / pt * Wd; fill(p.c); doc.rect(x, y, w, 6, 'F'); x += w; } }); y += 10; }
+  pv.forEach(({p, v}) => { need(7); fill(p.c); doc.rect(M, y - 3, 3, 3, 'F'); doc.setFont('helvetica', 'normal'); doc.setFontSize(10); txt('#282828', p.n, M + 5, y); txt('#282828', E(v), 210 - M, y, {align:'right'}); y += 6; });
+  kv('Totale', E(pv.reduce((t, x) => t + x.v, 0)), true); line();
+  if (S.goals.length) { h1('Obiettivi'); S.goals.forEach(g => { const pl = goalPlan(g), pc = Math.max(0, Math.min(100, pl.pct)); need(14);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); txt('#282828', g.name + ' (entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + ')', M, y); txt('#282828', E(goalSaved(g)) + ' di ' + E(goalTarget(g)), 210 - M, y, {align:'right'}); y += 2.5;
+      doc.setFillColor(235, 235, 232); doc.roundedRect(M, y, Wd, 3.5, 1.5, 1.5, 'F'); bar(M, y, Wd * pc / 100, 3.5, VAR[goalStatus(g).c] || goalStatus(g).c || '#199e70'); doc.setFontSize(7.5); txt('#666666', Math.round(pl.pct) + '%', 210 - M, y + 7.5, {align:'right'}); y += 11; }); line(); }
   if ((S.debts || []).length) { h1('Finanziamenti'); S.debts.forEach(d => { const c = debtInfo(d); kv((d.n || 'Finanziamento') + ' (TAEG ' + d.taeg + '%)', 'residuo ' + E(c.pv) + ' · ' + c.left + ' rate · interessi e costi ' + E(c.int)); }); line(); }
   h1('Movimenti'); doc.setFontSize(8.5);
   months.slice().reverse().forEach(ym => monthTx(ym).filter(x => !x.plan).forEach(x => { need(6); doc.setFont('helvetica', 'normal'); doc.setTextColor(60); doc.text(x.d.split('-').reverse().join('/'), M, y); doc.text((catOf(x.t, x.c).n + (x.s ? ' - ' + x.s : '') + (x.n ? ' - ' + x.n : '')).slice(0, 70), M + 22, y); const pos = x.t === 'in' || x.a < 0; doc.setTextColor(pos ? 20 : 120, pos ? 140 : 80, pos ? 70 : 0); doc.text((pos ? '+' : '-') + E(Math.abs(x.a)), 210 - M, y, {align:'right'}); y += 5; }));

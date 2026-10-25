@@ -52,6 +52,13 @@ if (navigator.storage && navigator.storage.persist) navigator.storage.persist().
 # il corpo: title e style restano, chiudiamo head prima del primo elemento visibile
 k=s.index('</style>', s.index('<style>', len(head)))+len('</style>')
 s=s[:k]+'\n</head>\n<body>'+s[k:]+'\n</body>\n</html>\n'
+# l'app non si apre dentro pagine di altri siti (clickjacking)
+s=s.replace('<script>','<script>\nif (window.top !== window.self) { try { top.location = location.href; } catch(e) {} document.documentElement.innerHTML = \'\'; throw new Error(\'frame\'); }',1)
+# CSP: si esegue solo lo script dell'app (impronta SHA-256), nessun codice iniettato
+import hashlib,base64
+i=s.index('<script>')+len('<script>'); j=s.index('</script>',i); assert s.count('<script')==1
+h=base64.b64encode(hashlib.sha256(s[i:j].encode()).digest()).decode()
+s=s.replace("script-src 'self' 'unsafe-inline'","script-src 'self' 'sha256-%s'"%h,1)
 open(D+'index.html','w').write(s)
 json.dump({"name":"Buddy4Free Risparmio","short_name":"Buddy4Free","description":"Traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.","lang":"it","start_url":"./","scope":"./","display":"standalone","orientation":"portrait","background_color":"#000000","theme_color":"#000000","categories":["finance","education","lifestyle"],
   "icons":[{"src":"icons/icon-192.png","sizes":"192x192","type":"image/png"},{"src":"icons/icon-512.png","sizes":"512x512","type":"image/png"},{"src":"icons/maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}]},open(D+'manifest.webmanifest','w'),ensure_ascii=False,indent=2)

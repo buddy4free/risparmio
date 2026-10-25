@@ -1003,6 +1003,17 @@ function freshState(){
     gym:{start:null, log:[], checks:null}, read:[], well:{}, reviews:{}, times:Object.fromEntries(WELL.map(w => [w.id, w.time])), sound:true, tgt:{liq:null, emerg:null}};
 }
 let S = freshState();
+/* i dati letti (memoria del telefono, backup, file importati) passano da qui: dove l'app si aspetta codici, date o numeri non restano caratteri che possano diventare codice */
+const FREE = new Set(['n', 'name', 's', 'subs', 'note', 'src', 'ext', 'impMap', 'catDel', 'subDel']);
+const NUMK = new Set(['a', 'target', 'saved', 'day', 'found', 'rata', 'months', 'taeg', 'balloon', 'tan', 'res', 'every', 'count', 'len', 'after', 'emergMonths', 'liqMonths', 'liq', 'emerg', 'inv']);
+function clean(o, k, free){
+  if (Array.isArray(o)) return o.map(x => clean(x, k, free));
+  if (o && typeof o === 'object') { const r = {}; Object.keys(o).forEach(kk => { if (kk === '__proto__' || kk === 'constructor' || kk === 'prototype') return; const f = free || FREE.has(kk); if (!f && /[<>"'`&\;]/.test(kk)) return; r[kk] = clean(o[kk], kk, f); }); return r; }
+  if (typeof o === 'string' && NUMK.has(k) && !free) { const v = parseFloat(o.replace(',', '.')); return isFinite(v) ? v : 0; }
+  if (typeof o === 'string') return free ? o.slice(0, 500) : k === 'col' && !/^#[0-9a-f]{3,8}$/i.test(o) ? '' : o.replace(/[<>"'`&\;]/g, '').slice(0, 80);
+  if (typeof o === 'number' && !isFinite(o)) return 0;
+  return o;
+}
 function migrate(){
   ['in','out'].forEach(t => { const D = t === 'in' ? DEF_IN : DEF_OUT; const cd = S.catDel || [], sd = S.subDel || []; D.forEach(d => { if (cd.includes(t + ':' + d.id)) return; const c = S.cats[t].find(x => x.id === d.id); if (!c) S.cats[t].push(t === 'out' ? {...d, subs:d.subs.filter(sb => !sd.includes(t + ':' + d.id + ':' + sb))} : {...d}); else { if (d.g && !c.gx) c.g = d.g; if (d.disc && !c.gx) c.disc = true; if (d.subs) d.subs.forEach(sb => { c.subs = c.subs || []; if (!c.subs.includes(sb) && !sd.includes(t + ':' + d.id + ':' + sb)) c.subs.push(sb); }); } }); });
   S.cats.out.forEach(c => { if (!c.g) c.g = c.id === 'famiglia' ? 'famiglia' : c.id === 'finanza' ? 'finanza' : 'altro'; });
@@ -1016,7 +1027,7 @@ function migrate(){
   S.times = Object.assign(Object.fromEntries(WELL.map(w => [w.id, w.time])), S.times || {});
   S.tgt = S.tgt || {liq:null, emerg:null};
 }
-try { const raw = localStorage.getItem(LS_KEY); if (raw) { S = Object.assign(freshState(), JSON.parse(raw)); migrate(); } } catch(e) {}
+try { const raw = localStorage.getItem(LS_KEY); if (raw) { S = Object.assign(freshState(), clean(JSON.parse(raw))); migrate(); } } catch(e) {}
 let R = S.setup ? {screen:'home'} : {screen:'welcome'};
 try { if (!localStorage.getItem('b4f-first')) localStorage.setItem('b4f-first', new Date().toISOString()); localStorage.setItem('b4f-opens', String(+(localStorage.getItem('b4f-opens') || 0) + 1)); } catch(e) {}
 /* riaprendo l'app torni dove eri (entro 2 ore) */
@@ -1622,7 +1633,7 @@ function renderTx(){
 async function exportCSV(){
   const months = new Set(S.tx.map(x => ymOf(x.d))); S.rec.forEach(r => { for (let m = r.from; m <= curYM(); m = addMonths(m, 1)) months.add(m); });
   const rows = [...months].sort().flatMap(ym => monthTx(ym)).sort((a, b) => a.d.localeCompare(b.d));
-  const q = v => '"' + String(v).replace(/"/g, '""') + '"';
+  const q = (v, i) => { v = String(v); if (i !== 4 && /^[=+\-@\t\r]/.test(v)) v = "'" + v; return '"' + v.replace(/"/g, '""') + '"'; };
   const csv = 'Data;Tipo;Categoria;Sottocategoria;Importo;Nota\n' + rows.map(x => [x.d, x.t === 'in' ? 'Entrata' : 'Uscita', catOf(x.t, x.c).n, x.s || '', String(x.a).replace('.', ','), x.n || ''].map(q).join(';')).join('\n');
   try { await downloads.save({filename:'buddy4free-movimenti.csv', data:'﻿' + csv}); toast('File salvato'); } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare il file'); }
 }
@@ -2920,7 +2931,7 @@ async function pwKey(pw, salt, iter){ const base = await crypto.subtle.importKey
 async function encryptText(text, pw){ const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), iter = 310000, key = await pwKey(pw, salt, iter);
   const ct = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, new TextEncoder().encode(text)));
   return JSON.stringify({app:'buddy4free-risparmio', enc:'AES-GCM-256', kdf:'PBKDF2-SHA256', iter, salt:b64e(salt), iv:b64e(iv), exported:new Date().toISOString(), data:b64e(ct)}); }
-async function decryptText(env, pw){ const key = await pwKey(pw, b64d(env.salt), env.iter || 310000); return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(env.iv)}, key, b64d(env.data))); }
+async function decryptText(env, pw){ const it = +env.iter || 310000; if (!(it >= 100000 && it <= 5e6)) throw new Error('iter'); const key = await pwKey(pw, b64d(env.salt), it); return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64d(env.iv)}, key, b64d(env.data))); }
 function exportBackup(){
   if (!downloads) { toast('Il salvataggio dei file non è disponibile qui'); return Promise.resolve(); }
   return new Promise(done => catPop('<b style="font-size:1.1rem">Backup completo</b><p class="small muted" style="margin:0">Il backup contiene tutti i tuoi dati. Proteggilo con una password: senza, chi trova il file (su Drive, nella posta…) può leggerlo.</p>' +
@@ -2936,11 +2947,12 @@ function exportBackup(){
     o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-x]')) done(); }); }));
 }
 function importBackup(file){
+  if (file.size > 30e6) return toast('Questo file è troppo grande per essere un backup');
   const fr = new FileReader();
   const restore = d => { if (!d || !d.cats || !Array.isArray(d.tx)) return toast('Questo file non è un backup valido');
-      const box = document.getElementById('ask'); box.innerHTML = '<div class="card" style="border-color:var(--critical)"><p>Il backup del ' + (d.exported ? new Date(d.exported).toLocaleDateString('it-IT') : '?') + ' contiene ' + d.tx.length + ' movimenti. Ripristinandolo sostituisci tutti i dati attuali. Continuare?</p><div class="row"><button class="btn danger" id="rb-yes">Sì, ripristina</button><button class="btn ghost" id="rb-no">Annulla</button></div></div>';
+      const box = document.getElementById('ask'); box.innerHTML = '<div class="card" style="border-color:var(--critical)"><p>Il backup del ' + (d.exported && !isNaN(new Date(d.exported)) ? new Date(d.exported).toLocaleDateString('it-IT') : '?') + ' contiene ' + d.tx.length + ' movimenti. Ripristinandolo sostituisci tutti i dati attuali. Continuare?</p><div class="row"><button class="btn danger" id="rb-yes">Sì, ripristina</button><button class="btn ghost" id="rb-no">Annulla</button></div></div>';
       box.querySelector('#rb-no').onclick = () => box.innerHTML = '';
-      box.querySelector('#rb-yes').onclick = () => { delete d.app; delete d.exported; const keepLock = S.lock; S = Object.assign(freshState(), d); if (S.lock) S.lock.bio = null; if (keepLock && !S.lock) S.lock = keepLock; migrate(); save(); toast('Backup ripristinato'); nav({screen:'home'}); }; };
+      box.querySelector('#rb-yes').onclick = () => { delete d.app; delete d.exported; const keepLock = S.lock; S = Object.assign(freshState(), clean(d)); S.lock = keepLock || {on:false, after:60}; migrate(); save(); toast('Backup ripristinato'); nav({screen:'home'}); }; };
   fr.onload = () => { let d; try { d = JSON.parse(fr.result); } catch(e) { return toast('Questo file non è un backup valido'); }
     if (!d || !d.enc) return restore(d);
     catPop('<b style="font-size:1.1rem">Backup protetto</b><p class="small muted" style="margin:0">Scrivi la password scelta quando hai salvato il backup.</p><input id="rb-pw" type="password" autocomplete="current-password" aria-label="Password del backup"><div class="row"><button class="btn" id="rb-ok">Apri</button><button class="btn ghost" data-x>Annulla</button></div>', (o, close) => {
@@ -2958,21 +2970,23 @@ async function bioCreate(){ const c = await navigator.credentials.create({public
 async function bioCheck(id){ const a = await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)), allowCredentials:[{type:'public-key', id:b64d(id)}], userVerification:'required', timeout:60000}});
   const flags = new Uint8Array(a.response.authenticatorData)[32]; return !!(flags & 4); }
 let LOCK = {fails:0, until:0, hidden:0};
+try { const f = JSON.parse(localStorage.getItem('b4f-lock-fails') || '{}'); LOCK.fails = +f.n || 0; LOCK.until = Math.min(+f.u || 0, Date.now() + 9e5); } catch(e) {}
+const lockFails = () => { try { localStorage.setItem('b4f-lock-fails', JSON.stringify({n:LOCK.fails, u:LOCK.until})); } catch(e) {} };
 function showLock(){
   if (!S.lock || !S.lock.on || document.getElementById('lock')) return;
-  document.body.classList.add('locked'); let pin = '';
+  document.body.classList.add('locked'); [...document.body.children].forEach(el => el.inert = true); let pin = '';
   const o = document.createElement('div'); o.id = 'lock';
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', S.lock.bio ? 'bio' : '', '0', 'del'];
   o.innerHTML = '<div class="lk"><img src="' + document.querySelector('#logo img').src + '" alt="Buddy4Free" class="lklogo"><b class="lkt">Inserisci il PIN</b><div class="lkdots">' + Array.from({length:S.lock.len}, () => '<i></i>').join('') + '</div><p class="lkmsg small"></p>' +
     '<div class="lkpad">' + keys.map(k => k ? '<button data-k="' + k + '" aria-label="' + (k === 'bio' ? 'Usa l\'impronta' : k === 'del' ? 'Cancella' : k) + '">' + (k === 'bio' ? '<span class="lkbio">☝</span>' : k === 'del' ? '⌫' : k) + '</button>' : '<span></span>').join('') + '</div>' +
     '<button class="textlink small" id="lk-forgot">Hai dimenticato il PIN?</button></div>';
-  document.body.appendChild(o);
+  document.body.appendChild(o); o.inert = false;
   const dots = () => o.querySelectorAll('.lkdots i').forEach((d, i) => d.classList.toggle('on', i < pin.length)), msg = t => o.querySelector('.lkmsg').textContent = t || '';
-  const open = () => { o.remove(); document.body.classList.remove('locked'); LOCK.fails = 0; lockSeen(); };
+  const open = () => { o.remove(); document.body.classList.remove('locked'); [...document.body.children].forEach(el => el.inert = false); LOCK.fails = 0; LOCK.until = 0; lockFails(); lockSeen(); };
   const check = async () => { if (Date.now() < LOCK.until) { pin = ''; dots(); return msg('Troppi tentativi: riprova tra ' + Math.ceil((LOCK.until - Date.now()) / 1000) + ' secondi'); }
     if (await pinHash(pin, S.lock.salt) === S.lock.hash) return open();
     LOCK.fails++; pin = ''; dots(); o.querySelector('.lkdots').classList.remove('shake'); void o.offsetWidth; o.querySelector('.lkdots').classList.add('shake');
-    if (LOCK.fails >= 5) { LOCK.until = Date.now() + 30000 * Math.pow(2, Math.min(4, LOCK.fails - 5)); msg('Troppi tentativi: attendi ' + Math.round((LOCK.until - Date.now()) / 1000) + ' secondi'); } else msg('PIN sbagliato'); };
+    if (LOCK.fails >= 5) { LOCK.until = Date.now() + 30000 * Math.pow(2, Math.min(4, LOCK.fails - 5)); msg('Troppi tentativi: attendi ' + Math.round((LOCK.until - Date.now()) / 1000) + ' secondi'); } else msg('PIN sbagliato'); lockFails(); };
   const bio = async () => { try { if (await bioCheck(S.lock.bio)) open(); } catch(e) { msg('Impronta non riconosciuta: usa il PIN'); } };
   o.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === 'bio') return bio(); if (k === 'del') pin = pin.slice(0, -1); else if (pin.length < S.lock.len) pin += k; dots(); msg(''); if (pin.length === S.lock.len) check(); });
   o.querySelector('#lk-forgot').onclick = () => { o.querySelector('.lk').innerHTML = '<b class="lkt">PIN dimenticato</b><p class="small" style="text-align:center;margin:0">Il PIN non si può recuperare: non lo conosciamo nemmeno noi. Puoi cancellare i dati di questa app e ricominciare, poi ripristinare il tuo ultimo backup.</p><label class="check small"><input type="checkbox" id="lk-sure"> Ho capito: si cancellano tutti i dati su questo telefono</label><button class="btn danger" id="lk-wipe">Cancella e ricomincia</button><button class="btn ghost" id="lk-back">Torna al PIN</button>';
@@ -3248,7 +3262,7 @@ function renderImport(){
       '<div class="card"><p>Arrivi da un\'altra app? Esporta i movimenti in un file <b>CSV</b> e caricalo qui: funziona con la maggior parte delle app di gestione spese e dei fogli di calcolo che hanno le colonne <i>Data</i>, <i>Categoria</i> e <i>Valore</i> o <i>Importo</i>.</p>' +
       '<p class="small muted">Di solito trovi l\'esportazione nelle impostazioni dell\'altra app, alla voce Esporta o Backup → CSV. Il file resta sul tuo telefono: nessuno lo riceve, nemmeno noi.</p>' +
       '<label class="btn" for="imp-f" style="align-self:flex-start;cursor:pointer">' + ic('list') + 'Scegli il file CSV</label><input type="file" id="imp-f" accept=".csv,.txt,.tsv,text/csv,text/plain" hidden></div></div>';
-    view.querySelector('#imp-f').onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { const p = parseCSV(String(r.result)); if (!p || !p.rows.length) return toast('Non riconosco il file: servono le colonne Data, Categoria e Valore'); prepImport(p); if (!IMP.rows.length) { IMP = null; return toast('Questi movimenti sono già tutti nell\'app'); } renderImport(); }; r.readAsText(f, 'utf-8'); };
+    view.querySelector('#imp-f').onchange = e => { const f = e.target.files[0]; if (!f) return; if (f.size > 30e6) return toast('Il file è troppo grande'); const r = new FileReader(); r.onload = () => { const p = parseCSV(String(r.result)); if (!p || !p.rows.length) return toast('Non riconosco il file: servono le colonne Data, Categoria e Valore'); prepImport(p); if (!IMP.rows.length) { IMP = null; return toast('Questi movimenti sono già tutti nell\'app'); } renderImport(); }; r.readAsText(f, 'utf-8'); };
     return;
   }
   const rows = IMP.rows.filter(x => x.d >= IMP.from), groups = {};
@@ -3349,7 +3363,7 @@ function doImport(rows){
     S.tx.push({id:uid(), t:T, c:q.c, s:q.s, a:rf ? -x.a : x.a, d:x.d, n:[q.keepSrc ? x.src : '', x.n].filter(Boolean).join(' · '), p:'liq', imp:1, ext:x.ext}); n++; });
   S.impMap = {}; Object.keys(IMP.map).forEach(k => { const v = IMP.map[k], c = res[k]; S.impMap[k] = {v:v.startsWith('n:') && c && c !== 'skip' ? c.c : v, f:IMP.forceSub.has(k) ? 1 : 0}; });
   S.tx.sort((a, b) => a.d.localeCompare(b.d));
-  IMP = null; save(); toast(n + ' movimenti importati');
+  IMP = null; S = clean(S); save(); toast(n + ' movimenti importati');
   view.innerHTML = '<div class="sec" style="gap:18px"><div class="intro"><span class="marker y" style="font-size:1.2rem">Fatto!</span><h2>' + n + ' movimenti importati</h2></div>' +
     '<div class="card"><p>Ora trovi tutto lo storico in <b>Movimenti</b> e in <b>Statistiche</b> (prova "Periodo → Tutto").</p><p class="small muted">Ultimo passo: i saldi dei pilastri non sono stati toccati. Apri i Pilastri e, per ognuno, usa "Correggi il saldo" con la cifra reale di oggi.</p>' +
     '<div class="row"><button class="btn" ' + nav$({screen:'pillar', id:'liq'}) + '>Sistema i saldi</button><button class="btn ghost" ' + nav$({screen:'stats'}) + '>Statistiche</button></div></div></div>';
@@ -3648,12 +3662,12 @@ function renderReview(){
 }
 function renderChamp(){
   const found = S.gym.log.reduce((s, e) => s + (e.found || 0), 0);
-  const notes = S.gym.log.filter(e => e.note);
+  const notes = S.gym.log.filter(e => e.note && GYM[e.day]);
   view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn('Palestra', {screen:'gym'}) +
     '<div class="trophy"><img src="' + LOGO + '" alt=""><span class="marker y" style="font-size:1.15rem">21 tappe completate</span><h1>Ora sei un <span class="hl">campione del risparmio</span>.</h1>' +
     '<div class="big num">' + eur(found) + '</div><p>di risparmi trovati all\'anno con le tue azioni. Adesso il tracciamento e la revisione mensile sono un\'abitudine: sei autonomo.</p></div>' +
     (downloads ? '<button class="btn" id="card">Salva la card</button>' : '') +
-    (notes.length ? '<div class="sec"><span class="label">Il tuo diario</span><div class="list">' + notes.map(e => '<div class="item" style="grid-template-columns:auto 1fr"><span class="ic">' + (e.day + 1) + '</span><span class="t"><b style="white-space:normal">' + esc(e.note) + '</b><span class="sub">' + esc(GYM[e.day].r.t) + (e.found ? ' · ' + eur(e.found) + '/anno' : '') + '</span></span></div>').join('') + '</div></div>' : '') +
+    (notes.length ? '<div class="sec"><span class="label">Il tuo diario</span><div class="list">' + notes.map(e => '<div class="item" style="grid-template-columns:auto 1fr"><span class="ic">' + (e.day + 1) + '</span><span class="t"><b style="white-space:normal">' + esc(e.note) + '</b><span class="sub">' + esc((GYM[e.day].r || GYM[e.day]).t) + (e.found ? ' · ' + eur(e.found) + '/anno' : '') + '</span></span></div>').join('') + '</div></div>' : '') +
     '<button class="textlink" id="again">Ricomincia la palestra da capo</button></div>';
   const c = view.querySelector('#card'); if (c) c.onclick = () => saveCard(found, c);
   view.querySelector('#again').onclick = () => { S.gym = {start:today(), log:[]}; S.read = []; save(); nav({screen:'gym'}); };

@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.buddy4free.risparmio",
+    "sha256_cert_fingerprints": ["C4:85:82:92:ED:F0:4F:EB:3F:F1:62:5F:D1:53:B9:A8:E1:CC:E4:0A:3E:34:78:DB:42:1B:B9:96:3B:41:17:3F"]
+  }
+}]

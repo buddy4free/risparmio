@@ -458,6 +458,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .gmini .gpct{font-family:var(--display);font-size:1.3rem}
 .esebtn.sm{width:auto;flex:1;padding:8px 12px;border-width:2px;gap:8px}
 .esebtn.sm .marker{font-size:1rem}
+.catscroll6{max-height:318px}
 .catscroll{max-height:212px;overflow-y:auto;overscroll-behavior:contain;padding-right:4px}
 .addgoal{align-items:center;justify-content:center;color:var(--muted);min-height:200px;background:none;border-style:dashed}
 .donut{display:flex;flex-direction:column;align-items:center;gap:12px}
@@ -983,10 +984,10 @@ function insights(ym){
 /* ---------- navigation ---------- */
 const view = document.getElementById('view');
 const nav$ = r => "data-nav='" + JSON.stringify(r).replace(/'/g, '&#39;') + "'";
-let GOAL_FROM = null;
+let GOAL_FROM = null, PREV = null, TXBACK = null;
 const GOAL_SCR = ['goal', 'whatif', 'gtips', 'read'];
 const SCROLL = {}, skey = r => r.screen + ':' + (r.id || '');
-function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; R = r; try { localStorage.setItem('b4f-last', JSON.stringify({r, t:Date.now()})); } catch(e) {} render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
+function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; PREV = R; R = r; try { localStorage.setItem('b4f-last', JSON.stringify({r, t:Date.now()})); } catch(e) {} render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
 view.addEventListener('click', e => { const b = e.target.closest('[data-nav]'); if (b) nav(JSON.parse(b.dataset.nav), b.classList.contains('back')); });
 document.getElementById('logo').onclick = () => nav(S.setup ? {screen:'home'} : {screen:'welcome'});
 document.getElementById('fab').onclick = () => { F = null; nav({screen:'add'}); };
@@ -1242,6 +1243,7 @@ function renderTx(){
   const s = stats(viewYM);
   let L = s.L;
   const XF = (S.xfers || []).filter(x => ymOf(x.d) === viewYM).map(x => Object.assign({xfer:true}, x));
+  if (R.cat && PREV && PREV.screen !== 'tx') TXBACK = {screen:PREV.screen}; if (!R.cat) TXBACK = null;
   if (R.cat) L = L.filter(x => x.c === R.cat && x.t === 'out');
   else if (txFilter === 'xfer') L = XF;
   else if (txFilter !== 'all') L = L.filter(x => x.t === txFilter);
@@ -1249,6 +1251,7 @@ function renderTx(){
   const groups = {}; L.forEach(x => (groups[x.d] = groups[x.d] || []).push(x));
   view.innerHTML = '<div class="sec" style="gap:20px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + '<button class="readcard" ' + nav$({screen:'dues'}) + '><span class="t"><b>' + ic('calendar') + ' Scadenze e rinnovi</b><span>' + ((S.dues || []).length ? (S.dues || []).length + ' in calendario' + (upcomingDues().length ? ' · <span style="color:var(--yellow);font-weight:700">' + upcomingDues().length + ' da decidere</span>' : '') : 'Assicurazioni, abbonamenti, bollo: ti avviso un mese prima') + '</span></span>' + ic('right') + '</button>' + monthNav() +
     '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur2(s.inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur2(s.out) + '</b></div></div>' +
+    (R.cat && TXBACK ? backBtn((TABS.find(t => t[0] === TXBACK.screen) || [0, TXBACK.screen === 'charts' ? 'Grafici' : 'Indietro'])[1], TXBACK) : '') +
     (R.cat ? '<div class="spread"><span class="chip">' + ic(catOf('out', R.cat).i) + esc(catOf('out', R.cat).n) + '</span><button class="textlink" ' + nav$({screen:'tx'}) + '>Mostra tutto</button></div>'
       : '<div class="filters">' + [['all','Tutti'],['out','Uscite'],['in','Entrate'],['xfer','Trasferimenti']].map(f => '<button data-f="' + f[0] + '" aria-pressed="' + (txFilter === f[0]) + '">' + f[1] + '</button>').join('') + '</div>') +
     (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => '<div class="dayhead">' + dLabel(d) + '</div><div class="list">' + groups[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
@@ -1623,7 +1626,7 @@ function donutHTML(rows, total){
 }
 function slideCard(title, rows, total, empty){
   if (!rows.length) return '<div class="card"><span class="label">' + title + '</span><p class="small muted">' + empty + '</p></div>';
-  return '<div class="card"><div class="spread"><span class="label">' + title + '</span><span class="small muted">barre ↔ cerchio</span></div><div class="carousel">' + '<div class="slide">' + hbarsHTML(rows, total) + '</div><div class="slide">' + donutHTML(rows, total) + '</div></div><div class="dots"><i class="on"></i><i></i></div></div>';
+  return '<div class="card"><div class="spread"><span class="label">' + title + '</span><span class="small muted">barre ↔ cerchio</span></div><div class="carousel">' + '<div class="slide">' + (rows.length > 6 ? '<div class="catscroll catscroll6">' + hbarsHTML(rows, total) + '</div><span class="small muted" style="text-align:center">' + rows.length + ' voci · scorri ↓</span>' : hbarsHTML(rows, total)) + '</div><div class="slide">' + donutHTML(rows, total) + '</div></div><div class="dots"><i class="on"></i><i></i></div></div>';
 }
 function renderStats(){
   if (!ST.ym) { ST.ym = curYM(); ST.y = +curYM().slice(0, 4); }
@@ -2647,7 +2650,8 @@ function renderImport(){
   const nImp = rows.filter(x => IMP.map[x.t + '|' + x.src] !== '__skip').length;
   view.innerHTML = '<div class="sec" style="gap:18px">' + back + '<div class="intro"><span class="label">Dati</span><h2>Controlla prima di importare</h2></div>' +
     '<div class="card"><div class="io"><div><span class="label">Movimenti</span><b>' + rows.length + '</b></div><div><span class="label">Periodo nel file</span><b style="font-size:1rem">' + ymLabel(first.slice(0, 7), {month:'short', year:'numeric'}) + ' – ' + ymLabel(last.slice(0, 7), {month:'short', year:'numeric'}) + '</b></div></div>' +
-      '<p class="small">Entrate <b style="color:' + IN_COL + '">' + eur(Math.round(inc)) + '</b> · Uscite <b style="color:' + OUT_COL + '">' + eur(Math.round(out)) + '</b>' + (IMP.skipped.xfer ? ' · ' + IMP.skipped.xfer + ' trasferimenti tra conti ignorati' : '') + (IMP.dup ? ' · ' + IMP.dup + ' già presenti, saltati' : '') + '</p>' +
+      '<p class="small">Entrate <b style="color:' + IN_COL + '">' + eur(Math.round(inc)) + '</b> · Uscite <b style="color:' + OUT_COL + '">' + eur(Math.round(out)) + '</b>' + (IMP.skipped.xfer ? ' · ' + IMP.skipped.xfer + ' trasferimenti tra conti ignorati' : '') + (IMP.dup && !IMP.replace ? ' · ' + IMP.dup + ' già presenti, saltati' : '') + '</p>' +
+      (IMP.impCount ? '<label class="check small"><input type="checkbox" id="imp-rep"' + (IMP.replace ? ' checked' : '') + '> Sostituisci i ' + IMP.impCount + ' movimenti importati in precedenza. Utile per rifare l\'importazione con altre categorie; quelli inseriti a mano restano.</label>' : '') +
       '<div class="field"><label for="imp-from">Importa i movimenti dal</label><input type="month" id="imp-from" value="' + IMP.from.slice(0, 7) + '" min="' + first.slice(0, 7) + '" max="' + last.slice(0, 7) + '"><span class="small muted">Se hai tanti anni di storico puoi partire da una data più recente: l\'app resta più leggera.</span></div>' +
       (S.demo || S.tx.length ? '<label class="check small"><input type="checkbox" id="imp-wipe"' + (IMP.wipe ? ' checked' : '') + (S.demo ? ' disabled' : '') + '> ' + (S.demo ? 'I dati di esempio verranno tolti' : 'Cancella prima i movimenti già presenti nell\'app (' + S.tx.length + ')') + '</label>' : '') + '</div>' +
     '<div class="card"><span class="label">Dove vanno le tue categorie</span><p class="small muted">Ho abbinato ogni categoria del file a una di Buddy4Free. Cambia quelle che non ti tornano. Il nome originale resta nella nota del movimento.</p>' +
@@ -2658,17 +2662,20 @@ function renderImport(){
   view.querySelectorAll('[data-map]').forEach(s => s.onchange = () => { IMP.map[s.dataset.map] = s.value; const y = window.scrollY; renderImport(); window.scrollTo({top:y}); });
   view.querySelector('#imp-from').onchange = e => { IMP.from = (e.target.value || first.slice(0, 7)) + '-01'; renderImport(); };
   const w = view.querySelector('#imp-wipe'); if (w) w.onchange = () => IMP.wipe = w.checked;
+  const rp = view.querySelector('#imp-rep'); if (rp) rp.onchange = () => { IMP.replace = rp.checked; IMP.rows = IMP.replace ? IMP.all : IMP.fresh; renderImport(); };
   view.querySelector('#imp-x').onclick = () => { IMP = null; nav({screen:'settings'}); };
   view.querySelector('#imp-go').onclick = () => doImport(rows);
 }
 function prepImport(p){
-  const have = new Set(S.tx.filter(x => x.ext).map(x => x.ext)), rows = p.rows.filter(x => !have.has(x.ext));
-  IMP = {rows, skipped:p.skipped, dup:p.rows.length - rows.length, map:{}, guess:{}, from:rows.reduce((m, x) => x.d < m ? x.d : m, '9999').slice(0, 7) + '-01', wipe:!!S.demo};
-  rows.forEach(x => { const k = x.t + '|' + x.src; if (IMP.map[k]) return; const g = guessCat(x.t, x.src); IMP.map[k] = S.cats[x.t].some(c => c.id === g[0]) ? g[0] : S.cats[x.t][0].id; IMP.guess[k] = g; });
+  const have = new Set(S.tx.filter(x => x.ext).map(x => x.ext)), fresh = p.rows.filter(x => !have.has(x.ext)), impCount = S.tx.filter(x => x.imp).length, dup = p.rows.length - fresh.length;
+  const replace = impCount > 0 && dup > 0, rows = replace ? p.rows : fresh;
+  IMP = {rows, all:p.rows, fresh, impCount, replace, skipped:p.skipped, dup, map:{}, guess:{}, from:rows.reduce((m, x) => x.d < m ? x.d : m, '9999').slice(0, 7) + '-01', wipe:!!S.demo};
+  p.rows.forEach(x => { const k = x.t + '|' + x.src; if (IMP.map[k]) return; const g = guessCat(x.t, x.src); IMP.map[k] = S.cats[x.t].some(c => c.id === g[0]) ? g[0] : S.cats[x.t][0].id; IMP.guess[k] = g; });
 }
 function doImport(rows){
   if (S.demo) { const keepT = S.times, keepTerms = S.terms, keepAt = S.termsAt; S = freshState(); S.times = keepT; S.terms = keepTerms; S.termsAt = keepAt; S.setup = true; S.pilFrom = today(); S.recAsked = true; }
   else if (IMP.wipe) S.tx = [];
+  else if (IMP.replace) S.tx = S.tx.filter(x => !x.imp);
   const made = {}; let n = 0;
   rows.forEach(x => { const k = x.t + '|' + x.src; let c = IMP.map[k]; if (c === '__skip') return;
     if (c === '__new') { if (!made[k]) { const nc = {id:'c' + uid(), n:x.src, i:'dots', subs:[], g:x.t === 'in' ? 'extra' : 'altro'}; S.cats[x.t].push(nc); made[k] = nc.id; } c = made[k]; }

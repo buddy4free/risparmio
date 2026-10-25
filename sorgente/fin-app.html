@@ -2890,7 +2890,7 @@ function renderPrivacy(){
     '<div class="terms">' + PRIVACY().map((t, i) => '<details' + (i === 1 ? ' open' : '') + '><summary>' + t[0] + '</summary><div>' + t[1] + '</div></details>').join('') + '</div></div>';
 }
 
-/* ---------- importazione da altre app (CSV, es. Fast Budget) ---------- */
+/* ---------- importazione da altre app (CSV) ---------- */
 let IMP = null;
 const fixText = s => { if (!/Ã|Â|ð/.test(s)) return s; try { return decodeURIComponent(escape(s)); } catch(e) { return s; } };
 function parseCSV(text){
@@ -2978,8 +2978,8 @@ function renderImport(){
   const back = backBtn('Impostazioni', {screen:'settings'});
   if (!IMP) {
     view.innerHTML = '<div class="sec" style="gap:18px">' + back + '<div class="intro"><span class="label">Dati</span><h2>Importa i tuoi movimenti</h2></div>' +
-      '<div class="card"><p>Arrivi da un\'altra app? Esporta i movimenti in un file <b>CSV</b> e caricalo qui: funziona con <b>Fast Budget</b> e con la maggior parte delle app e dei fogli di calcolo che hanno le colonne <i>Data</i>, <i>Categoria</i> e <i>Valore</i> o <i>Importo</i>.</p>' +
-      '<p class="small muted">In Fast Budget: Impostazioni → Esporta → CSV. Il file resta sul tuo telefono: nessuno lo riceve, nemmeno noi.</p>' +
+      '<div class="card"><p>Arrivi da un\'altra app? Esporta i movimenti in un file <b>CSV</b> e caricalo qui: funziona con la maggior parte delle app di gestione spese e dei fogli di calcolo che hanno le colonne <i>Data</i>, <i>Categoria</i> e <i>Valore</i> o <i>Importo</i>.</p>' +
+      '<p class="small muted">Di solito trovi l\'esportazione nelle impostazioni dell\'altra app, alla voce Esporta o Backup → CSV. Il file resta sul tuo telefono: nessuno lo riceve, nemmeno noi.</p>' +
       '<label class="btn" for="imp-f" style="align-self:flex-start;cursor:pointer">' + ic('list') + 'Scegli il file CSV</label><input type="file" id="imp-f" accept=".csv,.txt,.tsv,text/csv,text/plain" hidden></div></div>';
     view.querySelector('#imp-f').onchange = e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { const p = parseCSV(String(r.result)); if (!p || !p.rows.length) return toast('Non riconosco il file: servono le colonne Data, Categoria e Valore'); prepImport(p); if (!IMP.rows.length) { IMP = null; return toast('Questi movimenti sono già tutti nell\'app'); } renderImport(); }; r.readAsText(f, 'utf-8'); };
     return;
@@ -3003,7 +3003,7 @@ function renderImport(){
       '<div class="field"><label for="imp-from">Importa i movimenti dal</label><input type="month" id="imp-from" value="' + IMP.from.slice(0, 7) + '" min="' + first.slice(0, 7) + '" max="' + last.slice(0, 7) + '"><span class="small muted">Se hai tanti anni di storico puoi partire da una data più recente: l\'app resta più leggera.</span></div>' +
       (S.demo || S.tx.length ? '<label class="check small"><input type="checkbox" id="imp-wipe"' + (IMP.wipe ? ' checked' : '') + (S.demo ? ' disabled' : '') + '> ' + (S.demo ? 'I dati di esempio verranno tolti' : 'Cancella prima i movimenti già presenti nell\'app (' + S.tx.length + ')') + '</label>' : '') + '</div>' +
     '<div class="card"><span class="label">Dove vanno le tue categorie</span><p class="small muted">Ho abbinato ogni categoria del file a una di Buddy4Free. Sotto ogni nome vedi dove finisce: <b style="color:var(--fg)">categoria › sottocategoria</b>. Le entrate che hanno lo stesso nome di una spesa (per esempio Farmacia) diventano <b style="color:var(--fg)">rimborsi</b>: riducono quella spesa invece di contare come entrate.</p>' +
-      '<p class="small muted"><b style="color:var(--fg)">Avevi delle sottocategorie?</b> Il file CSV di Fast Budget contiene solo il nome della sottocategoria, non quello della categoria madre. Spunta le voci che stavano insieme (per esempio Romeo, Kira, Theo &amp; co), scrivi il nome della categoria madre (per esempio "Pet Sitting") e tocca Raggruppa: diventano sottocategorie.</p>' +
+      '<p class="small muted"><b style="color:var(--fg)">Avevi delle sottocategorie?</b> Spesso il file CSV contiene solo il nome della sottocategoria, non quello della categoria madre. Spunta le voci che stavano insieme (per esempio Romeo, Kira, Theo &amp; co), scrivi il nome della categoria madre (per esempio "Pet Sitting") e tocca Raggruppa: diventano sottocategorie.</p>' +
       '<label class="check small"><input type="checkbox" id="imp-ks"' + (IMP.keepSub ? ' checked' : '') + '> Usa i nomi del file come sottocategorie quando finiscono in una categoria con un altro nome</label>' +
       '<b class="small" style="color:' + OUT_COL + '">Uscite</b><div class="implist">' + list('out') + '</div>' +
       '<b class="small" style="color:' + IN_COL + '">Entrate</b><div class="implist">' + list('in') + '</div></div>' +
@@ -3300,7 +3300,7 @@ function renderSettings(){
       '<label class="item" for="s-rs" style="cursor:pointer"><span class="ic">' + ic('repeat') + '</span><span class="t"><b>Ripristina da un backup</b><span class="sub">Carica il file .json salvato in precedenza</span></span>' + ic('right') + '</label><input type="file" id="s-rs" accept=".json,.txt,application/json,text/plain" hidden>' +
       '<button class="item" ' + nav$({screen:'cats', t:'out'}) + '><span class="ic" style="background:#E5484D;color:#fff">' + ic('tag') + '</span><span class="t"><b>Categorie uscite</b><span class="sub">Crea, rinomina, sottocategorie, sposta, unisci</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'cats', t:'in'}) + '><span class="ic" style="background:#22A45D;color:#fff">' + ic('tag') + '</span><span class="t"><b>Categorie entrate</b><span class="sub">Crea, rinomina, sottocategorie, sposta, unisci</span></span>' + ic('right') + '</button>' +
-      '<button class="item" ' + nav$({screen:'import'}) + '><span class="ic">' + ic('list') + '</span><span class="t"><b>Importa da un\'altra app</b><span class="sub">File CSV, per esempio da Fast Budget</span></span>' + ic('right') + '</button>' +
+      '<button class="item" ' + nav$({screen:'import'}) + '><span class="ic">' + ic('list') + '</span><span class="t"><b>Importa da un\'altra app</b><span class="sub">File CSV esportato da un\'altra app o da un foglio di calcolo</span></span>' + ic('right') + '</button>' +
       (downloads ? '<button class="item" id="s-csv"><span class="ic">' + ic('list') + '</span><span class="t"><b>Esporta i movimenti in CSV</b><span class="sub">Da aprire con Excel o Fogli Google</span></span>' + ic('right') + '</button>' : '') +
       '<button class="item" ' + nav$({screen:'terms'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Termini e condizioni</b><span class="sub">Versione ' + TERMS_V + (S.termsAt ? ', accettata il ' + dshort(S.termsAt) : '') + '</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'privacy'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Informativa sulla privacy</b><span class="sub">I tuoi dati restano sul tuo dispositivo</span></span>' + ic('right') + '</button>' +

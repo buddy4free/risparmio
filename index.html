@@ -275,6 +275,11 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .improw .to{color:var(--yellow);white-space:normal}
 .improw input[type=checkbox]{width:20px;height:20px;margin:0}
 .impbulk{position:sticky;bottom:calc(84px + env(safe-area-inset-bottom));z-index:5;border:1px solid var(--yellow);box-shadow:0 8px 30px rgba(0,0,0,.6)}
+.impbulk .bkhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.impbulk .bkhead > :first-child{min-width:0}
+.impbulk .bktog{flex:0 0 auto;border:0;border-radius:99px;background:var(--yellow);color:#000;font-weight:800;padding:8px 14px;font-size:.88rem}
+.impbulk.mini{padding:8px 10px 8px 16px;gap:0}
+.impbulk.mini > :not(.bkhead){display:none}
 .terms{display:flex;flex-direction:column;gap:8px}
 .terms details{border:1px solid var(--line);border-radius:14px;background:var(--soft);padding:0 14px}
 .terms summary{cursor:pointer;font-weight:800;padding:14px 0;list-style:none;display:flex;justify-content:space-between;gap:10px}
@@ -1131,13 +1136,27 @@ function insights(ym){
 
 /* ---------- navigation ---------- */
 const view = document.getElementById('view');
+/* riquadri delle azioni sulla selezione: ridotti a una riga finché selezioni, si aprono con "Azioni" */
+let BULKOPEN = false;
+function compactBulk(){
+  const cards = view.querySelectorAll('.impbulk'); if (!cards.length) { BULKOPEN = false; return; }
+  cards.forEach(c => { if (c.querySelector('.bkhead')) return; const first = c.firstElementChild; if (!first || !c.querySelector('button, select, input')) return;
+    const h = document.createElement('div'); h.className = 'bkhead'; c.insertBefore(h, first); h.appendChild(first);
+    const t = document.createElement('button'); t.className = 'bktog'; t.type = 'button'; h.appendChild(t);
+    const set = () => { c.classList.toggle('mini', !BULKOPEN); t.textContent = BULKOPEN ? 'Riduci ▾' : 'Azioni ▴'; };
+    t.onclick = () => { BULKOPEN = !BULKOPEN; view.querySelectorAll('.impbulk').forEach(x => { x.classList.toggle('mini', !BULKOPEN); const b = x.querySelector('.bktog'); if (b) b.textContent = BULKOPEN ? 'Riduci ▾' : 'Azioni ▴'; }); };
+    set(); });
+}
+new MutationObserver(compactBulk).observe(view, {childList:true});
 const nav$ = r => "data-nav='" + JSON.stringify(r).replace(/'/g, '&#39;') + "'";
 let GOAL_FROM = null, PREV = null, TXBACK = null;
 const NAVSTACK = [];
 /* tappe del tasto indietro del telefono. Chrome salta le tappe aggiunte senza un tocco: per questo ne aggiungo una a ogni passo fatto toccando */
-let HD = 0, HIGN = 0;
-function histPush(){ try { if (navigator.userActivation && !navigator.userActivation.isActive && HD > 0) return; history.pushState({b4f:HD + 1}, ''); HD++; } catch (e) {} }
-function histHome(){ if (HD > 0) { const k = HD; HD = 0; HIGN = 1; try { history.go(-k); } catch (e) { HIGN = 0; } } }
+let HIGN = 0;
+/* ogni tappa ricorda la sua posizione: tornando alla Home salto esattamente fino all'inizio, mai oltre */
+const hIdx = () => (history.state && history.state.b4f) || 0;
+function histPush(){ try { if (navigator.userActivation && !navigator.userActivation.isActive && hIdx() > 0) return; history.pushState({b4f:hIdx() + 1}, ''); } catch (e) {} }
+function histHome(){ const k = hIdx(); if (k > 0 && !HIGN) { HIGN = 1; try { history.go(-k); } catch (e) { HIGN = 0; } } }
 const GOAL_SCR = ['goal', 'whatif', 'gtips', 'read'];
 const SCROLL = {}, skey = r => r.screen + ':' + (r.id || '');
 function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -1175,18 +1194,17 @@ function phoneBack(){
   if (R.screen === 'tx' && TXSEL) { TXSEL = null; render(); return true; }
   if (R.screen === 'cats' && !R.id && CATX.mode) { CATX.mode = ''; render(); return true; }
   if (R.screen === 'home' || !S.setup) return false;
-  if (NAVSTACK.length) { nav(NAVSTACK.pop(), true); return true; }
-  if (S.setup && R.screen !== 'home') { nav({screen:'home'}, true); return true; }
-  return false;
+  /* dalle schermate principali si torna alla Home; dalle altre alla schermata di prima */
+  if (TABS.some(t => t[0] === R.screen)) { nav({screen:'home'}, true); return true; }
+  const prev = NAVSTACK.pop(); nav(prev || {screen:TAB_OF[R.screen] || 'home'}, true); return true;
 }
 try { history.replaceState({b4f:0}, ''); } catch (e) {}
 if (S.setup && R.screen !== 'home') histPush();
 /* fuori dalla Home deve sempre esserci almeno una tappa: la rimetto al primo tocco */
-document.addEventListener('click', () => { if (S.setup && R.screen !== 'home' && HD === 0) histPush(); }, true);
+document.addEventListener('click', () => { if (S.setup && R.screen !== 'home' && hIdx() === 0) histPush(); }, true);
 window.addEventListener('popstate', () => {
   if (HIGN) { HIGN = 0; return; }
-  HD = Math.max(0, HD - 1);
-  if (phoneBack() && R.screen === 'home') histHome();
+  phoneBack();
 });
 const TABS = [['home','Home','house'],['tx','Movimenti','list'],['stats','Statistiche','chart'],['pillars','Pilastri','pillars'],['gym','Palestra','dumbbell'],['well','Benessere','leaf']];
 const TAB_OF = {import:'home', privacy:'home', terms:'home', support:'home', whatif:'pillars', debts:'pillars', missions:'gym', mission:'gym', learn:'gym', lesson:'gym', wbi:'home', dues:'tx', an:'stats', home:'home', tx:'tx', stats:'stats', charts:'stats', add:'tx', review:'stats', pillars:'pillars', pillar:'pillars', goal:'pillars', gtips:'pillars', sim:'pillars', gym:'gym', read:'gym', champ:'gym', well:'well', breath:'well'};

@@ -4,7 +4,7 @@
 
 Ho creato un'app. E mi serve il tuo aiuto 🙏
 
-Si chiama **Buddy4Free Risparmio** ed è tutto quello di cui parliamo qui, in un'app:
+Si chiama **Buddy4Free Risparmio**: un'app per il tuo risparmio personale, con tutto quello di cui parliamo qui:
 📊 entrate e uscite, senza fatica
 🏛️ i 4 pilastri della finanza personale
 🎯 i tuoi obiettivi, con "E se…?" per arrivarci prima
@@ -13,7 +13,12 @@ Si chiama **Buddy4Free Risparmio** ed è tutto quello di cui parliamo qui, in un
 
 È **gratuita**, senza pubblicità e senza abbonamenti. I tuoi dati restano sul tuo telefono.
 
-Per pubblicarla sul Play Store mi servono **almeno 12 tester con Android** che la provino per 14 giorni.
+Per pubblicarla sul Play Store cerco **20 tester con Android** che la provino per 14 giorni.
+
+Cosa ci guadagni:
+✅ la provi prima di tutti
+✅ le tue idee e i tuoi consigli diventano funzioni dell'app
+✅ è gratis, e lo resterà per sempre
 
 👉 Hai Android e vuoi provarla prima di tutti?
 Scrivimi **TEST** in direct e ti mando il link.
@@ -25,7 +30,7 @@ Scrivimi **TEST** in direct e ti mando il link.
 ## Storia (da pubblicare insieme, 2-3 slide)
 
 1. Clip dell'app + testo: "Ho creato un'app 📲"
-2. "Mi servono 12 tester con Android per 14 giorni" + sticker **domanda**: "Vuoi provarla? Scrivi la tua Gmail o TEST"
+2. "Cerco 20 tester con Android per 14 giorni: la provi prima di tutti e le tue idee entrano nell'app" + sticker **domanda**: "Vuoi provarla? Scrivi la tua Gmail o TEST"
    (oppure sticker **sondaggio**: "Ci sto! 🙋 / Ho iPhone 🍏")
 3. "È gratuita, senza pubblicità. Scrivimi TEST in direct 👇"
 

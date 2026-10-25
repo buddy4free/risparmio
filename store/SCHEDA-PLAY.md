@@ -12,7 +12,7 @@ Spese, entrate, 4 pilastri e obiettivi: risparmia senza stress. Gratis.
 
 I tuoi soldi, sotto controllo. Senza pubblicità, senza abbonamenti, senza registrazione.
 
-Niente trading, niente investimenti: solo i tuoi soldi di tutti i giorni. Segni entrate e uscite, capisci dove vanno e metti da parte per quello che conta.
+Niente trading, niente consigli di investimento: solo i tuoi soldi di tutti i giorni. Segni entrate e uscite, capisci dove vanno e metti da parte per quello che conta.
 
 Buddy4Free Risparmio nasce dal canale YouTube Buddy4Free, dove parliamo di minimalismo, decluttering e finanza personale. È un'app semplice e concreta per capire dove vanno i tuoi soldi e costruire, un passo alla volta, abitudini che durano.
 

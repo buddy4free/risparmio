@@ -54,11 +54,12 @@ def frame(i):
     elif t<14.0:
         u=t-10.8
         if u<0.06: c=Image.new('RGBA',(W,H),(255,255,255,255))
-        put(c,txt('NIENTE TRADING,',F('Anton',122),WH),W/2,H/2-500,back(u/0.3),min(1,u/0.12))
-        s1=u-0.45; put(c,txt('NIENTE INVESTIMENTI.',F('Anton',122),WH),W/2,H/2-340,back(s1/0.3) if s1>0 else 0,min(1,s1/0.12) if s1>0 else 0)
-        s2=u-1.05; put(c,tfit('Solo i tuoi soldi','Figtree',92,WH),W/2,H/2-90,1,min(1,s2/0.2) if s2>0 else 0)
-        put(c,tfit('di tutti i giorni,','Figtree',92,WH),W/2,H/2+30,1,min(1,(s2-0.15)/0.2) if s2>0.15 else 0)
-        s3=u-1.6; put(c,tfit('SOTTO CONTROLLO.','Anton',190,Y),W/2,H/2+280,(1.8-0.8*ease(s3/0.2)) if s3>=0 else 0,min(1,s3/0.1) if s3>=0 else 0)
+        put(c,txt('NIENTE TRADING,',F('Anton',122),WH),W/2,H/2-560,back(u/0.3),min(1,u/0.12))
+        s1=u-0.45; put(c,txt('NIENTE CONSIGLI',F('Anton',122),WH),W/2,H/2-405,back(s1/0.3) if s1>0 else 0,min(1,s1/0.12) if s1>0 else 0)
+        s1=u-0.6; put(c,txt('DI INVESTIMENTO.',F('Anton',122),WH),W/2,H/2-250,back(s1/0.3) if s1>0 else 0,min(1,s1/0.12) if s1>0 else 0)
+        s2=u-1.05; put(c,tfit('Solo i tuoi soldi','Figtree',92,WH),W/2,H/2-30,1,min(1,s2/0.2) if s2>0 else 0)
+        put(c,tfit('di tutti i giorni,','Figtree',92,WH),W/2,H/2+90,1,min(1,(s2-0.15)/0.2) if s2>0.15 else 0)
+        s3=u-1.6; put(c,tfit('SOTTO CONTROLLO.','Anton',190,Y),W/2,H/2+340,(1.8-0.8*ease(s3/0.2)) if s3>=0 else 0,min(1,s3/0.1) if s3>=0 else 0)
     elif t<16.8:
         u=t-14.0; n=0 if u<0.2 else min(20,int(1+(u-0.2)/1.2*20)) if u<1.4 else 20
         put(c,txt('CERCO',F('Anton',150),WH),W/2,H/2-430,ease(u/0.25),1)

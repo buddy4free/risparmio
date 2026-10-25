@@ -819,7 +819,11 @@ const dLabel = s => new Date(s + 'T12:00:00').toLocaleDateString('it-IT', {weekd
 const dshort = s => new Date(s + 'T12:00:00').toLocaleDateString('it-IT', {day:'numeric', month:'short'});
 const daysBetween = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
 const dayOffset = (s, n) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return iso(d); };
-const eur = (n, dec) => (typeof S !== 'undefined' && S && S.hide) ? '••• €' : (n < 0 ? '−' : '') + Math.abs(n).toLocaleString('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits: dec ? 2 : 0, maximumFractionDigits: dec ? 2 : 0});
+/* numeri all'italiana: il punto delle migliaia c'è sempre (anche 1.250), dal milione si abbrevia (1,25 Mln) */
+const fmtN = (n, dec) => { const f = Math.abs(n).toFixed(dec || 0).split('.'); return f[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (f[1] ? ',' + f[1] : ''); };
+const eur = (n, dec) => { if (typeof S !== 'undefined' && S && S.hide) return '••• €'; const a = Math.abs(n), sg = n < 0 ? '−' : '';
+  if (a >= 1e6) return sg + (a >= 1e9 ? fmtN(a / 1e9, 2).replace(/,?0+$/, '') + ' Mld €' : fmtN(a / 1e6, 2).replace(/,?0+$/, '') + ' Mln €');
+  return sg + fmtN(a, dec ? 2 : 0) + '\u00a0€'; };
 const eur2 = n => eur(n, Math.round(n) !== n);
 const parseAmt = v => { let t = String(v).trim().replace(/[€\s]/g, ''); if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.'); const x = parseFloat(t); return isNaN(x) ? 0 : Math.round(x * 100) / 100; };
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1215,7 +1219,7 @@ function todayList(){
   const gd = gymDay();
   if (gd.idx < 21) items.push({i:'dumbbell', n:'Palestra · tappa ' + (gd.idx + 1) + ' di 21', d:gd.doneToday ? 'Fatta oggi' : GYM[gd.idx].t, done:gd.doneToday, go:{screen:'gym'}});
   items.push({i:'list', n:'Registra le spese di oggi', d:S.tx.some(x => x.d === t) ? 'Fatto' : 'Due minuti, alle ' + S.times.track, done:S.tx.some(x => x.d === t), go:{screen:'add'}});
-  items.push({i:'feet', n:'Passi', d:(W.steps || 0).toLocaleString('it-IT') + ' di 8.000', done:(W.steps || 0) >= 8000, go:{screen:'well'}});
+  items.push({i:'feet', n:'Passi', d:fmtN(W.steps || 0) + ' di 8.000', done:(W.steps || 0) >= 8000, go:{screen:'well'}});
   items.push({i:'wave', n:'Respirazione guidata', d:W.breath ? 'Fatta' : 'Alle ' + S.times.breath, done:!!W.breath, go:{screen:'breath'}});
   upcomingDues().slice(0, 2).forEach(d => items.push({i:'calendar', n:'Scadenza: ' + d.n, d:dueState(d).l + ' · ' + eur2(d.a), done:false, go:{screen:'dues', open:d.id}}));
   if (new Date().getDate() <= 7 && !S.reviews[addMonths(curYM(), -1)]) items.push({i:'calendar', n:'Revisione mensile dei conti', d:'Il riepilogo di ' + ymLabel(addMonths(curYM(), -1), {month:'long'}), done:false, go:{screen:'review'}});
@@ -1842,7 +1846,7 @@ function renderWell(){
       '<div class="wrow"><span class="ic">' + ic('coffee') + '</span><span class="t"><b>Pause dal lavoro</b><span>Due pause di 5 minuti, lontano dalla scrivania</span></span><span class="row" style="gap:6px"><button class="tick" data-p="1" aria-pressed="' + ((W.pause || 0) >= 1) + '" aria-label="Prima pausa">1</button><button class="tick" data-p="2" aria-pressed="' + ((W.pause || 0) >= 2) + '" aria-label="Seconda pausa">2</button></span></div>' +
       '<button class="wrow" style="border-left:0;border-right:0;border-top:0;background:none;text-align:left;width:100%" ' + nav$({screen:'breath'}) + '><span class="ic' + (W.breath ? ' y' : '') + '">' + ic(W.breath ? 'check' : 'wave') + '</span><span class="t"><b>Respirazione guidata</b><span>' + (W.breath ? 'Fatta oggi' : '2, 5 o 10 minuti, con i suoni') + '</span></span>' + ic('right') + '</button>' +
     '</div></div>' +
-    '<div class="card"><span class="label">Passi, ultimi 7 giorni</span><div class="steps7" role="img" aria-label="Passi degli ultimi 7 giorni">' + days.map(d => { const s = (S.well[d] || {}).steps || 0; return '<div title="' + dshort(d) + ': ' + s.toLocaleString('it-IT') + ' passi"><em>' + (s ? (s / 1000).toFixed(1).replace('.', ',') + 'k' : '') + '</em><span style="height:' + Math.max(2, s / maxS * 100) + 'px;background:' + (s >= 8000 ? 'var(--good)' : 'var(--yellow)') + '"></span><small>' + new Date(d + 'T12:00:00').toLocaleDateString('it-IT', {weekday:'narrow'}) + '</small></div>'; }).join('') + '<i class="goal8" style="bottom:' + (8000 / maxS * 100 + 20) + 'px"></i></div><div class="legend small muted"><span><i class="tgt-key"></i>8.000 passi</span><span><i class="sw" style="background:var(--good)"></i>obiettivo raggiunto</span></div></div>' +
+    '<div class="card"><span class="label">Passi, ultimi 7 giorni</span><div class="steps7" role="img" aria-label="Passi degli ultimi 7 giorni">' + days.map(d => { const s = (S.well[d] || {}).steps || 0; return '<div title="' + dshort(d) + ': ' + fmtN(s) + ' passi"><em>' + (s ? (s / 1000).toFixed(1).replace('.', ',') + 'k' : '') + '</em><span style="height:' + Math.max(2, s / maxS * 100) + 'px;background:' + (s >= 8000 ? 'var(--good)' : 'var(--yellow)') + '"></span><small>' + new Date(d + 'T12:00:00').toLocaleDateString('it-IT', {weekday:'narrow'}) + '</small></div>'; }).join('') + '<i class="goal8" style="bottom:' + (8000 / maxS * 100 + 20) + 'px"></i></div><div class="legend small muted"><span><i class="tgt-key"></i>8.000 passi</span><span><i class="sw" style="background:var(--good)"></i>obiettivo raggiunto</span></div></div>' +
     '<div class="sec"><span class="label">Promemoria del benessere</span><p class="small muted">Per ricevere la notifica sul telefono, aggiungi ogni promemoria al tuo calendario.</p>' + remRows('well') + '</div></div>';
   const st = view.querySelector('#w-steps'); let stT;
   st.oninput = () => { clearTimeout(stT); stT = setTimeout(() => { W.steps = Math.max(0, parseInt(st.value.replace(/\D/g, '')) || 0); save(); if (W.steps >= 8000) toast('8.000 passi: ottimo!'); renderWell(); }, 900); };
@@ -2378,7 +2382,7 @@ async function exportPDF(mode){
   if (!downloads) return toast('Il salvataggio dei file non è disponibile qui');
   try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'); } catch(e) { return toast('Non riesco a preparare il PDF in questo momento'); }
   const doc = new window.jspdf.jsPDF({unit:'mm', format:'a4'}), M = 16, Wd = 210 - 2 * M; let y = 18;
-  const E = n => (n < 0 ? '-' : '') + Math.abs(n).toLocaleString('it-IT', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' EUR';
+  const E = n => (n < 0 ? '-' : '') + fmtN(n, 2) + ' EUR';
   const line = () => { doc.setDrawColor(220); doc.line(M, y, 210 - M, y); y += 4; };
   const need = h => { if (y + h > 285) { doc.addPage(); y = 18; } };
   const h1 = t => { need(14); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(0); doc.text(t, M, y); y += 7; };

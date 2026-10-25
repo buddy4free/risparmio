@@ -1,6 +1,6 @@
 import json,re,os,time,shutil
 P='/tmp/claude-0/-home-user/5d688e9e-4cef-51e8-b416-070f144b3467/scratchpad/'
-D='/home/user/buddy4free-app/'
+D='/home/user/risparmio/'
 s=open(P+'fin-app.html').read()
 L=json.load(open(P+'logo.json'))
 for k in ['ENSO','WORD','FULL']: s=s.replace('__'+k+'__',L[k.lower()])
@@ -32,6 +32,8 @@ head='''<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
+<meta name="color-scheme" content="dark only">
+<meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">

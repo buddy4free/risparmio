@@ -562,6 +562,8 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 #lock .lkpad button:active{background:var(--yellow);color:#000}
 #lock .lkbio{font-size:1.7rem}
 #lock .textlink{align-self:center}
+.vlinks{display:flex;flex-direction:column;gap:6px;align-items:center}
+.vlinks .row{justify-content:center;flex-wrap:wrap}
 .fab.bulkhide{opacity:0;pointer-events:none;transform:scale(.6)}
 .fab.open{transform:rotate(45deg);z-index:31}
 #dial .dialbg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:29;animation:dfade .15s ease}
@@ -1267,12 +1269,17 @@ function monthNav(){ return '<div class="month"><button id="m-prev" aria-label="
 function bindMonth(){ view.querySelector('#m-prev').onclick = () => { viewYM = addMonths(viewYM, -1); render(); }; view.querySelector('#m-next').onclick = () => { if (viewYM < curYM()) { viewYM = addMonths(viewYM, 1); render(); } }; }
 
 /* ---------- welcome & setup ---------- */
+/* video guida: incolla qui i link quando i video sono pubblicati (vuoti = non compaiono) */
+const VIDEO_SHORT = '', VIDEO_LONG = '';
+const ideaMail = () => 'mailto:' + CONTACT_EMAIL + '?subject=' + encodeURIComponent('Un suggerimento per Buddy4Free Risparmio') + '&body=' + encodeURIComponent('Ciao Lorenzo,\n\nti suggerisco:\n\n\n(Telefono e versione Android, se vuoi: )');
+const videoLinks = () => !VIDEO_SHORT && !VIDEO_LONG ? '' : '<div class="vlinks"><span class="label">Guarda come funziona</span><div class="row">' + (VIDEO_SHORT ? '<a class="btn sm ghost" href="' + VIDEO_SHORT + '" target="_blank" rel="noopener">' + ic('play') + 'In 1 minuto</a>' : '') + (VIDEO_LONG ? '<a class="btn sm ghost" href="' + VIDEO_LONG + '" target="_blank" rel="noopener">' + ic('play') + 'Guida completa</a>' : '') + '</div></div>';
 const YT_URL = 'https://www.youtube.com/@Buddy4Free', APP_URL = location.origin + location.pathname.replace(/index\.html$/, ''), DONATE_URL = '';
 function supportHTML(){
   return '<p>Questa app è <b class="y">gratuita</b>, senza pubblicità e senza abbonamenti, come tutto quello che nasce da Buddy4Free.</p>' +
     '<p class="muted">Usala, e falla girare a chi pensi ne abbia bisogno: un amico che vuole mettere ordine nei conti, un familiare, un collega.</p>' +
     '<p class="muted">Se vuoi sostenere il progetto, il modo più semplice è iscriverti al canale YouTube' + (DONATE_URL ? ' o lasciare una piccola donazione' : '') + '. Aiuta a farlo crescere e a tenerlo gratuito.</p>' +
     '<div class="sec" style="gap:8px"><a class="btn" href="' + YT_URL + '" target="_blank" rel="noopener">' + ic('play') + 'Iscriviti al canale Buddy4Free</a>' +
+    '<a class="btn ghost" href="' + ideaMail() + '">' + ic('star') + 'Dammi un suggerimento</a>' +
     '<button class="btn ghost" data-share>' + ic('users') + 'Condividi l\'app</button>' +
     (DONATE_URL ? '<a class="btn ghost" href="' + DONATE_URL + '" target="_blank" rel="noopener">' + ic('heart') + 'Fai una donazione</a>' : '') + '</div>';
 }
@@ -1306,7 +1313,7 @@ function freePopup(go){
 function renderWelcome(){
   view.innerHTML = '<div class="welcome"><h1 class="wtitle">I tuoi soldi,<br><span class="y">sotto controllo.</span></h1>' +
     '<img src="' + LOGO + '" alt="Buddy4Free">' +
-    '<p class="muted">Traccia entrate e uscite, scopri dove sprechi, riempi i 4 pilastri della finanza personale e raggiungi il tuo obiettivo: un viaggio, un\'auto, la casa o la cifra che vuoi tu.</p>' +
+    '<p class="muted">Traccia entrate e uscite, scopri dove sprechi, riempi i 4 pilastri della finanza personale e raggiungi il tuo obiettivo: un viaggio, un\'auto, la casa o la cifra che vuoi tu.</p>' + videoLinks() +
     '<label class="check small wterms"><input type="checkbox" id="w-terms"' + (termsOK() ? ' checked' : '') + '> <span>Ho letto e accetto i <button class="textlink" ' + nav$({screen:'terms'}) + '>Termini e condizioni</button>, ho letto l\'<button class="textlink" ' + nav$({screen:'privacy'}) + '>Informativa sulla privacy</button> e so che l\'app non fornisce consulenza finanziaria.</span></label>' +
     '<button class="btn wide" id="w-start">Inizia, bastano 2 minuti</button>' +
     '<button class="btn ghost wide" id="demo">Prova con dati di esempio</button></div>';
@@ -3027,16 +3034,18 @@ const MENU = [
   ['Il mio denaro', [['home', 'Home', 'house'], ['tx', 'Movimenti', 'list'], ['dues', 'Scadenze e rinnovi', 'calendar'], ['stats', 'Statistiche', 'chart'], ['review', 'Revisione mensile', 'check']]],
   ['Patrimonio', [['pillars', 'I 4 pilastri', 'pillars'], ['goals', 'Obiettivi', 'target'], ['sim', 'Simulatore del futuro', 'chart'], ['debts', 'Finanziamenti e debiti', 'bank']]],
   ['Crescere', [['gym', 'Palestra: percorso', 'dumbbell'], ['missions', 'Sfide e missioni', 'star'], ['learn', 'Impara', 'book'], ['wbi', 'Indice di benessere', 'heart'], ['well', 'Benessere', 'leaf']]],
-  ['App', [['support', 'Sostieni Buddy4Free', 'heart'], ['settings', 'Impostazioni', 'gear'], ['legend', 'Legenda', 'book'], ['terms', 'Termini e condizioni', 'shield'], ['privacy', 'Privacy', 'shield']]]
+  ['App', [['guide', 'Video guida', 'play'], ['idea', 'Dammi un suggerimento', 'star'], ['support', 'Sostieni Buddy4Free', 'heart'], ['settings', 'Impostazioni', 'gear'], ['legend', 'Legenda', 'book'], ['terms', 'Termini e condizioni', 'shield'], ['privacy', 'Privacy', 'shield']]]
 ];
 function openDrawer(open){
   const d = document.getElementById('drawer'), bg = document.getElementById('drawer-bg');
   if (!open) { d.classList.remove('on'); bg.hidden = true; setTimeout(() => d.hidden = true, 200); return; }
   d.innerHTML = '<div class="dhead"><img src="' + document.querySelector('#logo img').src + '" alt="Buddy4Free"><button class="topbtn" id="dclose" aria-label="Chiudi il menù">×</button></div>' +
-    MENU.map(g => '<span class="label">' + g[0] + '</span>' + g[1].filter(x => x[0] !== 'debts' || typeof renderDebts === 'function').map(x => '<button data-go="' + x[0] + '" aria-current="' + (R.screen === x[0]) + '">' + ic(x[2]) + x[1] + '</button>').join('')).join('');
+    MENU.map(g => '<span class="label">' + g[0] + '</span>' + g[1].filter(x => (x[0] !== 'debts' || typeof renderDebts === 'function') && (x[0] !== 'guide' || VIDEO_SHORT || VIDEO_LONG)).map(x => '<button data-go="' + x[0] + '" aria-current="' + (R.screen === x[0]) + '">' + ic(x[2]) + x[1] + '</button>').join('')).join('');
   d.hidden = false; bg.hidden = false; requestAnimationFrame(() => d.classList.add('on'));
   d.querySelector('#dclose').onclick = () => openDrawer(false);
-  d.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { openDrawer(false); const k = b.dataset.go; nav(k === 'goals' ? (mainGoal() ? {screen:'goal', id:mainGoal().id} : {screen:'goal', id:'new'}) : {screen:k}); });
+  d.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { openDrawer(false); const k = b.dataset.go;
+    if (k === 'idea') { location.href = ideaMail(); return; }
+    if (k === 'guide') return catPop('<b style="font-size:1.1rem">Video guida</b>' + videoLinks() + '<button class="textlink" data-x style="align-self:flex-start">Chiudi</button>', () => {}, true); nav(k === 'goals' ? (mainGoal() ? {screen:'goal', id:mainGoal().id} : {screen:'goal', id:'new'}) : {screen:k}); });
 }
 document.getElementById('burger').onclick = () => openDrawer(true);
 document.getElementById('drawer-bg').onclick = () => openDrawer(false);

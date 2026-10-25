@@ -30,20 +30,22 @@ Scrivimi **TEST** in direct e ti mando il link.
 ## Storia (da pubblicare insieme, 2-3 slide)
 
 1. Clip dell'app + testo: "Ho creato un'app 📲"
-2. "Cerco 20 tester con Android per 14 giorni: la provi prima di tutti e le tue idee entrano nell'app" + sticker **domanda**: "Vuoi provarla? Scrivi la tua Gmail o TEST"
+2. "Cerco 20 tester con Android per 14 giorni: la provi prima di tutti e le tue idee entrano nell'app" + sticker **domanda**: "Vuoi provarla? Scrivimi TEST"
    (oppure sticker **sondaggio**: "Ci sto! 🙋 / Ho iPhone 🍏")
 3. "È gratuita, senza pubblicità. Scrivimi TEST in direct 👇"
 
 ## Risposta in direct (da copiare e incollare)
 
-Grazie mille!! 🙏 Ecco come funziona, ci vogliono 2 minuti:
+Grazie mille!! 🙏 Mi scrivi la **Gmail che usi sul tuo telefono Android**? (quella con cui entri nel Play Store)
 
-1. Entra in questo gruppo con l'account Google che usi sul telefono Android:
-   👉 [LINK GRUPPO GOOGLE]
-2. Appena l'app è pronta ti mando il link del Play Store per installarla
-3. Tienila installata e usala per almeno 14 giorni (anche solo per segnare qualche spesa)
+La uso solo per darti accesso al test e la cancello quando il test finisce.
 
-Se trovi qualcosa che non va o hai un'idea, scrivimi qui. Ogni consiglio è oro ✨
+Appena l'app è pronta ti mando il link: ti basta toccare "Diventa un tester" e poi "Scarica". Poi tienila installata almeno 14 giorni (anche solo per segnare qualche spesa) 💛
+
+## Promemoria per te
+- Copia ogni Gmail nella Play Console: **Test → Test chiuso → Tester → Elenco email** (una per riga)
+- Segna chi ti ha risposto, così sai chi sollecitare se non installa
+- A test finito, cancella l'elenco
 
 ## Messaggio quando il test parte (con il link del Play Store)
 

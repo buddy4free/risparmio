@@ -166,6 +166,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .item.selrow.off{opacity:.45;cursor:default}
 .list .item.selrow{display:grid;width:100%;box-sizing:border-box}
 .item.selrow .amt{justify-self:end}
+.seg3.views button[aria-pressed="true"]{background:var(--yellow);color:#000}
 .io3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .io3 > div{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:2px;min-width:0}
 .io3 b{font-size:1rem;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1105,7 +1106,7 @@ document.getElementById('gear').innerHTML = ic('gear');
 document.getElementById('gear').onclick = () => nav(S.setup ? {screen:'settings'} : {screen:'welcome'});
 document.getElementById('help').onclick = () => nav({screen:'legend'});
 const TABS = [['home','Home','house'],['tx','Movimenti','list'],['stats','Statistiche','chart'],['pillars','Pilastri','pillars'],['gym','Palestra','dumbbell'],['well','Benessere','leaf']];
-const TAB_OF = {import:'home', privacy:'home', terms:'home', support:'home', whatif:'pillars', debts:'pillars', missions:'gym', mission:'gym', learn:'gym', lesson:'gym', wbi:'home', dues:'tx', an:'tx', home:'home', tx:'tx', stats:'stats', charts:'stats', add:'tx', review:'stats', pillars:'pillars', pillar:'pillars', goal:'pillars', gtips:'pillars', sim:'pillars', gym:'gym', read:'gym', champ:'gym', well:'well', breath:'well'};
+const TAB_OF = {import:'home', privacy:'home', terms:'home', support:'home', whatif:'pillars', debts:'pillars', missions:'gym', mission:'gym', learn:'gym', lesson:'gym', wbi:'home', dues:'tx', an:'stats', home:'home', tx:'tx', stats:'stats', charts:'stats', add:'tx', review:'stats', pillars:'pillars', pillar:'pillars', goal:'pillars', gtips:'pillars', sim:'pillars', gym:'gym', read:'gym', champ:'gym', well:'well', breath:'well'};
 function backBtn(label, r){ return '<button class="back" ' + nav$(r) + '>' + ic('left') + label + '</button>'; }
 function render(){
   const inApp = S.setup && !['welcome','setup'].includes(R.screen);
@@ -1370,12 +1371,11 @@ function bindTxPeriod(rr){
   view.querySelectorAll('[data-per]').forEach(b => b.onclick = () => { TXP = b.dataset.per; if (TXP === 'y') TXY = +viewYM.slice(0, 4); rr(); });
   const yp = view.querySelector('#y-prev'); if (yp) { yp.onclick = () => { TXY--; rr(); }; view.querySelector('#y-next').onclick = () => { if (TXY < +curYM().slice(0, 4)) { TXY++; rr(); } }; }
 }
-const txViews = cur => '<div class="seg3" style="grid-template-columns:1fr 1fr">' + [['tx', 'Elenco'], ['an', 'Analisi']].map(v => '<button data-mode="' + v[0] + '" ' + nav$({screen:v[0]}) + ' aria-pressed="' + (cur === v[0]) + '">' + v[1] + '</button>').join('') + '</div>';
 /* ---------- analisi movimenti: categorie → sottocategorie → movimenti ---------- */
 let AN = {t:'out', c:null, s:null};
 function renderAn(){
   if (AN.c && !S.cats[AN.t].some(c => c.id === AN.c)) AN.c = null;
-  const months = txMonths(), all = [].concat(...months.map(ym => monthTx(ym))).filter(x => !x.plan);
+  const months = stPeriod().months, all = [].concat(...months.map(ym => monthTx(ym))).filter(x => !x.plan);
   const inc = all.filter(x => x.t === 'in').reduce((t, x) => t + x.a, 0), out = all.filter(x => x.t === 'out').reduce((t, x) => t + x.a, 0), sv = inc - out;
   const L = all.filter(x => x.t === AN.t), col = AN.t === 'in' ? IN_COL : OUT_COL, nm = months.length;
   const cat = AN.c && catOf(AN.t, AN.c), inCat = cat ? L.filter(x => x.c === AN.c) : L, inSub = cat && AN.s !== null ? inCat.filter(x => (x.s || '') === AN.s) : inCat;
@@ -1390,10 +1390,10 @@ function renderAn(){
     body = E.length ? '<div class="hbars">' + E.map(([k, q]) => row('s:' + k, k || 'Senza sottocategoria', q.v, q.n, '<span class="ic" style="background:' + catColor(AN.t, cat) + ';opacity:' + (k ? 1 : .45) + '"></span>', catColor(AN.t, cat))).join('') + '</div>' : '<p class="small muted">Nessun movimento nel periodo.</p>'; }
   else { title = 'Movimenti';
     const G = {}; inSub.slice().sort((a, b) => b.d.localeCompare(a.d)).slice(0, 400).forEach(x => (G[x.d] = G[x.d] || []).push(x));
-    body = inSub.length ? Object.keys(G).sort().reverse().map(d => '<div class="dayhead">' + dLabel(d) + (TXP !== 'm' ? ' ' + d.slice(0, 4) : '') + '</div><div class="list">' + G[d].map(x => '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, cat) + '<span class="t"><b>' + esc(x.n || x.s || cat.n) + '</b><span class="sub">' + esc(cat.n + (x.s ? ' · ' + x.s : '')) + (x.rec ? ' · ogni mese' : '') + (isRf(x) ? ' · <b style="color:' + IN_COL + '">rimborso</b>' : '') + '</span></span>' + txAmt(x) + '</button>').join('') + '</div>').join('') +
+    body = inSub.length ? Object.keys(G).sort().reverse().map(d => '<div class="dayhead">' + dLabel(d) + (ST.mode !== 'm' ? ' ' + d.slice(0, 4) : '') + '</div><div class="list">' + G[d].map(x => '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, cat) + '<span class="t"><b>' + esc(x.n || x.s || cat.n) + '</b><span class="sub">' + esc(cat.n + (x.s ? ' · ' + x.s : '')) + (x.rec ? ' · ogni mese' : '') + (isRf(x) ? ' · <b style="color:' + IN_COL + '">rimborso</b>' : '') + '</span></span>' + txAmt(x) + '</button>').join('') + '</div>').join('') +
       (inSub.length > 400 ? '<p class="small muted">Mostro gli ultimi 400: per vederli tutti apri l\'elenco.</p>' : '') : '<p class="small muted">Nessun movimento nel periodo.</p>'; }
   const crumbs = '<div class="ancrumbs"><button data-crumb="0"' + (cat ? '' : ' aria-current="true"') + '>' + (AN.t === 'in' ? 'Entrate' : 'Uscite') + '</button>' + (cat ? '<span>›</span><button data-crumb="1"' + (AN.s === null ? ' aria-current="true"' : '') + '>' + esc(cat.n) + '</button>' : '') + (cat && AN.s !== null ? '<span>›</span><button aria-current="true">' + esc(AN.s || 'Senza sottocategoria') + '</button>' : '') + '</div>';
-  view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + txViews('an') + txPeriodHTML(months) +
+  view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Statistiche</h2></div>' + statViews('an') + stPeriodHTML() +
     '<div class="io3"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur(inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur(out) + '</b></div><div><span class="label">Risparmio</span><b style="color:' + (sv >= 0 ? 'var(--fg)' : '#E5484D') + '">' + (sv < 0 ? '−' : '') + eur(Math.abs(sv)) + '</b></div></div>' +
     '<div class="seg3" style="grid-template-columns:1fr 1fr">' + [['out', 'Uscite'], ['in', 'Entrate']].map(f => '<button data-t="' + f[0] + '" data-ant="' + f[0] + '" aria-pressed="' + (AN.t === f[0]) + '">' + f[1] + '</button>').join('') + '</div>' +
     crumbs +
@@ -1402,11 +1402,12 @@ function renderAn(){
       (cat && AN.s !== null && inSub.length ? '<button class="btn sm ghost" id="an-list" style="align-self:flex-start">' + ic('list') + 'Apri nell\'elenco per spostarli</button>' : '') +
       (cat && AN.s === null ? '<span class="small muted">Tocca una sottocategoria per vedere i movimenti.</span>' : '') + '</div></div>';
   bindDemo();
-  const rr = () => renderAn(); bindTxPeriod(rr);
+  const rr = () => renderAn(); bindStPeriod();
   view.querySelectorAll('[data-ant]').forEach(b => b.onclick = () => { AN = {t:b.dataset.ant, c:null, s:null}; rr(); });
   view.querySelectorAll('[data-crumb]').forEach(b => b.onclick = () => { if (b.dataset.crumb === '0') AN.c = null; AN.s = null; rr(); window.scrollTo({top:0}); });
   view.querySelectorAll('[data-an]').forEach(b => b.onclick = () => { const k = b.dataset.an; if (!AN.c) { AN.c = k; AN.s = null; } else AN.s = k.slice(2); rr(); const c = view.querySelector('.ancrumbs'); if (c) c.scrollIntoView({block:'start'}); });
-  const al = view.querySelector('#an-list'); if (al) al.onclick = () => { TXC = {t:AN.t, c:AN.c, s:AN.s}; TXBACK = null; nav({screen:'tx'}); };
+  const al = view.querySelector('#an-list'); if (al) al.onclick = () => { TXC = {t:AN.t, c:AN.c, s:AN.s}; TXBACK = {screen:'an'};
+    if (ST.mode === 'm') { TXP = 'm'; viewYM = ST.ym; } else if (ST.mode === 'y') { TXP = 'y'; TXY = ST.y; } else { TXP = 'p'; TXFR = ST.from; TXTO = ST.to; } nav({screen:'tx'}); };
 }
 function renderTx(){
   const fresh = TXREF !== PREV; TXREF = PREV;
@@ -1454,8 +1455,8 @@ function renderTx(){
           : '<div class="grid2"><div class="field"><label for="mv-c">Categoria</label><select id="mv-c">' + S.cats[selT].map(c => '<option value="' + c.id + '"' + (c.id === TXMV.c ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</select></div>' +
             '<div class="field"><label for="mv-s">Sottocategoria</label><select id="mv-s"><option value="">Nessuna</option>' + (mvCat.subs || []).map(x => '<option value="' + esc(x) + '"' + (x === TXMV.s ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '<option value="__new">+ Nuova…</option></select></div></div>' +
             '<div class="row"><button class="btn sm" id="mv-go">Sposta</button><button class="btn sm danger" id="mv-del">Elimina</button></div>') + '</div>' : '<div class="card impbulk"><span class="small">Tocca i movimenti da spostare o da eliminare.</span></div>');
-  view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + txViews('tx') + '<button class="readcard" ' + nav$({screen:'dues'}) + '><span class="t"><b>' + ic('calendar') + ' Scadenze e rinnovi</b><span>' + ((S.dues || []).length ? (S.dues || []).length + ' in calendario' + (upcomingDues().length ? ' · <span style="color:var(--yellow);font-weight:700">' + upcomingDues().length + ' da decidere</span>' : '') : 'Assicurazioni, abbonamenti, bollo: ti avviso un mese prima') + '</span></span>' + ic('right') + '</button>' +
-    (TXC && TXBACK ? backBtn((TABS.find(t => t[0] === TXBACK.screen) || [0, TXBACK.screen === 'charts' ? 'Grafici' : 'Indietro'])[1], TXBACK) : '') +
+  view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + '<button class="readcard" ' + nav$({screen:'dues'}) + '><span class="t"><b>' + ic('calendar') + ' Scadenze e rinnovi</b><span>' + ((S.dues || []).length ? (S.dues || []).length + ' in calendario' + (upcomingDues().length ? ' · <span style="color:var(--yellow);font-weight:700">' + upcomingDues().length + ' da decidere</span>' : '') : 'Assicurazioni, abbonamenti, bollo: ti avviso un mese prima') + '</span></span>' + ic('right') + '</button>' +
+    (TXC && TXBACK ? backBtn((TABS.find(t => t[0] === TXBACK.screen) || [0, TXBACK.screen === 'charts' ? 'Grafici' : TXBACK.screen === 'an' ? 'Analisi' : 'Indietro'])[1], TXBACK) : '') +
     period + catSel +
     (TXC ? '<div class="spread"><span class="chip" style="background:' + catColor(TXC.t, cat) + ';color:#fff">' + ic(cat.i) + esc(cat.n) + (TXC.s ? ' › ' + esc(TXC.s) : '') + '</span><button class="textlink" id="tx-clr">Togli il filtro</button></div>'
       : '<div class="filters">' + [['all','Tutti'],['out','Uscite'],['in','Entrate'],['xfer','Trasferimenti']].map(f => '<button data-f="' + f[0] + '" aria-pressed="' + (txFilter === f[0]) + '">' + f[1] + '</button>').join('') + '</div>') +
@@ -1874,19 +1875,43 @@ function slideCard(title, rows, total, empty, synth){
   if (!rows.length) return '<div class="card"><span class="label">' + title + '</span><p class="small muted">' + empty + '</p></div>';
   return '<div class="card"><div class="spread"><span class="label">' + title + '</span><span class="small muted">' + (synth ? 'barre ↔ sintesi' : 'barre ↔ cerchio') + '</span></div><div class="carousel">' + '<div class="slide">' + (rows.length > 6 ? '<div class="catscroll catscroll6">' + hbarsHTML(rows, total) + '</div><span class="small muted" style="text-align:center">' + rows.length + ' voci · scorri ↓</span>' : hbarsHTML(rows, total)) + '</div><div class="slide">' + (synth || donutHTML(rows, total)) + '</div></div><div class="dots"><i class="on"></i><i></i></div></div>';
 }
-function renderStats(){
+/* periodo delle statistiche, condiviso da Panoramica e Analisi */
+function stPeriod(){
   if (!ST.ym) { ST.ym = curYM(); ST.y = +curYM().slice(0, 4); }
   const first = [...S.tx.map(x => ymOf(x.d)), ...S.rec.map(r => r.from)].sort()[0] || curYM();
   if (!ST.from) { ST.from = addMonths(curYM(), -5); ST.to = curYM(); }
   const range = (a, b) => { const o = []; for (let m = a; m <= b; m = addMonths(m, 1)) o.push(m); return o; };
   const months = ST.mode === 'm' ? [ST.ym] : ST.mode === 'y' ? Array.from({length:12}, (_, i) => ST.y + '-' + pad(i + 1)).filter(ym => ym <= curYM()) : range(ST.from <= ST.to ? ST.from : ST.to, ST.to >= ST.from ? ST.to : ST.from).filter(ym => ym <= curYM());
+  const label = ST.mode === 'm' ? ymLabel(ST.ym) : ST.mode === 'y' ? 'Anno ' + ST.y : ymLabel(months[0] || ST.from, {month:'short', year:'numeric'}) + ' – ' + ymLabel(months[months.length - 1] || ST.to, {month:'short', year:'numeric'});
+  const canNext = ST.mode === 'm' ? ST.ym < curYM() : ST.y < +curYM().slice(0, 4);
+  return {months, first, label, canNext};
+}
+function stPeriodHTML(){
+  const {months, label, canNext} = stPeriod();
+  return '<div class="seg3"><button data-mode="m" aria-pressed="' + (ST.mode === 'm') + '">Mese</button><button data-mode="y" aria-pressed="' + (ST.mode === 'y') + '">Anno</button><button data-mode="p" aria-pressed="' + (ST.mode === 'p') + '">Periodo</button></div>' +
+    (ST.mode === 'p' ? '<div class="month"><span></span><b>' + label + ' · ' + months.length + (months.length === 1 ? ' mese' : ' mesi') + '</b><button id="p-edit" aria-label="Cambia periodo">' + ic('calendar') + '</button></div>' +
+        (ST.sheet ? '<div class="psheet" id="psheet"><div class="pin"><div class="spread"><b style="font-size:1.1rem">Scegli il periodo</b><button class="textlink" id="ps-x">Chiudi</button></div><div class="bigchips">' + [[3, 'Ultimi 3 mesi'], [6, 'Ultimi 6 mesi'], [12, 'Ultimi 12 mesi'], [0, 'Tutto']].map(q => '<button data-quick="' + q[0] + '">' + q[1] + '</button>').join('') + '</div><span class="small muted">Oppure scegli tu</span><div class="grid2"><div class="field"><label for="st-f">Da</label><input id="st-f" type="month" value="' + ST.from + '" max="' + curYM() + '"></div><div class="field"><label for="st-t">A</label><input id="st-t" type="month" value="' + ST.to + '" max="' + curYM() + '"></div></div><button class="btn" id="ps-ok">Mostra</button></div></div>' : '')
+      : '<div class="month"><button id="p-prev" aria-label="Periodo precedente">' + ic('left') + '</button><b>' + label + '</b><button id="p-next" aria-label="Periodo successivo"' + (canNext ? '' : ' disabled style="opacity:.3"') + '>' + ic('right') + '</button></div>');
+}
+function bindStPeriod(){
+  const {first, canNext} = stPeriod();
+  view.querySelectorAll('[data-mode]').forEach(x => x.onclick = () => { ST.mode = x.dataset.mode; ST.sheet = ST.mode === 'p'; render(); });
+  const pe = document.getElementById('p-edit'); if (pe) pe.onclick = () => { ST.sheet = true; render(); };
+  const px = document.getElementById('ps-x'); if (px) px.onclick = () => { ST.sheet = false; render(); };
+  const pso = document.getElementById('ps-ok'); if (pso) pso.onclick = () => { ST.from = val('st-f') || ST.from; ST.to = val('st-t') || ST.to; ST.sheet = false; render(); };
+  const psb = document.getElementById('psheet'); if (psb) psb.onclick = e => { if (e.target === psb) { ST.sheet = false; render(); } };
+  const pp = view.querySelector('#p-prev'); if (pp) { pp.onclick = () => { if (ST.mode === 'm') ST.ym = addMonths(ST.ym, -1); else ST.y--; render(); }; view.querySelector('#p-next').onclick = () => { if (!canNext) return; if (ST.mode === 'm') ST.ym = addMonths(ST.ym, 1); else ST.y++; render(); }; }
+  view.querySelectorAll('[data-quick]').forEach(x => x.onclick = () => { const n = +x.dataset.quick; ST.to = curYM(); ST.from = n ? addMonths(curYM(), -(n - 1)) : first; ST.sheet = false; render(); });
+}
+const statViews = cur => '<div class="seg3 views" style="grid-template-columns:1fr 1fr">' + [['stats', 'Panoramica'], ['an', 'Analisi']].map(v => '<button data-view="' + v[0] + '" ' + nav$({screen:v[0]}) + ' aria-pressed="' + (cur === v[0]) + '">' + v[1] + '</button>').join('') + '</div>';
+function renderStats(){
+  const {months, first} = stPeriod();
   const per = months.map(ym => ({ym, s:stats(ym)}));
   let inc = 0, out = 0; const byCat = {}, byIn = {};
   per.forEach(({s}) => { inc += s.inc; out += s.out; Object.entries(s.byCat).forEach(([c, a]) => byCat[c] = (byCat[c] || 0) + a); s.L.filter(x => x.t === 'in').forEach(x => byIn[x.c] = (byIn[x.c] || 0) + x.a); });
   const sv = inc - out, rate = inc > 0 ? sv / inc * 100 : null, b = band(rate);
   const lastYM = months[months.length - 1] || ST.ym, firstPrev = addMonths(months[0] || ST.ym, -1);
-  const label = ST.mode === 'm' ? ymLabel(ST.ym) : ST.mode === 'y' ? 'Anno ' + ST.y : ymLabel(months[0] || ST.from, {month:'short', year:'numeric'}) + ' – ' + ymLabel(months[months.length - 1] || ST.to, {month:'short', year:'numeric'});
-  const canNext = ST.mode === 'm' ? ST.ym < curYM() : ST.y < +curYM().slice(0, 4);
+  const {label} = stPeriod();
   const pil = PILLARS.map(p => ({p, v:pilBalanceAt(p.id, lastYM), v0:pilBalanceAt(p.id, firstPrev)}));
   const totP = pil.reduce((t, x) => t + x.v, 0), totP0 = pil.reduce((t, x) => t + x.v0, 0);
   let trendHTML;
@@ -1931,10 +1956,7 @@ function renderStats(){
   const outRows = Object.entries(byCat).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('out', c); return {id:c, disc:!!k.disc, n:k.n, v:a, c:catColor('out', k), tile:catTile('out', k), go:ST.mode === 'm' ? {screen:'tx', cat:c} : null}; });
   const inRows = Object.entries(byIn).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('in', c); return {id:c, n:k.n, v:a, c:catColor('in', k), tile:catTile('in', k), go:ST.mode === 'm' ? {screen:'tx', cat:c, ct:'in'} : null}; });
   view.innerHTML = '<div class="sec" style="gap:20px">' + demoBar() + '<div class="intro"><h2>Statistiche</h2></div>' +
-    '<div class="seg3"><button data-mode="m" aria-pressed="' + (ST.mode === 'm') + '">Mese</button><button data-mode="y" aria-pressed="' + (ST.mode === 'y') + '">Anno</button><button data-mode="p" aria-pressed="' + (ST.mode === 'p') + '">Periodo</button></div>' +
-    (ST.mode === 'p' ? '<div class="month"><span></span><b>' + label + ' · ' + months.length + (months.length === 1 ? ' mese' : ' mesi') + '</b><button id="p-edit" aria-label="Cambia periodo">' + ic('calendar') + '</button></div>' +
-        (ST.sheet ? '<div class="psheet" id="psheet"><div class="pin"><div class="spread"><b style="font-size:1.1rem">Scegli il periodo</b><button class="textlink" id="ps-x">Chiudi</button></div><div class="bigchips">' + [[3, 'Ultimi 3 mesi'], [6, 'Ultimi 6 mesi'], [12, 'Ultimi 12 mesi'], [0, 'Tutto']].map(q => '<button data-quick="' + q[0] + '">' + q[1] + '</button>').join('') + '</div><span class="small muted">Oppure scegli tu</span><div class="grid2"><div class="field"><label for="st-f">Da</label><input id="st-f" type="month" value="' + ST.from + '" max="' + curYM() + '"></div><div class="field"><label for="st-t">A</label><input id="st-t" type="month" value="' + ST.to + '" max="' + curYM() + '"></div></div><button class="btn" id="ps-ok">Mostra</button></div></div>' : '')
-      : '<div class="month"><button id="p-prev" aria-label="Periodo precedente">' + ic('left') + '</button><b>' + label + '</b><button id="p-next" aria-label="Periodo successivo"' + (canNext ? '' : ' disabled style="opacity:.3"') + '>' + ic('right') + '</button></div>') +
+    statViews('stats') + stPeriodHTML() +
     '<div class="card"><div class="spread"><span class="label">Riepilogo · ' + label + '</span><span class="status" style="background:' + b.c + '">' + (rate === null ? 'Nessuna entrata' : Math.round(rate) + '% · ' + b.l) + '</span></div>' +
       '<div class="carousel"><div class="slide">' + hbarsHTML([{n:'Entrate totali', v:inc, c:IN_COL, tile:'<span class="ic" style="background:' + IN_COL + '">' + ic('plus') + '</span>'}, {n:'Uscite totali', v:out, c:OUT_COL, tile:'<span class="ic" style="background:' + OUT_COL + '">' + ic('cart') + '</span>'}, {n:'Risparmio', v:sv, c:b.c, tile:'<span class="ic" style="background:' + b.c + '">' + ic('coins') + '</span>', sub:rate === null ? '–' : Math.round(rate) + '%'}]) + '</div><div class="slide">' + (inc > 0 || out > 0 ? donutHTML(sv >= 0 ? [{n:'Uscite', v:out, c:OUT_COL}, {n:'Risparmio', v:sv, c:b.c}] : [{n:'Entrate', v:inc, c:IN_COL}, {n:'Uscite oltre le entrate', v:-sv, c:'#E5484D'}], sv >= 0 ? inc : inc - sv) : '<p class="small muted">Nessun movimento nel periodo.</p>') + '</div></div><div class="dots"><i class="on"></i><i></i></div></div>' +
     '<div class="card"><div class="spread"><span class="label">Patrimonio nei 4 pilastri</span><b class="num" style="font-family:var(--display);font-size:1.3rem">' + eur(totP) + '</b></div>' +
@@ -1946,13 +1968,7 @@ function renderStats(){
     (!S.reviews[addMonths(curYM(), -1)] ? '<button class="readcard" ' + nav$({screen:'review'}) + '><span class="t"><b>' + ic('calendar') + ' Revisione mensile di ' + ymLabel(addMonths(curYM(), -1), {month:'long'}) + '</b><span>15 minuti per tenere la rotta</span></span>' + ic('right') + '</button>' : '') +
   '</div>';
   bindDemo();
-  view.querySelectorAll('[data-mode]').forEach(x => x.onclick = () => { ST.mode = x.dataset.mode; ST.sheet = ST.mode === 'p'; renderStats(); });
-  const pe = document.getElementById('p-edit'); if (pe) pe.onclick = () => { ST.sheet = true; renderStats(); };
-  const px = document.getElementById('ps-x'); if (px) px.onclick = () => { ST.sheet = false; renderStats(); };
-  const pso = document.getElementById('ps-ok'); if (pso) pso.onclick = () => { ST.from = val('st-f') || ST.from; ST.to = val('st-t') || ST.to; ST.sheet = false; renderStats(); };
-  const psb = document.getElementById('psheet'); if (psb) psb.onclick = e => { if (e.target === psb) { ST.sheet = false; renderStats(); } };
-  const pp = view.querySelector('#p-prev'); if (pp) { pp.onclick = () => { if (ST.mode === 'm') ST.ym = addMonths(ST.ym, -1); else ST.y--; renderStats(); }; view.querySelector('#p-next').onclick = () => { if (!canNext) return; if (ST.mode === 'm') ST.ym = addMonths(ST.ym, 1); else ST.y++; renderStats(); }; }
-  view.querySelectorAll('[data-quick]').forEach(x => x.onclick = () => { const n = +x.dataset.quick; ST.to = curYM(); ST.from = n ? addMonths(curYM(), -(n - 1)) : first; ST.sheet = false; renderStats(); });
+  bindStPeriod();
     bindCarousels();
 }
 
@@ -2722,7 +2738,7 @@ function postRender(){
 /* scorrimento laterale tra le sezioni principali: la pagina segue il dito */
 (function(){
   let x0 = null, y0 = null, t0 = 0, dx = 0, lock = null, skip = false, busy = false;
-  const SUB = {missions:'gym', learn:'gym', an:'tx'}, cur = () => SUB[R.screen] || R.screen, order = () => TABS.map(t => t[0]), reset = () => { view.style.transition = ''; view.style.transform = ''; view.style.opacity = ''; };
+  const SUB = {missions:'gym', learn:'gym', an:'stats'}, cur = () => SUB[R.screen] || R.screen, order = () => TABS.map(t => t[0]), reset = () => { view.style.transition = ''; view.style.transform = ''; view.style.opacity = ''; };
   view.addEventListener('touchstart', e => { if (busy) return; const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); dx = 0; lock = null; skip = !!e.target.closest('.hscroll, input, textarea, select, .carousel, .psheet') || order().indexOf(cur()) < 0; }, {passive:true});
   view.addEventListener('touchmove', e => {
     if (x0 === null || skip) return; const t = e.touches[0]; dx = t.clientX - x0; const dy = t.clientY - y0;

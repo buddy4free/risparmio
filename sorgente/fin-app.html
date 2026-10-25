@@ -166,6 +166,14 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .item.selrow.off{opacity:.45;cursor:default}
 .list .item.selrow{display:grid;width:100%;box-sizing:border-box}
 .item.selrow .amt{justify-self:end}
+.io3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.io3 > div{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.io3 b{font-size:1rem;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ancrumbs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-weight:700}
+.ancrumbs button{border:0;background:none;color:var(--muted);padding:4px 0;font-weight:700;text-decoration:underline}
+.ancrumbs button[aria-current="true"]{color:var(--fg);text-decoration:none}
+.ancrumbs span{color:var(--muted)}
+.hbar .t .small{font-size:.72rem}
 .txfilt{display:flex;flex-direction:column;gap:8px}
 .txfilt select{width:100%}
 .cxwrap{border-bottom:1px solid var(--line)}
@@ -1083,7 +1091,7 @@ document.getElementById('gear').innerHTML = ic('gear');
 document.getElementById('gear').onclick = () => nav(S.setup ? {screen:'settings'} : {screen:'welcome'});
 document.getElementById('help').onclick = () => nav({screen:'legend'});
 const TABS = [['home','Home','house'],['tx','Movimenti','list'],['stats','Statistiche','chart'],['pillars','Pilastri','pillars'],['gym','Palestra','dumbbell'],['well','Benessere','leaf']];
-const TAB_OF = {import:'home', privacy:'home', terms:'home', support:'home', whatif:'pillars', debts:'pillars', missions:'gym', mission:'gym', learn:'gym', lesson:'gym', wbi:'home', dues:'tx', home:'home', tx:'tx', stats:'stats', charts:'stats', add:'tx', review:'stats', pillars:'pillars', pillar:'pillars', goal:'pillars', gtips:'pillars', sim:'pillars', gym:'gym', read:'gym', champ:'gym', well:'well', breath:'well'};
+const TAB_OF = {import:'home', privacy:'home', terms:'home', support:'home', whatif:'pillars', debts:'pillars', missions:'gym', mission:'gym', learn:'gym', lesson:'gym', wbi:'home', dues:'tx', an:'tx', home:'home', tx:'tx', stats:'stats', charts:'stats', add:'tx', review:'stats', pillars:'pillars', pillar:'pillars', goal:'pillars', gtips:'pillars', sim:'pillars', gym:'gym', read:'gym', champ:'gym', well:'well', breath:'well'};
 function backBtn(label, r){ return '<button class="back" ' + nav$(r) + '>' + ic('left') + label + '</button>'; }
 function render(){
   const inApp = S.setup && !['welcome','setup'].includes(R.screen);
@@ -1095,7 +1103,7 @@ function render(){
   document.getElementById('topbar').hidden = R.screen === 'welcome' || R.screen === 'add';
   document.getElementById('gear').hidden = true; document.getElementById('help').hidden = true;
   ({welcome:renderWelcome, setup:renderSetup, home:renderHome, tx:renderTx, charts:renderStats, stats:renderStats, add:renderAdd, pillars:renderPillars, pillar:renderPillar, goal:renderGoal,
-    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, import:renderImport, cats:renderCats, legend:renderLegend, sim:renderSim, dues:renderDues, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
+    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, import:renderImport, cats:renderCats, an:renderAn, legend:renderLegend, sim:renderSim, dues:renderDues, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
   postRender(); bindCarousels();
 }
 function demoBar(){ return S.demo ? '<div class="demo"><span>Stai guardando dati di esempio.</span><button id="demo-end">Inizia con i tuoi dati</button></div>' : ''; }
@@ -1329,18 +1337,71 @@ function renderHome(){
 let txFilter = 'all';
 /* filtri dei movimenti: categoria (TXC = {t, c, s}), periodo (mese, anno, tutto) */
 let TXC = null, TXP = 'm', TXY = +curYM().slice(0, 4), TXLIM = 300, TXREF = null, TXFR = addMonths(curYM(), -5), TXTO = curYM(), TXSEL = null, TXMV = {c:'', s:''};
-function renderTx(){
-  const fresh = TXREF !== PREV; TXREF = PREV;
-  if (R.cat) { TXBACK = PREV && PREV.screen !== 'tx' ? {screen:PREV.screen} : null; if (PREV && PREV.screen === 'stats' && ST.mode === 'm' && ST.ym) viewYM = ST.ym;
-    TXC = {t:R.ct || 'out', c:R.cat, s:R.sub}; TXP = 'm'; R = {screen:'tx'}; }
-  else if (fresh && PREV && !['tx', 'add', 'cats'].includes(PREV.screen)) { TXC = null; TXBACK = null; TXSEL = null; }
-  if (TXC && !S.cats[TXC.t].some(c => c.id === TXC.c)) TXC = null;
-  if (!TXC) TXBACK = null;
+/* periodo condiviso da Movimenti e Analisi */
+function txMonths(){
   const first = [...S.tx.map(x => ymOf(x.d)), ...S.rec.map(r => r.from)].sort()[0] || curYM();
   const range = (a, b) => { const o = []; for (let m = a; m <= b; m = addMonths(m, 1)) o.push(m); return o; };
   const pf = TXFR <= TXTO ? TXFR : TXTO, pt = TXFR <= TXTO ? TXTO : TXFR;
   const months = TXP === 'm' ? [viewYM] : TXP === 'y' ? range(TXY + '-01', TXY + '-12').filter(m => m <= curYM()) : TXP === 'p' ? range(pf, pt).filter(m => m <= curYM()) : range(first < curYM() ? first : curYM(), curYM());
   if (!months.length) months.push(curYM());
+  return months;
+}
+function txPeriodHTML(months){
+  return '<div class="seg3" style="grid-template-columns:repeat(4,1fr)">' + [['m', 'Mese'], ['y', 'Anno'], ['p', 'Periodo'], ['a', 'Tutto']].map(q => '<button data-mode="' + q[0] + '" data-per="' + q[0] + '" aria-pressed="' + (TXP === q[0]) + '">' + q[1] + '</button>').join('') + '</div>' +
+    (TXP === 'm' ? monthNav() : TXP === 'y' ? '<div class="month"><button id="y-prev" aria-label="Anno precedente">' + ic('left') + '</button><b>' + TXY + '</b><button id="y-next" aria-label="Anno successivo"' + (TXY >= +curYM().slice(0, 4) ? ' disabled style="opacity:.3"' : '') + '>' + ic('right') + '</button></div>' : TXP === 'p' ? '<div class="grid2"><div class="field"><label for="tx-fr">Da</label><input id="tx-fr" type="month" value="' + TXFR + '" max="' + curYM() + '"></div><div class="field"><label for="tx-to">A</label><input id="tx-to" type="month" value="' + TXTO + '" max="' + curYM() + '"></div></div>' : '<div class="month"><span></span><b>' + ymLabel(months[0], {month:'short', year:'numeric'}) + ' – oggi</b><span></span></div>');
+}
+function bindTxPeriod(rr){
+  if (TXP === 'm') bindMonth();
+  const fr = view.querySelector('#tx-fr'); if (fr) { fr.onchange = () => { TXFR = fr.value || TXFR; rr(); }; view.querySelector('#tx-to').onchange = e => { TXTO = e.target.value || TXTO; rr(); }; }
+  view.querySelectorAll('[data-per]').forEach(b => b.onclick = () => { TXP = b.dataset.per; if (TXP === 'y') TXY = +viewYM.slice(0, 4); rr(); });
+  const yp = view.querySelector('#y-prev'); if (yp) { yp.onclick = () => { TXY--; rr(); }; view.querySelector('#y-next').onclick = () => { if (TXY < +curYM().slice(0, 4)) { TXY++; rr(); } }; }
+}
+const txViews = cur => '<div class="seg3" style="grid-template-columns:1fr 1fr">' + [['tx', 'Elenco'], ['an', 'Analisi']].map(v => '<button data-mode="' + v[0] + '" ' + nav$({screen:v[0]}) + ' aria-pressed="' + (cur === v[0]) + '">' + v[1] + '</button>').join('') + '</div>';
+/* ---------- analisi movimenti: categorie → sottocategorie → movimenti ---------- */
+let AN = {t:'out', c:null, s:null};
+function renderAn(){
+  if (AN.c && !S.cats[AN.t].some(c => c.id === AN.c)) AN.c = null;
+  const months = txMonths(), all = [].concat(...months.map(ym => monthTx(ym))).filter(x => !x.plan);
+  const inc = all.filter(x => x.t === 'in').reduce((t, x) => t + x.a, 0), out = all.filter(x => x.t === 'out').reduce((t, x) => t + x.a, 0), sv = inc - out;
+  const L = all.filter(x => x.t === AN.t), col = AN.t === 'in' ? IN_COL : OUT_COL, nm = months.length;
+  const cat = AN.c && catOf(AN.t, AN.c), inCat = cat ? L.filter(x => x.c === AN.c) : L, inSub = cat && AN.s !== null ? inCat.filter(x => (x.s || '') === AN.s) : inCat;
+  const tot = inSub.reduce((t, x) => t + x.a, 0);
+  const row = (k, n, v, cnt, tile, c) => '<button class="hbar" data-an="' + esc(k) + '" title="' + esc(n) + ': ' + eur2(v) + '">' + tile + '<span class="t"><span>' + esc(n) + '</span><span class="track"><i style="width:' + (v / mx * 100) + '%;background:' + c + '"></i></span><span class="small muted">' + movN(cnt) + (nm > 1 ? ' · ' + eur(v / nm) + ' al mese' : '') + '</span></span><span class="v">' + eur(v) + '<small>' + (tot ? Math.round(v / tot * 100) : 0) + '%</small></span></button>';
+  let mx = 1, body = '', title;
+  if (!cat) { const g = {}; L.forEach(x => { (g[x.c] = g[x.c] || {v:0, n:0}); g[x.c].v += x.a; g[x.c].n++; }); const E = Object.entries(g).sort((a, b) => b[1].v - a[1].v); mx = Math.max(1, ...E.map(e => e[1].v));
+    title = (AN.t === 'in' ? 'Entrate' : 'Uscite') + ' per categoria';
+    body = E.length ? '<div class="hbars">' + E.map(([id, q]) => { const k = catOf(AN.t, id); return row(id, k.n, q.v, q.n, catTile(AN.t, k), catColor(AN.t, k)); }).join('') + '</div>' : '<p class="small muted">Nessun movimento nel periodo.</p>'; }
+  else if (AN.s === null) { const g = {}; inCat.forEach(x => { const k = x.s || ''; (g[k] = g[k] || {v:0, n:0}); g[k].v += x.a; g[k].n++; }); const E = Object.entries(g).sort((a, b) => b[1].v - a[1].v); mx = Math.max(1, ...E.map(e => e[1].v));
+    title = 'Sottocategorie di ' + cat.n;
+    body = E.length ? '<div class="hbars">' + E.map(([k, q]) => row('s:' + k, k || 'Senza sottocategoria', q.v, q.n, '<span class="ic" style="background:' + catColor(AN.t, cat) + ';opacity:' + (k ? 1 : .45) + '"></span>', catColor(AN.t, cat))).join('') + '</div>' : '<p class="small muted">Nessun movimento nel periodo.</p>'; }
+  else { title = 'Movimenti';
+    const G = {}; inSub.slice().sort((a, b) => b.d.localeCompare(a.d)).slice(0, 400).forEach(x => (G[x.d] = G[x.d] || []).push(x));
+    body = inSub.length ? Object.keys(G).sort().reverse().map(d => '<div class="dayhead">' + dLabel(d) + (TXP !== 'm' ? ' ' + d.slice(0, 4) : '') + '</div><div class="list">' + G[d].map(x => '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, cat) + '<span class="t"><b>' + esc(x.n || x.s || cat.n) + '</b><span class="sub">' + esc(cat.n + (x.s ? ' · ' + x.s : '')) + (x.rec ? ' · ogni mese' : '') + '</span></span><span class="amt num" style="color:' + col + '">' + (x.t === 'in' ? '+' : '−') + eur2(x.a).replace('−', '') + '</span></button>').join('') + '</div>').join('') +
+      (inSub.length > 400 ? '<p class="small muted">Mostro gli ultimi 400: per vederli tutti apri l\'elenco.</p>' : '') : '<p class="small muted">Nessun movimento nel periodo.</p>'; }
+  const crumbs = '<div class="ancrumbs"><button data-crumb="0"' + (cat ? '' : ' aria-current="true"') + '>' + (AN.t === 'in' ? 'Entrate' : 'Uscite') + '</button>' + (cat ? '<span>›</span><button data-crumb="1"' + (AN.s === null ? ' aria-current="true"' : '') + '>' + esc(cat.n) + '</button>' : '') + (cat && AN.s !== null ? '<span>›</span><button aria-current="true">' + esc(AN.s || 'Senza sottocategoria') + '</button>' : '') + '</div>';
+  view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + txViews('an') + txPeriodHTML(months) +
+    '<div class="io3"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur(inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur(out) + '</b></div><div><span class="label">Risparmio</span><b style="color:' + (sv >= 0 ? 'var(--fg)' : '#E5484D') + '">' + (sv < 0 ? '−' : '') + eur(Math.abs(sv)) + '</b></div></div>' +
+    '<div class="seg3" style="grid-template-columns:1fr 1fr">' + [['out', 'Uscite'], ['in', 'Entrate']].map(f => '<button data-t="' + f[0] + '" data-ant="' + f[0] + '" aria-pressed="' + (AN.t === f[0]) + '">' + f[1] + '</button>').join('') + '</div>' +
+    crumbs +
+    '<div class="card"><div class="spread"><span class="label">' + esc(title) + '</span><b class="num" style="color:' + col + '">' + eur2(tot) + '</b></div>' + (nm > 1 ? '<span class="small muted">' + movN(inSub.length) + ' in ' + nm + ' mesi · media ' + eur(tot / nm) + ' al mese</span>' : '<span class="small muted">' + movN(inSub.length) + '</span>') +
+      (cat && AN.s === null ? '' : !cat ? '<span class="small muted">Tocca una categoria per vedere le sottocategorie.</span>' : '') + body +
+      (cat && AN.s !== null && inSub.length ? '<button class="btn sm ghost" id="an-list" style="align-self:flex-start">' + ic('list') + 'Apri nell\'elenco per spostarli</button>' : '') +
+      (cat && AN.s === null ? '<span class="small muted">Tocca una sottocategoria per vedere i movimenti.</span>' : '') + '</div></div>';
+  bindDemo();
+  const rr = () => renderAn(); bindTxPeriod(rr);
+  view.querySelectorAll('[data-ant]').forEach(b => b.onclick = () => { AN = {t:b.dataset.ant, c:null, s:null}; rr(); });
+  view.querySelectorAll('[data-crumb]').forEach(b => b.onclick = () => { if (b.dataset.crumb === '0') AN.c = null; AN.s = null; rr(); window.scrollTo({top:0}); });
+  view.querySelectorAll('[data-an]').forEach(b => b.onclick = () => { const k = b.dataset.an; if (!AN.c) { AN.c = k; AN.s = null; } else AN.s = k.slice(2); rr(); const c = view.querySelector('.ancrumbs'); if (c) c.scrollIntoView({block:'start'}); });
+  const al = view.querySelector('#an-list'); if (al) al.onclick = () => { TXC = {t:AN.t, c:AN.c, s:AN.s}; TXBACK = null; nav({screen:'tx'}); };
+}
+function renderTx(){
+  const fresh = TXREF !== PREV; TXREF = PREV;
+  if (R.cat) { TXBACK = PREV && PREV.screen !== 'tx' ? {screen:PREV.screen} : null; if (PREV && PREV.screen === 'stats' && ST.mode === 'm' && ST.ym) viewYM = ST.ym;
+    TXC = {t:R.ct || 'out', c:R.cat, s:R.sub}; TXP = 'm'; R = {screen:'tx'}; }
+  else if (fresh && PREV && !['tx', 'add', 'cats', 'an'].includes(PREV.screen)) { TXC = null; TXBACK = null; TXSEL = null; }
+  if (TXC && !S.cats[TXC.t].some(c => c.id === TXC.c)) TXC = null;
+  if (!TXC) TXBACK = null;
+  const months = txMonths();
   let L = [].concat(...months.map(ym => monthTx(ym)));
   const XF = (S.xfers || []).filter(x => months.includes(ymOf(x.d))).map(x => Object.assign({xfer:true}, x));
   const inc = L.filter(x => x.t === 'in').reduce((t, x) => t + x.a, 0), out = L.filter(x => x.t === 'out').reduce((t, x) => t + x.a, 0);
@@ -1352,8 +1413,7 @@ function renderTx(){
   L.sort((a, b) => b.d.localeCompare(a.d));
   const shown = L.slice(0, TXLIM), groups = {}; shown.forEach(x => (groups[x.d] = groups[x.d] || []).push(x));
   const perLabel = TXP === 'm' ? ymLabel(viewYM) : TXP === 'y' ? 'Anno ' + TXY : TXP === 'p' ? ymLabel(months[0], {month:'short', year:'numeric'}) + ' – ' + ymLabel(months[months.length - 1], {month:'short', year:'numeric'}) : 'Da ' + ymLabel(months[0], {month:'short', year:'numeric'});
-  const period = '<div class="seg3" style="grid-template-columns:repeat(4,1fr)">' + [['m', 'Mese'], ['y', 'Anno'], ['p', 'Periodo'], ['a', 'Tutto']].map(q => '<button data-mode="' + q[0] + '" data-per="' + q[0] + '" aria-pressed="' + (TXP === q[0]) + '">' + q[1] + '</button>').join('') + '</div>' +
-    (TXP === 'm' ? monthNav() : TXP === 'y' ? '<div class="month"><button id="y-prev" aria-label="Anno precedente">' + ic('left') + '</button><b>' + TXY + '</b><button id="y-next" aria-label="Anno successivo"' + (TXY >= +curYM().slice(0, 4) ? ' disabled style="opacity:.3"' : '') + '>' + ic('right') + '</button></div>' : TXP === 'p' ? '<div class="grid2"><div class="field"><label for="tx-fr">Da</label><input id="tx-fr" type="month" value="' + TXFR + '" max="' + curYM() + '"></div><div class="field"><label for="tx-to">A</label><input id="tx-to" type="month" value="' + TXTO + '" max="' + curYM() + '"></div></div>' : '<div class="month"><span></span><b>' + ymLabel(months[0], {month:'short', year:'numeric'}) + ' – oggi</b><span></span></div>');
+  const period = txPeriodHTML(months);
   const catSel = '<div class="txfilt"><select id="tx-c" aria-label="Filtra per categoria"><option value="">Tutte le categorie</option>' + [['out', 'Uscite'], ['in', 'Entrate']].map(([t, n]) => '<optgroup label="' + n + '">' + S.cats[t].map(c => '<option value="' + t + ':' + c.id + '"' + (TXC && TXC.t === t && TXC.c === c.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</optgroup>').join('') + '</select>' +
     (cat && (cat.subs || []).length ? '<select id="tx-s" aria-label="Filtra per sottocategoria"><option value="__all">Tutte le sottocategorie</option>' + cat.subs.map(sb => '<option value="' + esc(sb) + '"' + (TXC.s === sb ? ' selected' : '') + '>' + esc(sb) + '</option>').join('') + '<option value=""' + (TXC.s === '' ? ' selected' : '') + '>Senza sottocategoria</option></select>' : '') + '</div>';
   let summary;
@@ -1380,7 +1440,7 @@ function renderTx(){
           : '<div class="grid2"><div class="field"><label for="mv-c">Categoria</label><select id="mv-c">' + S.cats[selT].map(c => '<option value="' + c.id + '"' + (c.id === TXMV.c ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</select></div>' +
             '<div class="field"><label for="mv-s">Sottocategoria</label><select id="mv-s"><option value="">Nessuna</option>' + (mvCat.subs || []).map(x => '<option value="' + esc(x) + '"' + (x === TXMV.s ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '<option value="__new">+ Nuova…</option></select></div></div>' +
             '<div class="row"><button class="btn sm" id="mv-go">Sposta</button><button class="btn sm danger" id="mv-del">Elimina</button></div>') + '</div>' : '<div class="card impbulk"><span class="small">Tocca i movimenti da spostare o da eliminare.</span></div>');
-  view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + '<button class="readcard" ' + nav$({screen:'dues'}) + '><span class="t"><b>' + ic('calendar') + ' Scadenze e rinnovi</b><span>' + ((S.dues || []).length ? (S.dues || []).length + ' in calendario' + (upcomingDues().length ? ' · <span style="color:var(--yellow);font-weight:700">' + upcomingDues().length + ' da decidere</span>' : '') : 'Assicurazioni, abbonamenti, bollo: ti avviso un mese prima') + '</span></span>' + ic('right') + '</button>' +
+  view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + txViews('tx') + '<button class="readcard" ' + nav$({screen:'dues'}) + '><span class="t"><b>' + ic('calendar') + ' Scadenze e rinnovi</b><span>' + ((S.dues || []).length ? (S.dues || []).length + ' in calendario' + (upcomingDues().length ? ' · <span style="color:var(--yellow);font-weight:700">' + upcomingDues().length + ' da decidere</span>' : '') : 'Assicurazioni, abbonamenti, bollo: ti avviso un mese prima') + '</span></span>' + ic('right') + '</button>' +
     (TXC && TXBACK ? backBtn((TABS.find(t => t[0] === TXBACK.screen) || [0, TXBACK.screen === 'charts' ? 'Grafici' : 'Indietro'])[1], TXBACK) : '') +
     period + catSel +
     (TXC ? '<div class="spread"><span class="chip" style="background:' + catColor(TXC.t, cat) + ';color:#fff">' + ic(cat.i) + esc(cat.n) + (TXC.s ? ' › ' + esc(TXC.s) : '') + '</span><button class="textlink" id="tx-clr">Togli il filtro</button></div>'
@@ -1394,9 +1454,9 @@ function renderTx(){
       : '<div class="note">Nessun movimento' + (TXC ? ' con questo filtro' : '') + (TXP === 'm' ? ' a ' + ymLabel(viewYM, {month:'long'}) : TXP === 'y' ? ' nel ' + TXY : TXP === 'p' ? ' nel periodo' : '') + '.' + (TXP === 'm' ? ' Prova "Anno" o "Tutto" per vedere un periodo più lungo.' : '') + '</div>') +
     (downloads && S.tx.length + S.rec.length ? '<button class="textlink" id="csv">Esporta tutti i movimenti in CSV</button>' : '') +
   '</div>';
-  if (TXP === 'm') bindMonth(); bindDemo();
+  bindDemo();
   const rr = () => { TXLIM = 300; renderTx(); }, keepY = () => { const y = window.scrollY; renderTx(); window.scrollTo({top:y}); };
-  const fr = view.querySelector('#tx-fr'); if (fr) { fr.onchange = () => { TXFR = fr.value || TXFR; rr(); }; view.querySelector('#tx-to').onchange = e => { TXTO = e.target.value || TXTO; rr(); }; }
+  bindTxPeriod(rr);
   const sb = view.querySelector('#tx-sel'); if (sb) sb.onclick = () => { TXSEL = TXSEL ? null : new Set(); keepY(); };
   const sa = view.querySelector('#tx-sall'); if (sa) sa.onclick = () => { const ids = selectable.map(x => x.id); if (ids.every(id => TXSEL.has(id))) ids.forEach(id => TXSEL.delete(id)); else ids.forEach(id => TXSEL.add(id)); keepY(); };
   view.querySelectorAll('[data-tsel]').forEach(cb => cb.onchange = () => { cb.checked ? TXSEL.add(cb.dataset.tsel) : TXSEL.delete(cb.dataset.tsel); keepY(); });
@@ -1405,8 +1465,6 @@ function renderTx(){
     confirmDo('Sposti ' + movN(list.length) + ' in <b>' + esc(d.n) + (TXMV.s ? ' › ' + esc(TXMV.s) : '') + '</b>.', 'Sposta', () => { list.forEach(x => { x.c = d.id; x.s = TXMV.s; }); if (TXMV.s) addSub(selT, d, TXMV.s); toast(movN(list.length) + ' spostati in ' + d.n); TXSEL = new Set(); keepY(); }); };
   const md = view.querySelector('#mv-del'); if (md) md.onclick = () => { const n = TXSEL.size; confirmDo('Elimini ' + movN(n) + '. Non si può annullare.', 'Elimina', () => { S.tx = S.tx.filter(x => !TXSEL.has(x.id)); toast(movN(n) + ' eliminati'); TXSEL = new Set(); keepY(); }); };
   const mx = view.querySelector('#mv-x'); if (mx) mx.onclick = () => { TXSEL = null; keepY(); };
-  view.querySelectorAll('[data-per]').forEach(b => b.onclick = () => { TXP = b.dataset.per; if (TXP === 'y') TXY = +viewYM.slice(0, 4); rr(); });
-  const yp = view.querySelector('#y-prev'); if (yp) { yp.onclick = () => { TXY--; rr(); }; view.querySelector('#y-next').onclick = () => { if (TXY < +curYM().slice(0, 4)) { TXY++; rr(); } }; }
   view.querySelector('#tx-c').onchange = e => { const v = e.target.value; if (!v) TXC = null; else { const [t, c] = v.split(':'); TXC = {t, c}; } rr(); };
   const ts = view.querySelector('#tx-s'); if (ts) ts.onchange = e => { TXC.s = e.target.value === '__all' ? undefined : e.target.value; rr(); };
   const tc = view.querySelector('#tx-clr'); if (tc) tc.onclick = () => { TXC = null; TXBACK = null; rr(); };
@@ -2622,7 +2680,7 @@ function postRender(){
 /* scorrimento laterale tra le sezioni principali: la pagina segue il dito */
 (function(){
   let x0 = null, y0 = null, t0 = 0, dx = 0, lock = null, skip = false, busy = false;
-  const SUB = {missions:'gym', learn:'gym'}, cur = () => SUB[R.screen] || R.screen, order = () => TABS.map(t => t[0]), reset = () => { view.style.transition = ''; view.style.transform = ''; view.style.opacity = ''; };
+  const SUB = {missions:'gym', learn:'gym', an:'tx'}, cur = () => SUB[R.screen] || R.screen, order = () => TABS.map(t => t[0]), reset = () => { view.style.transition = ''; view.style.transform = ''; view.style.opacity = ''; };
   view.addEventListener('touchstart', e => { if (busy) return; const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); dx = 0; lock = null; skip = !!e.target.closest('.hscroll, input, textarea, select, .carousel, .psheet') || order().indexOf(cur()) < 0; }, {passive:true});
   view.addEventListener('touchmove', e => {
     if (x0 === null || skip) return; const t = e.touches[0]; dx = t.clientX - x0; const dy = t.clientY - y0;

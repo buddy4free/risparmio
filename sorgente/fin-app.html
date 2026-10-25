@@ -177,6 +177,10 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .hbar .t .small{font-size:.72rem}
 .rfbox{border:1px dashed #22A45D;border-radius:14px;padding:12px;align-items:flex-start;gap:10px}
 .rfbox input{margin-top:2px;width:22px;height:22px;flex:0 0 22px;accent-color:#22A45D}
+.txq{display:flex;align-items:center;gap:8px;background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:0 12px}
+.txq .i{width:18px;height:18px;color:var(--muted);flex:0 0 18px}
+.txq input{border:0;background:none;flex:1;min-width:0;padding:12px 0}
+.txq button{border:0;background:none;color:var(--muted);font-size:1.4rem;line-height:1;padding:4px}
 .txfilt{display:flex;flex-direction:column;gap:8px}
 .txfilt select{width:100%}
 .cxwrap{border-bottom:1px solid var(--line)}
@@ -1351,7 +1355,8 @@ function renderHome(){
 /* ---------- movimenti ---------- */
 let txFilter = 'all';
 /* filtri dei movimenti: categoria (TXC = {t, c, s}), periodo (mese, anno, tutto) */
-let TXC = null, TXP = 'm', TXY = +curYM().slice(0, 4), TXLIM = 300, TXREF = null, TXFR = addMonths(curYM(), -5), TXTO = curYM(), TXSEL = null, TXMV = {c:'', s:''};
+const normQ = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+let TXQ = '', TXC = null, TXP = 'm', TXY = +curYM().slice(0, 4), TXLIM = 300, TXREF = null, TXFR = addMonths(curYM(), -5), TXTO = curYM(), TXSEL = null, TXMV = {c:'', s:''};
 /* periodo condiviso da Movimenti e Analisi */
 function txMonths(){
   const first = [...S.tx.map(x => ymOf(x.d)), ...S.rec.map(r => r.from)].sort()[0] || curYM();
@@ -1425,11 +1430,12 @@ function renderTx(){
   else if (txFilter === 'xfer') L = XF;
   else if (txFilter !== 'all') L = L.filter(x => x.t === txFilter);
   else L = L.concat(XF);
+  if (TXQ) { const q = normQ(TXQ).trim(); L = L.filter(x => normQ(x.xfer ? [destLabel(x.from), destLabel(x.to), x.n].join(' ') : [x.n, x.s, catOf(x.t, x.c).n, String(x.a).replace('.', ',')].join(' ')).includes(q)); }
   L.sort((a, b) => b.d.localeCompare(a.d));
   const shown = L.slice(0, TXLIM), groups = {}; shown.forEach(x => (groups[x.d] = groups[x.d] || []).push(x));
   const perLabel = TXP === 'm' ? ymLabel(viewYM) : TXP === 'y' ? 'Anno ' + TXY : TXP === 'p' ? ymLabel(months[0], {month:'short', year:'numeric'}) + ' – ' + ymLabel(months[months.length - 1], {month:'short', year:'numeric'}) : 'Da ' + ymLabel(months[0], {month:'short', year:'numeric'});
   const period = txPeriodHTML(months);
-  const catSel = '<div class="txfilt"><select id="tx-c" aria-label="Filtra per categoria"><option value="">Tutte le categorie</option>' + [['out', 'Uscite'], ['in', 'Entrate']].map(([t, n]) => '<optgroup label="' + n + '">' + S.cats[t].map(c => '<option value="' + t + ':' + c.id + '"' + (TXC && TXC.t === t && TXC.c === c.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</optgroup>').join('') + '</select>' +
+  const catSel = '<div class="txfilt"><div class="txq">' + ic('list') + '<input id="tx-q" type="search" placeholder="Cerca nella nota, nella categoria o nell\'importo" value="' + esc(TXQ) + '" aria-label="Cerca nei movimenti">' + (TXQ ? '<button id="tx-qx" aria-label="Cancella la ricerca">×</button>' : '') + '</div><select id="tx-c" aria-label="Filtra per categoria"><option value="">Tutte le categorie</option>' + [['out', 'Uscite'], ['in', 'Entrate']].map(([t, n]) => '<optgroup label="' + n + '">' + S.cats[t].map(c => '<option value="' + t + ':' + c.id + '"' + (TXC && TXC.t === t && TXC.c === c.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</optgroup>').join('') + '</select>' +
     (cat && (cat.subs || []).length ? '<select id="tx-s" aria-label="Filtra per sottocategoria"><option value="__all">Tutte le sottocategorie</option>' + cat.subs.map(sb => '<option value="' + esc(sb) + '"' + (TXC.s === sb ? ' selected' : '') + '>' + esc(sb) + '</option>').join('') + '<option value=""' + (TXC.s === '' ? ' selected' : '') + '>Senza sottocategoria</option></select>' : '') + '</div>';
   let summary;
   if (TXC) { const tot = L.filter(x => !x.plan).reduce((t, x) => t + x.a, 0), real = L.filter(x => !x.plan).length, col = TXC.t === 'in' ? IN_COL : OUT_COL;
@@ -1439,6 +1445,8 @@ function renderTx(){
       '<div class="io"><div><span class="label">Totale</span><b style="color:' + col + '">' + eur2(tot) + '</b></div><div><span class="label">' + (months.length > 1 ? 'Media al mese' : 'Movimenti') + '</span><b>' + (months.length > 1 ? eur(tot / months.length) : real) + '</b></div></div>' +
       (months.length > 1 ? '<span class="small muted">' + movN(real) + ' in ' + months.length + ' mesi</span>' : '') +
       (subRows.length > 1 || (subRows[0] && subRows[0][0]) ? '<span class="label" style="margin-top:6px">Per sottocategoria · tocca per filtrare</span><div' + (subRows.length > 6 ? ' class="catscroll catscroll6"' : '') + '>' + hbarsHTML(subRows.map(r => ({n:r[0] || 'Senza sottocategoria', v:r[1], c:catColor(TXC.t, cat), go:null, sk:r[0]})), tot) + '</div>' : '') + '</div>';
+  } else if (TXQ) { const fo = L.filter(x => x.t === 'out' && !x.plan).reduce((t, x) => t + x.a, 0), fi = L.filter(x => x.t === 'in' && !x.plan).reduce((t, x) => t + x.a, 0);
+    summary = '<div class="card"><span class="label">Ricerca "' + esc(TXQ) + '" · ' + movN(L.length) + '</span><div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur2(fi) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur2(fo) + '</b></div></div></div>';
   } else summary = '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur2(inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur2(out) + '</b></div></div>';
   const withY = TXP !== 'm', dl = d => dLabel(d) + (withY ? ' ' + d.slice(0, 4) : '');
   /* selezione multipla: sposta in un'altra categoria o sottocategoria, oppure elimina */
@@ -1466,7 +1474,7 @@ function renderTx(){
       if (TXSEL) { const ok = !x.rec && !x.plan && S.tx.some(y => y.id === x.id); return '<label class="item selrow' + (ok ? '' : ' off') + '">' + (ok ? '<input type="checkbox" data-tsel="' + x.id + '"' + (TXSEL.has(x.id) ? ' checked' : '') + '>' : '<span class="small muted" title="Ricorrente: si modifica dalla serie">↻</span>') + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (isRf(x) ? ' · rimborso' : '') + '</span></span>' + txAmt(x) + '</label>'; }
       return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan ? ' · previsto' : x.rec ? ' · ogni mese' : '') + (isRf(x) ? ' · <b style="color:' + IN_COL + '">rimborso</b>' : '') + '</span></span>' + txAmt(x) + '</button>'; }).join('') + '</div>').join('') + '</div>' +
       selCard() + (L.length > shown.length ? '<button class="btn ghost" id="tx-more">Mostra altri ' + Math.min(300, L.length - shown.length) + ' (' + (L.length - shown.length) + ' in tutto)</button>' : '')
-      : '<div class="note">Nessun movimento' + (TXC ? ' con questo filtro' : '') + (TXP === 'm' ? ' a ' + ymLabel(viewYM, {month:'long'}) : TXP === 'y' ? ' nel ' + TXY : TXP === 'p' ? ' nel periodo' : '') + '.' + (TXP === 'm' ? ' Prova "Anno" o "Tutto" per vedere un periodo più lungo.' : '') + '</div>') +
+      : '<div class="note">Nessun movimento' + (TXC || TXQ ? ' con questo filtro' : '') + (TXP === 'm' ? ' a ' + ymLabel(viewYM, {month:'long'}) : TXP === 'y' ? ' nel ' + TXY : TXP === 'p' ? ' nel periodo' : '') + '.' + (TXP === 'm' ? ' Prova "Anno" o "Tutto" per vedere un periodo più lungo.' : '') + '</div>') +
     (downloads && S.tx.length + S.rec.length ? '<button class="textlink" id="csv">Esporta tutti i movimenti in CSV</button>' : '') +
   '</div>';
   bindDemo();
@@ -1480,6 +1488,8 @@ function renderTx(){
     confirmDo('Sposti ' + movN(list.length) + ' in <b>' + esc(d.n) + (TXMV.s ? ' › ' + esc(TXMV.s) : '') + '</b>.', 'Sposta', () => { list.forEach(x => { x.c = d.id; x.s = TXMV.s; }); if (TXMV.s) addSub(selT, d, TXMV.s); toast(movN(list.length) + ' spostati in ' + d.n); TXSEL = new Set(); keepY(); }); };
   const md = view.querySelector('#mv-del'); if (md) md.onclick = () => { const n = TXSEL.size; confirmDo('Elimini ' + movN(n) + '. Non si può annullare.', 'Elimina', () => { S.tx = S.tx.filter(x => !TXSEL.has(x.id)); toast(movN(n) + ' eliminati'); TXSEL = new Set(); keepY(); }); };
   const mx = view.querySelector('#mv-x'); if (mx) mx.onclick = () => { TXSEL = null; keepY(); };
+  const tq = view.querySelector('#tx-q'); let qt; if (tq) { tq.oninput = () => { clearTimeout(qt); qt = setTimeout(() => { TXQ = tq.value; const pos = tq.selectionStart; rr(); const n = view.querySelector('#tx-q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 300); }; }
+  const tqx = view.querySelector('#tx-qx'); if (tqx) tqx.onclick = () => { TXQ = ''; rr(); };
   view.querySelector('#tx-c').onchange = e => { const v = e.target.value; if (!v) TXC = null; else { const [t, c] = v.split(':'); TXC = {t, c}; } rr(); };
   const ts = view.querySelector('#tx-s'); if (ts) ts.onchange = e => { TXC.s = e.target.value === '__all' ? undefined : e.target.value; rr(); };
   const tc = view.querySelector('#tx-clr'); if (tc) tc.onclick = () => { TXC = null; TXBACK = null; rr(); };

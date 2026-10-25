@@ -168,6 +168,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .colpick button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px var(--bg) inset}
 .colpick .cg{width:auto;border-radius:99px;padding:0 12px;background:var(--soft);border:1px solid var(--line);font-weight:600;font-size:.85rem;display:inline-flex;align-items:center;gap:6px}
 .colpick .cg .i{width:16px;height:16px}
+.choose .cmanage{margin-top:10px;border-style:dashed}
+.choose .cmanage .ic{color:#000}
 .item.nt{grid-template-columns:1fr auto}
 .cxord{display:flex;gap:4px}
 .cxord button{width:40px;height:40px;border:1px solid var(--line);background:var(--soft);border-radius:10px;font-weight:800;font-size:1.05rem}
@@ -1399,7 +1401,8 @@ const TYPE = {out:['Uscita','#E5484D','Una spesa: soldi che escono','cart'], in:
 function renderChooser(){
   F = null;
   view.innerHTML = '<div class="sec" style="gap:18px"><div class="formbar"><button class="back" ' + nav$({screen:'tx'}) + '>' + ic('left') + 'Annulla</button><b>Cosa vuoi registrare?</b><span></span></div>' +
-    '<div class="choose">' + ['in', 'out', 'xfer'].map(t => '<button ' + nav$({screen:'add', type:t}) + ' style="--tc:' + TYPE[t][1] + '"><span class="ic">' + ic(TYPE[t][3]) + '</span><span class="t"><b>' + TYPE[t][0] + '</b><span>' + TYPE[t][2] + '</span></span>' + ic('right') + '</button>').join('') + '</div></div>';
+    '<div class="choose">' + ['in', 'out', 'xfer'].map(t => '<button ' + nav$({screen:'add', type:t}) + ' style="--tc:' + TYPE[t][1] + '"><span class="ic">' + ic(TYPE[t][3]) + '</span><span class="t"><b>' + TYPE[t][0] + '</b><span>' + TYPE[t][2] + '</span></span>' + ic('right') + '</button>').join('') +
+      '<button ' + nav$({screen:'cats'}) + ' class="cmanage" style="--tc:var(--yellow)"><span class="ic">' + ic('tag') + '</span><span class="t"><b>Gestisci categorie</b><span>Crea, rinomina, sottocategorie, icone e colori</span></span>' + ic('right') + '</button></div></div>';
 }
 function renderAdd(){
   if (!R.type && !R.edit && !R.editX && !R.xfer) return renderChooser();
@@ -2823,7 +2826,7 @@ function doImport(rows){
 }
 
 /* ---------- gestisci categorie ---------- */
-let CATX = {reorder:false};
+let CATX = {reorder:false, from:null};
 const isDefCat = (t, id) => (t === 'in' ? DEF_IN : DEF_OUT).some(d => d.id === id);
 function catUse(t, id, sb){ const m = x => x.t === t && x.c === id && (sb === undefined || (x.s || '') === sb); return S.tx.filter(m).length + S.rec.filter(m).length; }
 function recat(t, m, f){ S.tx.concat(S.rec).forEach(x => { if (x.t === t && m(x)) f(x); }); }
@@ -2842,9 +2845,10 @@ function catPop(html, bind){
 }
 function renderCats(){
   const t = R.t || 'out', G = t === 'in' ? IN_GROUPS : GROUPS;
+  if (PREV && PREV.screen !== 'cats') CATX.from = PREV.screen === 'add' ? {screen:'add', type:PREV.type} : {screen:'settings'};
   if (R.id) return renderCatEdit(t, G);
-  const L = S.cats[t];
-  view.innerHTML = '<div class="sec" style="gap:18px">' + backBtn('Impostazioni', {screen:'settings'}) +
+  const L = S.cats[t], from = CATX.from || {screen:'settings'};
+  view.innerHTML = '<div class="sec" style="gap:18px">' + backBtn(from.screen === 'add' ? (from.type ? 'Torna al movimento' : 'Indietro') : 'Impostazioni', from) +
     '<div class="intro"><span class="label">Dati</span><h2>Gestisci categorie</h2><p class="muted">Rinomina, cambia icona, aggiungi sottocategorie, sposta o unisci. I movimenti seguono sempre la loro categoria.</p></div>' +
     '<div class="filters">' + [['out', 'Uscite'], ['in', 'Entrate']].map(f => '<button data-ct="' + f[0] + '" aria-pressed="' + (t === f[0]) + '">' + f[1] + '</button>').join('') + '</div>' +
     '<div class="spread"><span class="small muted">' + L.length + ' categorie</span><button class="textlink" id="cx-ord">' + (CATX.reorder ? 'Fatto' : 'Riordina') + '</button></div>' +

@@ -2994,7 +2994,10 @@ function impResolve(k){
   const g = IMP.guess[k] || ['', ''];
   if (!IMP.forceSub.has(k) && cat && g[0] === cat.id && g[1]) return {id:cat.id, name, sub:g[1], isNew:false};
   if (!IMP.forceSub.has(k) && !IMP.keepSub && !v.startsWith('n:')) return {id:cat.id, name, sub:'', isNew:false};
-  const sub = (cat && (cat.subs || []).find(x => x.toLowerCase() === lo)) || src;
+  /* raggruppando sotto "Casa Vicenza", "Gas Vicenza" diventa "Gas" e "Condominio Mo" diventa "Condominio" */
+  const pw = name.toLowerCase().split(/\s+/).filter(w => w.length >= 3), tk = src.split(/\s+/), keep = tk.filter(w => { const l = w.toLowerCase(); return !pw.some(p => p === l || (l.length >= 2 && p.startsWith(l))); });
+  const short = IMP.forceSub.has(k) && tk.length > 1 && keep.length && keep.length < tk.length ? keep.join(' ') : src;
+  const sub = (cat && (cat.subs || []).find(x => x.toLowerCase() === short.toLowerCase())) || short;
   return {id:cat && cat.id, name, sub, isNew:!cat};
 }
 /* icona indovinata dal nome, per le categorie nuove */

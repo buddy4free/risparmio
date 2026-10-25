@@ -201,7 +201,9 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 
 /* welcome & setup */
 .welcome{display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px;padding-top:6px}
-.welcome img{width:min(200px,55vw);height:auto}
+.welcome{min-height:calc(100dvh - 120px);justify-content:center}
+.welcome h1{margin:0}
+.welcome img{width:min(220px,58vw);height:auto;margin:6px 0}
 .welcome p{max-width:42ch}
 .supcard p{margin:0}
 .terms{display:flex;flex-direction:column;gap:8px}
@@ -1020,16 +1022,26 @@ function supportPopup(){
   document.body.appendChild(o); bindShare(o);
   o.onclick = e => { if (e.target === o || e.target.closest('[data-x]')) o.remove(); };
 }
+/* prima di iniziare: l'app è gratuita */
+function freePopup(go){
+  const o = document.createElement('div'); o.className = 'psheet'; o.id = 'freepop';
+  o.innerHTML = '<div class="pin" style="text-align:center;align-items:center"><span class="marker y" style="font-size:1.6rem">Tutto gratis</span>' +
+    '<p style="margin:0;font-size:1.05rem">Buddy4Free Risparmio è <b class="y">gratuita</b>: niente pubblicità, niente abbonamenti, niente funzioni a pagamento. Come tutto quello che nasce da Buddy4Free.</p>' +
+    '<p class="muted" style="margin:0">Usala, e falla girare a chi pensi ne abbia bisogno. Se vuoi sostenere il progetto, iscriviti al canale YouTube.</p>' +
+    '<button class="btn wide" data-go>Iniziamo</button><a class="btn ghost wide" href="' + YT_URL + '" target="_blank" rel="noopener">' + ic('play') + 'Il canale Buddy4Free</a></div>';
+  document.body.appendChild(o);
+  o.querySelector('[data-go]').onclick = () => { o.remove(); go(); };
+  o.onclick = e => { if (e.target === o) o.remove(); };
+}
 function renderWelcome(){
-  view.innerHTML = '<div class="welcome"><img src="' + LOGO + '" alt="Buddy4Free">' +
-    '<h1>I tuoi soldi, <span class="hl">sotto controllo</span>.</h1>' +
+  view.innerHTML = '<div class="welcome"><h1>I tuoi soldi, <span class="hl">sotto controllo</span>.</h1>' +
+    '<img src="' + LOGO + '" alt="Buddy4Free">' +
     '<p class="muted">Traccia entrate e uscite, scopri dove sprechi, riempi i 4 pilastri della finanza personale e raggiungi il tuo obiettivo: un viaggio, un\'auto, la casa o la cifra che vuoi tu.</p>' +
     '<label class="check small wterms"><input type="checkbox" id="w-terms"' + (termsOK() ? ' checked' : '') + '> <span>Ho letto e accetto i <button class="textlink" ' + nav$({screen:'terms'}) + '>Termini e condizioni</button>, ho letto l\'<button class="textlink" ' + nav$({screen:'privacy'}) + '>Informativa sulla privacy</button> e so che l\'app non fornisce consulenza finanziaria.</span></label>' +
     '<button class="btn wide" id="w-start">Inizia, bastano 2 minuti</button>' +
-    '<button class="btn ghost wide" id="demo">Prova con dati di esempio</button>' +
-    '<p class="small muted">Gratuita, senza pubblicità, nello spirito di <a href="' + YT_URL + '" target="_blank" rel="noopener" class="y">Buddy4Free</a>: usala e falla girare a chi ne ha bisogno.</p></div>';
+    '<button class="btn ghost wide" id="demo">Prova con dati di esempio</button></div>';
   const cb = view.querySelector('#w-terms'), gate = f => () => { if (!cb.checked) { toast('Prima accetta i Termini e condizioni'); cb.closest('label').classList.add('shake'); setTimeout(() => cb.closest('label').classList.remove('shake'), 500); return; } acceptTerms(); f(); };
-  view.querySelector('#w-start').onclick = gate(() => nav({screen:'setup', i:0}));
+  view.querySelector('#w-start').onclick = gate(() => freePopup(() => nav({screen:'setup', i:0})));
   view.querySelector('#demo').onclick = gate(() => { loadDemo(); acceptTerms(); nav({screen:'home'}); });
 }
 let SU = {};

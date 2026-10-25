@@ -186,6 +186,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .ancrumbs button[aria-current="true"]{color:var(--fg);text-decoration:none}
 .ancrumbs span{color:var(--muted)}
 .hbar .t .small{font-size:.72rem}
+.rfbox{border:1px dashed #22A45D;border-radius:14px;padding:12px;align-items:flex-start;gap:10px}
+.rfbox input{margin-top:2px;width:22px;height:22px;flex:0 0 22px;accent-color:#22A45D}
 .txfilt{display:flex;flex-direction:column;gap:8px}
 .txfilt select{width:100%}
 .cxwrap{border-bottom:1px solid var(--line)}
@@ -1045,7 +1047,7 @@ function txEffects(){
   const key = S.savedAt + ':' + S.tx.length + ':' + S.rec.length + ':' + today() + ':' + pilFrom();
   if (_eff && _effKey === key) return _eff;
   const from = pilFrom(), out = [];
-  for (let ym = [ymOf(from)].concat(S.tx.filter(x => x.f).map(x => ymOf(x.d))).sort()[0]; ym <= curYM(); ym = addMonths(ym, 1)) monthTx(ym).forEach(x => { if (x.imp || (x.d < from && !x.f) || x.d > today()) return; out.push({d:x.d, k:x.p || 'liq', a:x.t === 'in' ? x.a : -x.a, n:(x.t === 'in' ? 'Entrata: ' : 'Uscita: ') + catOf(x.t, x.c).n + (x.n ? ' · ' + x.n : ''), tx:true}); });
+  for (let ym = [ymOf(from)].concat(S.tx.filter(x => x.f).map(x => ymOf(x.d))).sort()[0]; ym <= curYM(); ym = addMonths(ym, 1)) monthTx(ym).forEach(x => { if (x.imp || (x.d < from && !x.f) || x.d > today()) return; out.push({d:x.d, k:x.p || 'liq', a:x.t === 'in' ? x.a : -x.a, n:(x.t === 'in' ? 'Entrata: ' : x.a < 0 ? 'Rimborso: ' : 'Uscita: ') + catOf(x.t, x.c).n + (x.n ? ' · ' + x.n : ''), tx:true}); });
   _eff = out; _effKey = key; return out;
 }
 const effSum = k => txEffects().filter(e => e.k === k).reduce((t, e) => t + e.a, 0);
@@ -1396,7 +1398,7 @@ function renderAn(){
     body = E.length ? '<div class="hbars">' + E.map(([k, q]) => row('s:' + k, k || 'Senza sottocategoria', q.v, q.n, '<span class="ic" style="background:' + catColor(AN.t, cat) + ';opacity:' + (k ? 1 : .45) + '"></span>', catColor(AN.t, cat))).join('') + '</div>' : '<p class="small muted">Nessun movimento nel periodo.</p>'; }
   else { title = 'Movimenti';
     const G = {}; inSub.slice().sort((a, b) => b.d.localeCompare(a.d)).slice(0, 400).forEach(x => (G[x.d] = G[x.d] || []).push(x));
-    body = inSub.length ? Object.keys(G).sort().reverse().map(d => '<div class="dayhead">' + dLabel(d) + (TXP !== 'm' ? ' ' + d.slice(0, 4) : '') + '</div><div class="list">' + G[d].map(x => '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, cat) + '<span class="t"><b>' + esc(x.n || x.s || cat.n) + '</b><span class="sub">' + esc(cat.n + (x.s ? ' · ' + x.s : '')) + (x.rec ? ' · ogni mese' : '') + '</span></span><span class="amt num" style="color:' + col + '">' + (x.t === 'in' ? '+' : '−') + eur2(x.a).replace('−', '') + '</span></button>').join('') + '</div>').join('') +
+    body = inSub.length ? Object.keys(G).sort().reverse().map(d => '<div class="dayhead">' + dLabel(d) + (TXP !== 'm' ? ' ' + d.slice(0, 4) : '') + '</div><div class="list">' + G[d].map(x => '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, cat) + '<span class="t"><b>' + esc(x.n || x.s || cat.n) + '</b><span class="sub">' + esc(cat.n + (x.s ? ' · ' + x.s : '')) + (x.rec ? ' · ogni mese' : '') + (isRf(x) ? ' · <b style="color:' + IN_COL + '">rimborso</b>' : '') + '</span></span>' + txAmt(x) + '</button>').join('') + '</div>').join('') +
       (inSub.length > 400 ? '<p class="small muted">Mostro gli ultimi 400: per vederli tutti apri l\'elenco.</p>' : '') : '<p class="small muted">Nessun movimento nel periodo.</p>'; }
   const crumbs = '<div class="ancrumbs"><button data-crumb="0"' + (cat ? '' : ' aria-current="true"') + '>' + (AN.t === 'in' ? 'Entrate' : 'Uscite') + '</button>' + (cat ? '<span>›</span><button data-crumb="1"' + (AN.s === null ? ' aria-current="true"' : '') + '>' + esc(cat.n) + '</button>' : '') + (cat && AN.s !== null ? '<span>›</span><button aria-current="true">' + esc(AN.s || 'Senza sottocategoria') + '</button>' : '') + '</div>';
   view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + txViews('an') + txPeriodHTML(months) +
@@ -1468,8 +1470,8 @@ function renderTx(){
     summary + selBar() +
     (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => '<div class="dayhead">' + dl(d) + '</div><div class="list">' + groups[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
       const c = catOf(x.t, x.c);
-      if (TXSEL) { const ok = !x.rec && !x.plan && S.tx.some(y => y.id === x.id); return '<label class="item selrow' + (ok ? '' : ' off') + '">' + (ok ? '<input type="checkbox" data-tsel="' + x.id + '"' + (TXSEL.has(x.id) ? ' checked' : '') + '>' : '<span class="small muted" title="Ricorrente: si modifica dalla serie">↻</span>') + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + '</span></span><span class="amt num" style="color:' + (x.t === 'in' ? IN_COL : OUT_COL) + '">' + (x.t === 'in' ? '+' : '−') + eur2(x.a).replace('−', '') + '</span></label>'; }
-      return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan ? ' · previsto' : x.rec ? ' · ogni mese' : '') + '</span></span><span class="amt num" style="color:' + (x.t === 'in' ? IN_COL : OUT_COL) + '">' + (x.t === 'in' ? '+' : '−') + eur2(x.a).replace('−', '') + '</span></button>'; }).join('') + '</div>').join('') + '</div>' +
+      if (TXSEL) { const ok = !x.rec && !x.plan && S.tx.some(y => y.id === x.id); return '<label class="item selrow' + (ok ? '' : ' off') + '">' + (ok ? '<input type="checkbox" data-tsel="' + x.id + '"' + (TXSEL.has(x.id) ? ' checked' : '') + '>' : '<span class="small muted" title="Ricorrente: si modifica dalla serie">↻</span>') + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (isRf(x) ? ' · rimborso' : '') + '</span></span>' + txAmt(x) + '</label>'; }
+      return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan ? ' · previsto' : x.rec ? ' · ogni mese' : '') + (isRf(x) ? ' · <b style="color:' + IN_COL + '">rimborso</b>' : '') + '</span></span>' + txAmt(x) + '</button>'; }).join('') + '</div>').join('') + '</div>' +
       selCard() + (L.length > shown.length ? '<button class="btn ghost" id="tx-more">Mostra altri ' + Math.min(300, L.length - shown.length) + ' (' + (L.length - shown.length) + ' in tutto)</button>' : '')
       : '<div class="note">Nessun movimento' + (TXC ? ' con questo filtro' : '') + (TXP === 'm' ? ' a ' + ymLabel(viewYM, {month:'long'}) : TXP === 'y' ? ' nel ' + TXY : TXP === 'p' ? ' nel periodo' : '') + '.' + (TXP === 'm' ? ' Prova "Anno" o "Tutto" per vedere un periodo più lungo.' : '') + '</div>') +
     (downloads && S.tx.length + S.rec.length ? '<button class="textlink" id="csv">Esporta tutti i movimenti in CSV</button>' : '') +
@@ -1541,6 +1543,9 @@ function renderXfer(){
     save(); toast('Spostati ' + eur2(a) + ' da ' + destLabel(F.from) + ' a ' + destLabel(F.to)); viewYM = ymOf(F.d); F = null; nav({screen:'tx'});
   };
 }
+/* un rimborso è un'uscita con importo negativo: riduce la spesa della sua categoria e rientra nel pilastro */
+const isRf = x => x.t === 'out' && x.a < 0;
+const txAmt = x => '<span class="amt num" style="color:' + (x.t === 'in' || isRf(x) ? IN_COL : OUT_COL) + '">' + (x.t === 'in' || isRf(x) ? '+' : '−') + eur2(Math.abs(x.a)) + '</span>';
 function destOptions(t){ return ['liq', 'emerg'].concat(S.goals.filter(g => g.kind !== 'emergenza').map(g => 'g:' + g.id)).concat(t === 'in' ? ['inv'] : []); }
 const TYPE = {out:['Uscita','#E5484D','Una spesa: soldi che escono','cart'], in:['Entrata','#22A45D','Stipendio, regali, vendite: soldi che arrivano','plus'], xfer:['Trasferimento','#3987e5','Sposta soldi tra i tuoi pilastri','repeat']};
 function renderChooser(){
@@ -1557,36 +1562,37 @@ function renderAdd(){
     if (R.edit) {
       if (R.edit.startsWith('r:')) { const [, rid, dk] = R.edit.split(':'); const r = S.rec.find(x => x.id === rid);
         if (r) Object.assign(F, {t:r.t, c:r.c, s:r.s, a:String(r.a).replace('.', ','), d:dk.length === 10 ? dk : dk + '-' + pad(r.day), n:r.n, rec:true, recId:rid, recKey:dk, p:r.p || 'liq', every:r.every || 1, unit:r.unit || 'm', end:r.count ? 'count' : r.until ? 'until' : 'never', count:r.count || 12, until:r.until || ''}); }
-      else { const x = S.tx.find(y => y.id === R.edit); if (x) Object.assign(F, {t:x.t, c:x.c, s:x.s, a:String(x.a).replace('.', ','), d:x.d, n:x.n, p:x.p || 'liq'}); }
+      else { const x = S.tx.find(y => y.id === R.edit); if (x) Object.assign(F, {t:isRf(x) ? 'in' : x.t, rf:isRf(x), c:x.c, s:x.s, a:String(Math.abs(x.a)).replace('.', ','), d:x.d, n:x.n, p:x.p || 'liq'}); }
       F.step = 'amt';
     }
   }
   if (F.t === 'xfer') return renderXfer();
-  const cats = S.cats[F.t], cur = F.c && catOf(F.t, F.c), T = TYPE[F.t], four = F.t === 'out' || !!(cur && (cur.subs || []).length);
-  const crumbs = (F.c ? '<button class="crumb" data-step="cat">' + catTile(F.t, cur) + esc(cur.n) + '</button>' : '') +
+  const CT = F.rf ? 'out' : F.t, cats = S.cats[CT], cur = F.c && catOf(CT, F.c), T = F.rf ? ['Rimborso', '#22A45D'] : TYPE[F.t], four = CT === 'out' || !!(cur && (cur.subs || []).length);
+  const crumbs = (F.c ? '<button class="crumb" data-step="cat">' + catTile(CT, cur) + esc(cur.n) + '</button>' : '') +
     (F.c && four && F.step !== 'cat' && F.step !== 'sub' ? '<button class="crumb" data-step="sub">' + (F.s ? esc(F.s) : 'nessuna sottocategoria') + '</button>' : '') +
     (['amt'].includes(F.step) ? '<button class="crumb" data-step="dest"><i class="dot" style="background:' + destColor(F.p) + '"></i>' + esc(destLabel(F.p)) + '</button>' : '');
   const stepNo = {cat:1, sub:2, dest:four ? 3 : 2, amt:four ? 4 : 3}[F.step], steps = four ? 4 : 3;
   let body = '';
   if (F.step === 'cat') {
-    body = '<h3>Scegli la categoria</h3><div class="cats">' + cats.map(c => '<button data-c="' + c.id + '" aria-pressed="' + (F.c === c.id) + '">' + catTile(F.t, c) + esc(c.n) + '</button>').join('') + '<button data-c="__new" aria-pressed="' + F.newCat + '">' + ic('plus') + 'Nuova</button></div>' + (F.newCat ? '' : '<button class="textlink" ' + nav$({screen:'cats', t:F.t}) + ' style="align-self:flex-start">Gestisci categorie</button>') +
-      (F.newCat ? '<div class="card"><b>Nuova categoria</b><input id="nc-n" placeholder="Nome"><div class="iconpick">' + PICK_ICONS.map(n => '<button data-ic="' + n + '" aria-pressed="' + (F.icon === n) + '" aria-label="' + n + '">' + ic(n) + '</button>').join('') + '</div>' + (F.t === 'out' ? '<label class="check"><input type="checkbox" id="nc-d"> Spesa non essenziale</label>' : '') + '<button class="btn sm" id="nc-ok" style="align-self:flex-start">Crea categoria</button></div>' : '');
+    body = (F.t === 'in' && !R.edit ? '<label class="check rfbox"><input type="checkbox" id="f-rf"' + (F.rf ? ' checked' : '') + '><span><b>È un rimborso di una spesa</b><br><span class="small muted">Un reso, una nota spese, una quota che un amico ti restituisce. Scegli la spesa che ti hanno rimborsato: il rimborso la riduce e non conta come entrata.</span></span></label>' : '') +
+      '<h3>' + (F.rf ? 'Che spesa ti hanno rimborsato?' : 'Scegli la categoria') + '</h3><div class="cats">' + cats.map(c => '<button data-c="' + c.id + '" aria-pressed="' + (F.c === c.id) + '">' + catTile(CT, c) + esc(c.n) + '</button>').join('') + '<button data-c="__new" aria-pressed="' + F.newCat + '">' + ic('plus') + 'Nuova</button></div>' + (F.newCat ? '' : '<button class="textlink" ' + nav$({screen:'cats', t:CT}) + ' style="align-self:flex-start">Gestisci categorie</button>') +
+      (F.newCat ? '<div class="card"><b>Nuova categoria</b><input id="nc-n" placeholder="Nome"><div class="iconpick">' + PICK_ICONS.map(n => '<button data-ic="' + n + '" aria-pressed="' + (F.icon === n) + '" aria-label="' + n + '">' + ic(n) + '</button>').join('') + '</div>' + (CT === 'out' ? '<label class="check"><input type="checkbox" id="nc-d"> Spesa non essenziale</label>' : '') + '<button class="btn sm" id="nc-ok" style="align-self:flex-start">Crea categoria</button></div>' : '');
   } else if (F.step === 'sub') {
     body = '<h3>Sottocategoria di ' + esc(cur.n) + '</h3><div class="bigchips">' + (cur.subs || []).map(x => '<button data-s="' + esc(x) + '" aria-pressed="' + (F.s === x) + '">' + esc(x) + '</button>').join('') + '<button data-s="" aria-pressed="' + (!F.s) + '" class="muted">Nessuna</button><button data-s="__new">+ Nuova</button></div>' +
       (F.newSub ? '<div class="row"><input id="ns-n" placeholder="Nome sottocategoria" style="flex:1;width:auto"><button class="btn sm" id="ns-ok">Aggiungi</button></div>' : '');
   } else if (F.step === 'dest') {
-    body = '<h3>' + (F.t === 'in' ? 'Dove vanno i soldi?' : 'Da dove escono i soldi?') + '</h3><div class="destlist">' + destOptions(F.t).map(k => '<button data-p="' + k + '" aria-pressed="' + (F.p === k) + '"><i class="dot" style="background:' + destColor(k) + '"></i><span>' + esc(destLabel(k)) + (k === 'liq' ? '<br><span class="small muted">Il conto di tutti i giorni · di solito questa</span>' : '') + '</span><b class="num">' + eur(destBal(k)) + '</b></button>').join('') + '</div>';
+    body = '<h3>' + (F.rf ? 'Dove arrivano i soldi?' : F.t === 'in' ? 'Dove vanno i soldi?' : 'Da dove escono i soldi?') + '</h3><div class="destlist">' + destOptions(CT).map(k => '<button data-p="' + k + '" aria-pressed="' + (F.p === k) + '"><i class="dot" style="background:' + destColor(k) + '"></i><span>' + esc(destLabel(k)) + (k === 'liq' ? '<br><span class="small muted">Il conto di tutti i giorni · di solito questa</span>' : '') + '</span><b class="num">' + eur(destBal(k)) + '</b></button>').join('') + '</div>';
   } else {
     const opt = F.rec ? '<div class="recbox"><div class="row"><span>Ogni</span><input id="r-ev" type="number" min="1" max="52" value="' + F.every + '" style="width:70px"><select id="r-un" style="width:auto"><option value="w"' + (F.unit === 'w' ? ' selected' : '') + '>settimane</option><option value="m"' + (F.unit === 'm' ? ' selected' : '') + '>mesi</option></select></div>' +
       '<span class="label">Fino a</span><div class="bigchips">' + [['never', 'Sempre'], ['count', 'Un numero di volte'], ['until', 'Una data']].map(o => '<button data-end="' + o[0] + '" aria-pressed="' + (F.end === o[0]) + '">' + o[1] + '</button>').join('') + '</div>' +
       (F.end === 'count' ? '<div class="row"><input id="r-ct" type="number" min="1" max="520" value="' + F.count + '" style="width:90px"><span>volte</span></div>' : '') +
       (F.end === 'until' ? '<input id="r-ut" type="date" value="' + (F.until || dayOffset(F.d, 365)) + '">' : '') + '</div>' : '';
-    body = '<label class="amount t-' + F.t + '"><span>€</span><input id="f-a" inputmode="decimal" placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"></label>' +
+    body = (F.rf ? '<p class="small muted" style="margin:0">Rimborso di <b style="color:var(--fg)">' + esc(cur.n + (F.s ? ' › ' + F.s : '')) + '</b>: scrivi solo quanto ti è tornato.</p>' : '') + '<label class="amount t-' + F.t + '"><span>€</span><input id="f-a" inputmode="decimal" placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"></label>' +
       '<div class="grid2"><div class="field"><label for="f-d">Data</label><input id="f-d" type="date" value="' + F.d + '"' + (F.rec ? '' : ' max="' + today() + '"') + '></div><div class="field"><label for="f-n">Nota</label><input id="f-n" placeholder="Facoltativa" value="' + esc(F.n) + '"></div></div>' +
-      '<label class="check"><input type="checkbox" id="f-rec"' + (F.rec ? ' checked' : '') + (R.edit && !F.recId ? ' disabled' : '') + '> Si ripete</label>' + opt +
+      (F.rf ? '<input type="checkbox" id="f-rec" hidden>' : '<label class="check"><input type="checkbox" id="f-rec"' + (F.rec ? ' checked' : '') + (R.edit && !F.recId ? ' disabled' : '') + '> Si ripete</label>' + opt) +
       (R.edit ? '<div id="delwrap" class="sec">' + (F.recId ? '<button class="btn danger" data-del="one">Elimina solo questa volta</button><button class="btn danger" data-del="stop">Interrompi da qui in poi</button>' : '<button class="btn danger" data-del="one">Elimina</button>') + '</div>' : '');
   }
-  view.innerHTML = '<div class="sec" style="gap:16px">' + formBar((R.edit ? 'Modifica ' : 'Nuova ') + T[0].toLowerCase()) +
+  view.innerHTML = '<div class="sec" style="gap:16px">' + formBar(F.rf ? (R.edit ? 'Modifica rimborso' : 'Nuovo rimborso') : (R.edit ? 'Modifica ' : 'Nuova ') + T[0].toLowerCase()) +
     '<div class="stepbar"><span class="label">Passo ' + stepNo + ' di ' + steps + '</span><div class="qbar"><i style="width:' + stepNo / steps * 100 + '%;background:' + T[1] + '"></i></div></div>' +
     (crumbs ? '<div class="crumbs">' + crumbs + '</div>' : '') + body + '</div>';
   const saveBtn = document.getElementById('f-save'); saveBtn.hidden = F.step !== 'amt';
@@ -1594,9 +1600,10 @@ function renderAdd(){
     if (F.rec && document.getElementById('r-ev')) { F.every = Math.max(1, +val('r-ev') || 1); F.unit = val('r-un'); if (document.getElementById('r-ct')) F.count = Math.max(1, +val('r-ct') || 1); if (document.getElementById('r-ut')) F.until = val('r-ut'); } };
   const go = st => { keep(); F.step = st; renderAdd(); window.scrollTo({top:0}); };
   view.querySelectorAll('[data-step]').forEach(b => b.onclick = () => go(b.dataset.step));
-  view.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { if (b.dataset.c === '__new') { F.newCat = !F.newCat; return renderAdd(); } F.c = b.dataset.c; F.newCat = false; if ((catOf(F.t, F.c).subs || []).length) { F.s = ''; go('sub'); } else go(R.edit ? 'amt' : 'dest'); });
+  const rfc = document.getElementById('f-rf'); if (rfc) rfc.onchange = () => { F.rf = rfc.checked; F.c = null; F.s = ''; F.p = 'liq'; F.rec = false; renderAdd(); };
+  view.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { if (b.dataset.c === '__new') { F.newCat = !F.newCat; return renderAdd(); } F.c = b.dataset.c; F.newCat = false; if ((catOf(CT, F.c).subs || []).length) { F.s = ''; go('sub'); } else go(R.edit ? 'amt' : 'dest'); });
   view.querySelectorAll('[data-ic]').forEach(b => b.onclick = () => { const n = val('nc-n'); F.icon = b.dataset.ic; renderAdd(); document.getElementById('nc-n').value = n; });
-  const nc = view.querySelector('#nc-ok'); if (nc) nc.onclick = () => { const n = val('nc-n').trim(); if (!n) return toast('Scrivi il nome della categoria'); const c = {id:'c' + uid(), n, i:F.icon, subs:[], g:F.t === 'in' ? 'extra' : 'altro'}; if (F.t === 'out' && document.getElementById('nc-d').checked) c.disc = true; S.cats[F.t].push(c); F.c = c.id; F.newCat = false; save(); go(F.t === 'out' ? 'sub' : 'dest'); };
+  const nc = view.querySelector('#nc-ok'); if (nc) nc.onclick = () => { const n = val('nc-n').trim(); if (!n) return toast('Scrivi il nome della categoria'); const c = {id:'c' + uid(), n, i:F.icon, subs:[], g:CT === 'in' ? 'extra' : 'altro'}; if (CT === 'out' && document.getElementById('nc-d').checked) c.disc = true; S.cats[CT].push(c); F.c = c.id; F.newCat = false; save(); go(CT === 'out' ? 'sub' : 'dest'); };
   view.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { if (b.dataset.s === '__new') { F.newSub = !F.newSub; return renderAdd(); } F.s = b.dataset.s; go(R.edit ? 'amt' : 'dest'); });
   const ns = view.querySelector('#ns-ok'); if (ns) ns.onclick = () => { const n = val('ns-n').trim(); if (!n) return; cur.subs = cur.subs || []; cur.subs.push(n); F.s = n; F.newSub = false; save(); go(R.edit ? 'amt' : 'dest'); };
   view.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { F.p = b.dataset.p; go('amt'); });
@@ -1609,7 +1616,10 @@ function renderAdd(){
     keep(); const a = parseAmt(F.a);
     if (!(a > 0)) return toast('Inserisci un importo');
     if (!F.c) return toast('Scegli una categoria');
-    if (!destOptions(F.t).includes(F.p)) F.p = 'liq';
+    if (!destOptions(CT).includes(F.p)) F.p = 'liq';
+    if (F.rf) { const v = {t:'out', c:F.c, s:F.s, a:-a, d:F.d, n:F.n, p:F.p};
+      if (R.edit) Object.assign(S.tx.find(x => x.id === R.edit), v); else S.tx.push(Object.assign({id:uid()}, v, F.d < pilFrom() ? {f:1} : {}));
+      save(); toast('Rimborso salvato · +' + eur2(a) + ' su ' + catOf('out', F.c).n); viewYM = ymOf(F.d) > curYM() ? curYM() : ymOf(F.d); F = null; return nav({screen:'tx'}); }
     const recFields = {every:F.every, unit:F.unit, count:F.end === 'count' ? F.count : null, until:F.end === 'until' ? (F.until || null) : null, start:F.d, day:+F.d.slice(8)};
     if (F.recId) { const r = S.rec.find(x => x.id === F.recId); Object.assign(r, {c:F.c, s:F.s, a, n:F.n, p:F.p}, recFields); if (r.unit === 'm') r.from = r.from || ymOf(F.d); else r.from = ymOf(r.start); }
     else if (R.edit) Object.assign(S.tx.find(x => x.id === R.edit), {t:F.t, c:F.c, s:F.s, a, d:F.d, n:F.n, p:F.p});
@@ -2629,7 +2639,7 @@ async function exportPDF(mode){
   if (S.goals.length) { h1('Obiettivi'); S.goals.forEach(g => { const pl = goalPlan(g); kv(g.name + ' (entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + ')', E(goalSaved(g)) + ' di ' + E(goalTarget(g)) + ' · ' + Math.round(pl.pct) + '%'); }); line(); }
   if ((S.debts || []).length) { h1('Finanziamenti'); S.debts.forEach(d => { const c = debtInfo(d); kv((d.n || 'Finanziamento') + ' (TAEG ' + d.taeg + '%)', 'residuo ' + E(c.pv) + ' · ' + c.left + ' rate · interessi e costi ' + E(c.int)); }); line(); }
   h1('Movimenti'); doc.setFontSize(8.5);
-  months.slice().reverse().forEach(ym => monthTx(ym).filter(x => !x.plan).forEach(x => { need(6); doc.setFont('helvetica', 'normal'); doc.setTextColor(60); doc.text(x.d.split('-').reverse().join('/'), M, y); doc.text((catOf(x.t, x.c).n + (x.s ? ' - ' + x.s : '') + (x.n ? ' - ' + x.n : '')).slice(0, 70), M + 22, y); doc.setTextColor(x.t === 'in' ? 20 : 120, x.t === 'in' ? 140 : 80, x.t === 'in' ? 70 : 0); doc.text((x.t === 'in' ? '+' : '-') + E(x.a), 210 - M, y, {align:'right'}); y += 5; }));
+  months.slice().reverse().forEach(ym => monthTx(ym).filter(x => !x.plan).forEach(x => { need(6); doc.setFont('helvetica', 'normal'); doc.setTextColor(60); doc.text(x.d.split('-').reverse().join('/'), M, y); doc.text((catOf(x.t, x.c).n + (x.s ? ' - ' + x.s : '') + (x.n ? ' - ' + x.n : '')).slice(0, 70), M + 22, y); const pos = x.t === 'in' || x.a < 0; doc.setTextColor(pos ? 20 : 120, pos ? 140 : 80, pos ? 70 : 0); doc.text((pos ? '+' : '-') + E(Math.abs(x.a)), 210 - M, y, {align:'right'}); y += 5; }));
   need(14); y += 6; doc.setFontSize(8); doc.setTextColor(120); doc.text('Documento generato dall\'app per uso personale. Le informazioni non costituiscono consulenza finanziaria.', M, y);
   try { await downloads.save({filename:'buddy4free-resoconto-' + (mode === 'y' ? curYM().slice(0, 4) : curYM()) + '.pdf', data:doc.output('blob')}); toast('PDF salvato'); } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare il PDF'); }
 }
@@ -2891,8 +2901,8 @@ function renderImport(){
   const newNames = t => [...new Set(Object.entries(IMP.map).filter(([k, v]) => k.startsWith(t + '|') && v.startsWith('n:')).map(([, v]) => v.slice(2)))].filter(n => !S.cats[t].some(c => c.n.toLowerCase() === n.toLowerCase())).sort((a, b) => a.localeCompare(b));
   const sel = (k, g) => { const v = IMP.map[k], nn = newNames(g.t); return '<select data-map="' + esc(k) + '" aria-label="Categoria per ' + esc(g.src) + '">' + S.cats[g.t].map(c => '<option value="' + c.id + '"' + (v === c.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') +
     (nn.length ? '<optgroup label="Nuove">' + nn.map(n => '<option value="n:' + esc(n) + '"' + (v === 'n:' + n ? ' selected' : '') + '>+ ' + esc(n) + '</option>').join('') + '</optgroup>' : '') +
-    '<option value="__ask">+ Nuova categoria madre…</option><option value="__skip"' + (v === '__skip' ? ' selected' : '') + '>Non importare</option></select>'; };
-  const dest = k => { const r = impResolve(k); if (!r) return '<span class="small muted">non importata</span>'; return '<span class="small to">→ ' + esc(r.name) + (r.sub ? ' › ' + esc(r.sub) : '') + (r.isNew ? ' <i class="muted">(nuova)</i>' : '') + '</span>'; };
+    (g.t === 'in' && IMP.outSrc.has(g.src) ? '<option value="__rf"' + (v === '__rf' ? ' selected' : '') + '>↩ Rimborso della spesa "' + esc(g.src) + '"</option>' : '') + '<option value="__ask">+ Nuova categoria madre…</option><option value="__skip"' + (v === '__skip' ? ' selected' : '') + '>Non importare</option></select>'; };
+  const dest = k => { const r = impResolve(k); if (!r) return '<span class="small muted">non importata</span>'; return '<span class="small to">' + (r.rf ? '↩ rimborso di ' : '→ ') + esc(r.name) + (r.sub ? ' › ' + esc(r.sub) : '') + (r.isNew ? ' <i class="muted">(nuova)</i>' : '') + '</span>'; };
   const list = t => G.filter(([, g]) => g.t === t).map(([k, g]) => '<div class="improw"><input type="checkbox" data-pick="' + esc(k) + '"' + (IMP.pick.has(k) ? ' checked' : '') + ' aria-label="Seleziona ' + esc(g.src) + '"><div><b>' + esc(g.src) + '</b><span class="small muted">' + g.n + (g.n === 1 ? ' movimento' : ' movimenti') + ' · ' + eur(Math.round(g.a)) + '</span>' + dest(k) + '</div>' + sel(k, g) + '</div>').join('');
   const nImp = rows.filter(x => IMP.map[x.t + '|' + x.src] !== '__skip').length;
   const allNames = [...new Set(S.cats.out.concat(S.cats.in).map(c => c.n).concat(newNames('out'), newNames('in')))].sort((a, b) => a.localeCompare(b));
@@ -2902,7 +2912,7 @@ function renderImport(){
       (IMP.impCount ? '<label class="check small"><input type="checkbox" id="imp-rep"' + (IMP.replace ? ' checked' : '') + '> Sostituisci i ' + IMP.impCount + ' movimenti importati in precedenza. Utile per rifare l\'importazione con altre categorie; quelli inseriti a mano restano.</label>' : '') +
       '<div class="field"><label for="imp-from">Importa i movimenti dal</label><input type="month" id="imp-from" value="' + IMP.from.slice(0, 7) + '" min="' + first.slice(0, 7) + '" max="' + last.slice(0, 7) + '"><span class="small muted">Se hai tanti anni di storico puoi partire da una data più recente: l\'app resta più leggera.</span></div>' +
       (S.demo || S.tx.length ? '<label class="check small"><input type="checkbox" id="imp-wipe"' + (IMP.wipe ? ' checked' : '') + (S.demo ? ' disabled' : '') + '> ' + (S.demo ? 'I dati di esempio verranno tolti' : 'Cancella prima i movimenti già presenti nell\'app (' + S.tx.length + ')') + '</label>' : '') + '</div>' +
-    '<div class="card"><span class="label">Dove vanno le tue categorie</span><p class="small muted">Ho abbinato ogni categoria del file a una di Buddy4Free. Sotto ogni nome vedi dove finisce: <b style="color:var(--fg)">categoria › sottocategoria</b>.</p>' +
+    '<div class="card"><span class="label">Dove vanno le tue categorie</span><p class="small muted">Ho abbinato ogni categoria del file a una di Buddy4Free. Sotto ogni nome vedi dove finisce: <b style="color:var(--fg)">categoria › sottocategoria</b>. Le entrate che hanno lo stesso nome di una spesa (per esempio Farmacia) diventano <b style="color:var(--fg)">rimborsi</b>: riducono quella spesa invece di contare come entrate.</p>' +
       '<p class="small muted"><b style="color:var(--fg)">Avevi delle sottocategorie?</b> Il file CSV di Fast Budget contiene solo il nome della sottocategoria, non quello della categoria madre. Spunta le voci che stavano insieme (per esempio Romeo, Kira, Theo &amp; co), scrivi il nome della categoria madre (per esempio "Pet Sitting") e tocca Raggruppa: diventano sottocategorie.</p>' +
       '<label class="check small"><input type="checkbox" id="imp-ks"' + (IMP.keepSub ? ' checked' : '') + '> Usa i nomi del file come sottocategorie quando finiscono in una categoria con un altro nome</label>' +
       '<b class="small" style="color:' + OUT_COL + '">Uscite</b><div class="implist">' + list('out') + '</div>' +
@@ -2928,6 +2938,7 @@ function renderImport(){
 function impResolve(k){
   const v = IMP.map[k]; if (!v || v === '__skip') return null;
   const i = k.indexOf('|'), t = k.slice(0, i), src = k.slice(i + 1), lo = src.toLowerCase();
+  if (v === '__rf') { const r = impResolve('out|' + src); return r && Object.assign({}, r, {rf:true}); }
   let cat = null, name;
   if (v.startsWith('n:')) { name = v.slice(2); cat = S.cats[t].find(c => c.n.toLowerCase() === name.toLowerCase()) || null; if (cat) name = cat.n; }
   else { cat = catOf(t, v); name = cat.n; }
@@ -2950,13 +2961,15 @@ function iconFor(name){
 function prepImport(p){
   const have = new Set(S.tx.filter(x => x.ext).map(x => x.ext)), fresh = p.rows.filter(x => !have.has(x.ext)), impCount = S.tx.filter(x => x.imp).length, dup = p.rows.length - fresh.length;
   const replace = impCount > 0 && dup > 0, rows = replace ? p.rows : fresh;
-  IMP = {rows, all:p.rows, fresh, impCount, replace, skipped:p.skipped, dup, map:{}, guess:{}, pick:new Set(), forceSub:new Set(), keepSub:true, gname:'', srcNames:new Set(p.rows.map(x => x.src.toLowerCase())), from:rows.reduce((m, x) => x.d < m ? x.d : m, '9999').slice(0, 7) + '-01', wipe:!!S.demo};
+  IMP = {rows, all:p.rows, fresh, impCount, replace, skipped:p.skipped, dup, map:{}, guess:{}, pick:new Set(), forceSub:new Set(), keepSub:true, gname:'', srcNames:new Set(p.rows.map(x => x.src.toLowerCase())), outSrc:new Set(p.rows.filter(x => x.t === 'out').map(x => x.src)), from:rows.reduce((m, x) => x.d < m ? x.d : m, '9999').slice(0, 7) + '-01', wipe:!!S.demo};
   /* se reimporti, riparti dagli abbinamenti dell'ultima volta */
   const last = S.impMap || {};
   p.rows.forEach(x => { const k = x.t + '|' + x.src; if (IMP.map[k]) return; const g = guessCat(x.t, x.src); IMP.guess[k] = g;
-    const prev = last[k]; if (prev && (prev.v === '__skip' || prev.v.startsWith('n:') || S.cats[x.t].some(c => c.id === prev.v))) { IMP.map[k] = prev.v; if (prev.f) IMP.forceSub.add(k); return; }
+    const prev = last[k]; if (prev && (prev.v === '__skip' || prev.v === '__rf' || prev.v.startsWith('n:') || S.cats[x.t].some(c => c.id === prev.v))) { IMP.map[k] = prev.v === 'rimborsi' && x.t === 'in' && IMP.outSrc.has(x.src) ? '__rf' : prev.v; if (prev.f) IMP.forceSub.add(k); return; }
     const same = S.cats[x.t].find(c => c.n.toLowerCase() === x.src.toLowerCase());
-    IMP.map[k] = g[0] === '__new' ? (same ? same.id : 'n:' + x.src) : S.cats[x.t].some(c => c.id === g[0]) ? g[0] : S.cats[x.t][0].id; });
+    IMP.map[k] = g[0] === '__new' ? (same ? same.id : 'n:' + x.src) : S.cats[x.t].some(c => c.id === g[0]) ? g[0] : S.cats[x.t][0].id;
+    /* un'entrata con lo stesso nome di una spesa del file è quasi sempre un rimborso di quella spesa */
+    if (x.t === 'in' && IMP.outSrc.has(x.src)) IMP.map[k] = '__rf'; });
 }
 function doImport(rows){
   if (S.demo) { const keepT = S.times, keepTerms = S.terms, keepAt = S.termsAt; S = freshState(); S.times = keepT; S.terms = keepTerms; S.termsAt = keepAt; S.setup = true; S.pilFrom = today(); S.recAsked = true; }
@@ -2966,14 +2979,15 @@ function doImport(rows){
   if (IMP.replace || IMP.wipe) ['in', 'out'].forEach(t => { S.cats[t] = S.cats[t].filter(c => !(/^c/.test(c.id) && IMP.srcNames.has(c.n.toLowerCase()) && !S.tx.some(x => x.c === c.id) && !(S.rec || []).some(x => x.c === c.id) && !Object.values(IMP.map).includes(c.id))); });
   const res = {}; let n = 0;
   rows.forEach(x => { const k = x.t + '|' + x.src; if (IMP.map[k] === '__skip') return;
-    if (!res[k]) { const r = impResolve(k); let c = r.id && S.cats[x.t].find(y => y.id === r.id);
-      if (!c) c = S.cats[x.t].find(y => y.n.toLowerCase() === r.name.toLowerCase());
-      if (!c) { c = {id:'c' + uid(), n:r.name, i:iconFor(r.name), subs:[], g:x.t === 'in' ? 'extra' : 'altro', imp:1}; S.cats[x.t].push(c); }
+    const rf = IMP.map[k] === '__rf', T = rf ? 'out' : x.t;
+    if (!res[k]) { const r = impResolve(k); if (!r) { res[k] = 'skip'; return; } let c = r.id && S.cats[T].find(y => y.id === r.id);
+      if (!c) c = S.cats[T].find(y => y.n.toLowerCase() === r.name.toLowerCase());
+      if (!c) { c = {id:'c' + uid(), n:r.name, i:iconFor(r.name), subs:[], g:T === 'in' ? 'extra' : 'altro', imp:1}; S.cats[T].push(c); }
       c.subs = c.subs || []; if (r.sub && !c.subs.includes(r.sub)) c.subs.push(r.sub);
       res[k] = {c:c.id, s:r.sub, keepSrc:x.src.toLowerCase() !== c.n.toLowerCase() && x.src.toLowerCase() !== r.sub.toLowerCase()}; }
-    const q = res[k];
-    S.tx.push({id:uid(), t:x.t, c:q.c, s:q.s, a:x.a, d:x.d, n:[q.keepSrc ? x.src : '', x.n].filter(Boolean).join(' · '), p:'liq', imp:1, ext:x.ext}); n++; });
-  S.impMap = {}; Object.keys(IMP.map).forEach(k => { const v = IMP.map[k], c = res[k]; S.impMap[k] = {v:v.startsWith('n:') && c ? c.c : v, f:IMP.forceSub.has(k) ? 1 : 0}; });
+    const q = res[k]; if (q === 'skip') return;
+    S.tx.push({id:uid(), t:T, c:q.c, s:q.s, a:rf ? -x.a : x.a, d:x.d, n:[q.keepSrc ? x.src : '', x.n].filter(Boolean).join(' · '), p:'liq', imp:1, ext:x.ext}); n++; });
+  S.impMap = {}; Object.keys(IMP.map).forEach(k => { const v = IMP.map[k], c = res[k]; S.impMap[k] = {v:v.startsWith('n:') && c && c !== 'skip' ? c.c : v, f:IMP.forceSub.has(k) ? 1 : 0}; });
   S.tx.sort((a, b) => a.d.localeCompare(b.d));
   IMP = null; save(); toast(n + ' movimenti importati');
   view.innerHTML = '<div class="sec" style="gap:18px"><div class="intro"><span class="marker y" style="font-size:1.2rem">Fatto!</span><h2>' + n + ' movimenti importati</h2></div>' +

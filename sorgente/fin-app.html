@@ -156,8 +156,13 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .colpick button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px var(--bg) inset}
 .colpick .cg{width:auto;border-radius:99px;padding:0 12px;background:var(--soft);border:1px solid var(--line);font-weight:600;font-size:.85rem;display:inline-flex;align-items:center;gap:6px}
 .colpick .cg .i{width:16px;height:16px}
-.choose .cmanage{margin-top:10px;border-style:dashed}
-.choose .cmanage .ic{color:#000}
+.cman2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choose .cmanage{border-style:dashed;grid-template-columns:auto 1fr;padding:12px;gap:10px}
+.choose .cmanage .ic{width:36px;height:36px;border-radius:11px}
+.choose .cmanage .t b{font-size:1.02rem;line-height:1.15}
+.item.selrow{grid-template-columns:auto 1fr auto;cursor:pointer}
+.item.subrow{grid-template-columns:auto 1fr auto}
+.item.selrow input,.item.subrow input{width:22px;height:22px;margin:0;accent-color:var(--yellow)}
 .item.nt{grid-template-columns:1fr auto}
 .cxord{display:flex;gap:4px}
 .cxord button{width:40px;height:40px;border:1px solid var(--line);background:var(--soft);border-radius:10px;font-weight:800;font-size:1.05rem}
@@ -1386,7 +1391,8 @@ function renderChooser(){
   F = null;
   view.innerHTML = '<div class="sec" style="gap:18px"><div class="formbar"><button class="back" ' + nav$({screen:'tx'}) + '>' + ic('left') + 'Annulla</button><b>Cosa vuoi registrare?</b><span></span></div>' +
     '<div class="choose">' + ['in', 'out', 'xfer'].map(t => '<button ' + nav$({screen:'add', type:t}) + ' style="--tc:' + TYPE[t][1] + '"><span class="ic">' + ic(TYPE[t][3]) + '</span><span class="t"><b>' + TYPE[t][0] + '</b><span>' + TYPE[t][2] + '</span></span>' + ic('right') + '</button>').join('') +
-      '<button ' + nav$({screen:'cats'}) + ' class="cmanage" style="--tc:var(--yellow)"><span class="ic">' + ic('tag') + '</span><span class="t"><b>Gestisci categorie</b><span>Crea, rinomina, sottocategorie, icone e colori</span></span>' + ic('right') + '</button></div></div>';
+      '<span class="label" style="margin-top:12px">Gestisci</span><div class="cman2"><button ' + nav$({screen:'cats', t:'in'}) + ' class="cmanage" style="--tc:#22A45D"><span class="ic">' + ic('tag') + '</span><span class="t"><b>Categorie entrate</b></span></button>' +
+      '<button ' + nav$({screen:'cats', t:'out'}) + ' class="cmanage" style="--tc:#E5484D"><span class="ic">' + ic('tag') + '</span><span class="t"><b>Categorie uscite</b></span></button></div></div></div>';
 }
 function renderAdd(){
   if (!R.type && !R.edit && !R.editX && !R.xfer) return renderChooser();
@@ -2807,7 +2813,7 @@ function doImport(rows){
 }
 
 /* ---------- gestisci categorie ---------- */
-let CATX = {reorder:false, from:null};
+let CATX = {mode:'', from:null, sel:null, ssel:null, t:null, id:null};
 const isDefCat = (t, id) => (t === 'in' ? DEF_IN : DEF_OUT).some(d => d.id === id);
 function catUse(t, id, sb){ const m = x => x.t === t && x.c === id && (sb === undefined || (x.s || '') === sb); return S.tx.filter(m).length + S.rec.filter(m).length; }
 function recat(t, m, f){ S.tx.concat(S.rec).forEach(x => { if (x.t === t && m(x)) f(x); }); }
@@ -2824,26 +2830,63 @@ function catPop(html, bind){
   o.onclick = e => { if (e.target === o || e.target.closest('[data-x]')) o.remove(); };
   bind(o, () => o.remove()); const i = o.querySelector('input'); if (i) i.focus();
 }
+/* operazioni sulle categorie: i movimenti (e i ricorrenti) seguono sempre */
+function opCatInto(t, c, d){ recat(t, x => x.c === c.id, x => { if (x.s) x.n = [x.s, x.n].filter(Boolean).join(' · '); x.c = d.id; x.s = c.n; }); addSub(t, d, c.n); dropCat(t, c, d); }
+function opCatMerge(t, c, d){ recat(t, x => x.c === c.id, x => x.c = d.id); (c.subs || []).forEach(sb => addSub(t, d, sb)); dropCat(t, c, d); }
+function opCatDel(t, c, d){ if (d) recat(t, x => x.c === c.id, x => { x.c = d.id; if (x.s && !(d.subs || []).includes(x.s)) { x.n = [x.s, x.n].filter(Boolean).join(' · '); x.s = ''; } }); dropCat(t, c, d); }
+function opSubMove(t, c, sb, v){
+  if (v === '__own') { let nc = S.cats[t].find(x => x.n.toLowerCase() === sb.toLowerCase());
+    if (!nc) { nc = {id:'c' + uid(), n:sb, i:iconFor(sb) === 'dots' ? c.i : iconFor(sb), g:c.g, subs:[]}; S.cats[t].splice(S.cats[t].indexOf(c) + 1, 0, nc); }
+    recat(t, x => x.c === c.id && x.s === sb, x => { x.c = nc.id; x.s = ''; }); forgetSub(t, c, sb); return; }
+  const d = S.cats[t].find(x => x.id === v); recat(t, x => x.c === c.id && x.s === sb, x => x.c = d.id); addSub(t, d, sb); forgetSub(t, c, sb);
+}
+function opSubDel(t, c, sb){ recat(t, x => x.c === c.id && x.s === sb, x => x.s = ''); forgetSub(t, c, sb); }
+const movN = k => k + (k === 1 ? ' movimento' : ' movimenti');
+function confirmDo(msg, label, f){ catPop('<b style="font-size:1.1rem">Sei sicuro?</b><p style="margin:0">' + msg + '</p><div class="row"><button class="btn" id="cp-ok">' + label + '</button><button class="btn ghost" data-x>Annulla</button></div>', (o, close) => { o.querySelector('#cp-ok').onclick = () => { f(); save(); close(); }; }); }
+const TNAME = {out:['Categorie uscite', 'uscita', '#E5484D'], in:['Categorie entrate', 'entrata', '#22A45D']};
 function renderCats(){
   const t = R.t || 'out';
-  if (PREV && PREV.screen !== 'cats') CATX.from = PREV.screen === 'add' ? {screen:'add', type:PREV.type} : {screen:'settings'};
+  if (PREV && PREV.screen !== 'cats' && CATX.prevRef !== PREV) { CATX.prevRef = PREV; CATX.from = PREV.screen === 'add' ? {screen:'add', type:PREV.type} : {screen:'settings'}; CATX.sel = new Set(); CATX.ssel = new Set(); CATX.mode = ''; }
+  CATX.sel = CATX.sel || new Set(); CATX.ssel = CATX.ssel || new Set();
+  if (CATX.t !== t || CATX.id !== R.id) { CATX.sel.clear(); CATX.ssel.clear(); if (CATX.t !== t) CATX.mode = ''; CATX.t = t; CATX.id = R.id; }
   if (R.id) return renderCatEdit(t);
-  const L = S.cats[t], from = CATX.from || {screen:'settings'};
+  const L = S.cats[t], from = CATX.from || {screen:'settings'}, M = CATX.mode, keepY = () => { const y = window.scrollY; renderCats(); window.scrollTo({top:y}); };
+  [...CATX.sel].forEach(id => { if (!L.some(c => c.id === id)) CATX.sel.delete(id); });
+  const selC = L.filter(c => CATX.sel.has(c.id)), rest = L.filter(c => !CATX.sel.has(c.id)), selN = selC.reduce((a, c) => a + catUse(t, c.id), 0);
   view.innerHTML = '<div class="sec" style="gap:18px">' + backBtn(from.screen === 'add' ? (from.type ? 'Torna al movimento' : 'Indietro') : 'Impostazioni', from) +
-    '<div class="intro"><span class="label">Dati</span><h2>Gestisci categorie</h2><p class="muted">Rinomina, cambia icona, aggiungi sottocategorie, sposta o unisci. I movimenti seguono sempre la loro categoria.</p></div>' +
-    '<div class="filters">' + [['out', 'Uscite'], ['in', 'Entrate']].map(f => '<button data-ct="' + f[0] + '" aria-pressed="' + (t === f[0]) + '">' + f[1] + '</button>').join('') + '</div>' +
-    '<div class="spread"><span class="small muted">' + L.length + ' categorie</span><button class="textlink" id="cx-ord">' + (CATX.reorder ? 'Fatto' : 'Riordina') + '</button></div>' +
+    '<div class="intro"><span class="label" style="color:' + TNAME[t][2] + '">Gestisci</span><h2>' + TNAME[t][0] + '</h2></div>' +
+    '<div class="seg3" style="grid-template-columns:1fr 1fr">' + [['out', 'Uscite'], ['in', 'Entrate']].map(f => '<button data-t="' + f[0] + '" data-ct="' + f[0] + '" aria-pressed="' + (t === f[0]) + '">' + f[1] + '</button>').join('') + '</div>' +
+    '<div class="spread"><span class="small muted">' + L.length + ' categorie</span><span class="row" style="gap:16px">' +
+      (M !== 'ord' ? '<button class="textlink" id="cx-sel">' + (M === 'sel' ? 'Fatto' : 'Seleziona') + '</button>' : '') + (M !== 'sel' ? '<button class="textlink" id="cx-ord">' + (M === 'ord' ? 'Fatto' : 'Riordina') + '</button>' : '') + '</span></div>' +
+    (M === 'sel' ? '<div class="spread small"><span class="muted">Tocca le categorie da selezionare</span><button class="textlink" id="cx-all">' + (selC.length === L.length ? 'Nessuna' : 'Tutte') + '</button></div>' : '') +
     '<div class="list">' + L.map((c, i) => { const n = catUse(t, c.id), ns = (c.subs || []).length;
-      if (CATX.reorder) return '<div class="item">' + catTile(t, c) + '<span class="t"><b>' + esc(c.n) + '</b></span><span class="cxord"><button data-up="' + i + '"' + (i ? '' : ' disabled') + ' aria-label="Sposta su ' + esc(c.n) + '">↑</button><button data-dn="' + i + '"' + (i < L.length - 1 ? '' : ' disabled') + ' aria-label="Sposta giù ' + esc(c.n) + '">↓</button></span></div>';
-      const sub = [ns ? ns + (ns === 1 ? ' sottocategoria' : ' sottocategorie') : '', n + (n === 1 ? ' movimento' : ' movimenti')].filter(Boolean).join(' · ');
+      if (M === 'ord') return '<div class="item">' + catTile(t, c) + '<span class="t"><b>' + esc(c.n) + '</b></span><span class="cxord"><button data-up="' + i + '"' + (i ? '' : ' disabled') + ' aria-label="Sposta su ' + esc(c.n) + '">↑</button><button data-dn="' + i + '"' + (i < L.length - 1 ? '' : ' disabled') + ' aria-label="Sposta giù ' + esc(c.n) + '">↓</button></span></div>';
+      const sub = [ns ? ns + (ns === 1 ? ' sottocategoria' : ' sottocategorie') : '', movN(n)].filter(Boolean).join(' · ');
+      if (M === 'sel') return '<label class="item selrow"><input type="checkbox" data-pick="' + c.id + '"' + (CATX.sel.has(c.id) ? ' checked' : '') + '>' + '<span class="t"><b>' + esc(c.n) + '</b><span class="sub">' + esc(sub) + '</span></span>' + catTile(t, c) + '</label>';
       return '<button class="item" ' + nav$({screen:'cats', t, id:c.id}) + '>' + catTile(t, c) + '<span class="t"><b>' + esc(c.n) + '</b><span class="sub">' + esc(sub) + '</span></span>' + ic('right') + '</button>'; }).join('') + '</div>' +
-    (CATX.reorder ? '<p class="small muted">L\'ordine è quello che vedi quando aggiungi un movimento: metti in alto le categorie che usi di più.</p>' : '<button class="btn" id="cx-new" style="align-self:flex-start">' + ic('plus') + 'Nuova categoria</button>') + '</div>';
+    (M === 'ord' ? '<p class="small muted">L\'ordine è quello che vedi quando aggiungi un movimento: metti in alto le categorie che usi di più.</p>' : M === 'sel' ? '' : '<button class="btn" id="cx-new" style="align-self:flex-start">' + ic('plus') + 'Nuova categoria di ' + TNAME[t][1] + '</button>') +
+    (M === 'sel' && selC.length ? '<div class="card impbulk"><b>' + selC.length + (selC.length === 1 ? ' categoria selezionata' : ' categorie selezionate') + ' · ' + movN(selN) + '</b>' +
+      (rest.length ? '<div class="field"><label for="cx-to">Destinazione</label><select id="cx-to">' + rest.map(o => '<option value="' + o.id + '">' + esc(o.n) + '</option>').join('') + '</select></div>' +
+        '<div class="row" style="flex-wrap:wrap"><button class="btn sm" id="cx-in">Diventano sue sottocategorie</button><button class="btn sm ghost" id="cx-mg">Unisci</button><button class="btn sm danger" id="cx-del">Elimina</button></div>' +
+        '<span class="small muted"><b style="color:var(--fg)">Sottocategorie</b>: ognuna entra nella destinazione con il suo nome. <b style="color:var(--fg)">Unisci</b>: i movimenti passano nella destinazione. <b style="color:var(--fg)">Elimina</b>: se hanno movimenti, li sposto nella destinazione.</span>'
+        : '<span class="small muted">Lascia almeno una categoria non selezionata: serve come destinazione.</span>') + '</div>' : '') + '</div>';
   view.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => nav({screen:'cats', t:b.dataset.ct}));
-  view.querySelector('#cx-ord').onclick = () => { CATX.reorder = !CATX.reorder; renderCats(); };
+  const so = view.querySelector('#cx-ord'); if (so) so.onclick = () => { CATX.mode = M === 'ord' ? '' : 'ord'; renderCats(); };
+  const ss = view.querySelector('#cx-sel'); if (ss) ss.onclick = () => { CATX.mode = M === 'sel' ? '' : 'sel'; CATX.sel.clear(); renderCats(); };
+  const sa = view.querySelector('#cx-all'); if (sa) sa.onclick = () => { if (selC.length === L.length) CATX.sel.clear(); else L.forEach(c => CATX.sel.add(c.id)); keepY(); };
+  view.querySelectorAll('[data-pick]').forEach(cb => cb.onchange = () => { cb.checked ? CATX.sel.add(cb.dataset.pick) : CATX.sel.delete(cb.dataset.pick); keepY(); });
   const mv = (i, d) => { const y = window.scrollY, a = S.cats[t]; [a[i], a[i + d]] = [a[i + d], a[i]]; save(); renderCats(); window.scrollTo({top:y}); };
   view.querySelectorAll('[data-up]').forEach(b => b.onclick = () => mv(+b.dataset.up, -1));
   view.querySelectorAll('[data-dn]').forEach(b => b.onclick = () => mv(+b.dataset.dn, 1));
-  const nb = view.querySelector('#cx-new'); if (nb) nb.onclick = () => catPop('<b style="font-size:1.1rem">Nuova categoria di ' + (t === 'in' ? 'entrata' : 'uscita') + '</b><input id="cp-n" placeholder="Nome"><div class="row"><button class="btn" id="cp-ok">Crea</button><button class="btn ghost" data-x>Annulla</button></div>', (o, close) => {
+  const dest = () => S.cats[t].find(x => x.id === val('cx-to')), names = () => selC.map(c => '"' + esc(c.n) + '"').join(', ');
+  const after = msg => { CATX.sel.clear(); CATX.mode = ''; toast(msg); renderCats(); };
+  const bi = view.querySelector('#cx-in'); if (bi) bi.onclick = () => { const d = dest();
+    confirmDo(names() + ' diventano sottocategorie di <b>' + esc(d.n) + '</b>' + (selN ? ', con i loro ' + movN(selN) : '') + '.', 'Sposta', () => { selC.forEach(c => opCatInto(t, c, d)); after(selC.length + ' categorie ora sono dentro ' + d.n); }); };
+  const bm = view.querySelector('#cx-mg'); if (bm) bm.onclick = () => { const d = dest();
+    confirmDo(names() + ' vengono unite a <b>' + esc(d.n) + '</b>' + (selN ? ': ' + movN(selN) + ' passano lì' : '') + '.', 'Unisci', () => { selC.forEach(c => opCatMerge(t, c, d)); after('Unite a ' + d.n); }); };
+  const bd = view.querySelector('#cx-del'); if (bd) bd.onclick = () => { const d = dest();
+    confirmDo('Elimini ' + names() + '.' + (selN ? ' I loro ' + movN(selN) + ' passano in <b>' + esc(d.n) + '</b>.' : ''), 'Elimina', () => { selC.forEach(c => opCatDel(t, c, catUse(t, c.id) ? d : null)); after(selC.length === 1 ? 'Categoria eliminata' : selC.length + ' categorie eliminate'); }); };
+  const nb = view.querySelector('#cx-new'); if (nb) nb.onclick = () => catPop('<b style="font-size:1.1rem">Nuova categoria di ' + TNAME[t][1] + '</b><input id="cp-n" placeholder="Nome"><div class="row"><button class="btn" id="cp-ok">Crea</button><button class="btn ghost" data-x>Annulla</button></div>', (o, close) => {
     o.querySelector('#cp-ok').onclick = () => { const n = o.querySelector('#cp-n').value.trim(); if (!n) return toast('Scrivi il nome');
       if (S.cats[t].some(c => c.n.toLowerCase() === n.toLowerCase())) return toast('Esiste già una categoria con questo nome');
       const c = {id:'c' + uid(), n, i:iconFor(n), subs:[], g:t === 'in' ? 'extra' : 'altro'}; S.cats[t].push(c); save(); close(); nav({screen:'cats', t, id:c.id}); }; });
@@ -2851,53 +2894,56 @@ function renderCats(){
 function renderCatEdit(t){
   const c = S.cats[t].find(x => x.id === R.id); if (!c) return nav({screen:'cats', t});
   c.subs = c.subs || []; S.tx.concat(S.rec).forEach(x => { if (x.t === t && x.c === c.id && x.s && !c.subs.includes(x.s)) c.subs.push(x.s); });
-  const others = S.cats[t].filter(x => x.id !== c.id), n = catUse(t, c.id), mov = k => k + (k === 1 ? ' movimento' : ' movimenti'), noSub = c.subs.length ? catUse(t, c.id, '') : 0;
-  view.innerHTML = '<div class="sec" style="gap:18px">' + backBtn('Categorie', {screen:'cats', t}) +
-    '<div class="intro"><span class="label">' + (t === 'in' ? 'Entrata' : 'Uscita') + ' · ' + mov(n) + '</span><h2 style="display:flex;gap:12px;align-items:center">' + catTile(t, c) + esc(c.n) + '</h2></div>' +
+  [...CATX.ssel].forEach(sb => { if (!c.subs.includes(sb)) CATX.ssel.delete(sb); });
+  const others = S.cats[t].filter(x => x.id !== c.id), n = catUse(t, c.id), noSub = c.subs.length ? catUse(t, c.id, '') : 0, keepY = () => { const y = window.scrollY; renderCats(); window.scrollTo({top:y}); };
+  const selS = c.subs.filter(sb => CATX.ssel.has(sb)), selSN = selS.reduce((a, sb) => a + catUse(t, c.id, sb), 0);
+  view.innerHTML = '<div class="sec" style="gap:18px">' + backBtn(TNAME[t][0], {screen:'cats', t}) +
+    '<div class="intro"><span class="label" style="color:' + TNAME[t][2] + '">' + (t === 'in' ? 'Entrata' : 'Uscita') + ' · ' + movN(n) + '</span><h2 style="display:flex;gap:12px;align-items:center">' + catTile(t, c) + esc(c.n) + '</h2></div>' +
     '<div class="card"><div class="field"><label for="ce-n">Nome</label><input id="ce-n" value="' + esc(c.n) + '"></div>' +
       '<span class="label">Icona</span><div class="iconpick">' + PICK_ICONS.map(k => '<button data-ic="' + k + '" aria-pressed="' + (c.i === k) + '" aria-label="' + k + '">' + ic(k) + '</button>').join('') + '</div>' +
       '<span class="label">Colore</span><div class="colpick">' + CAT_COLS.map(k => '<button data-col="' + k + '" aria-pressed="' + (!!c.col && c.col === k) + '" style="background:' + k + '" aria-label="Colore ' + k + '"></button>').join('') + '<button data-col="g" aria-pressed="' + (!c.col || c.col === 'g') + '" class="cg">Originale</button><button data-col="rnd" class="cg">' + ic('repeat') + 'A caso</button></div>' +
       (t === 'out' ? '<label class="check"><input type="checkbox" id="ce-d"' + (c.disc ? ' checked' : '') + '> Spesa non essenziale: conta nei suggerimenti su dove tagliare</label>' : '') +
       '<button class="btn sm" id="ce-ok" style="align-self:flex-start">' + ic('check') + 'Salva</button></div>' +
-    '<div class="card"><span class="label">Sottocategorie</span>' + (c.subs.length ? '<div class="list">' + c.subs.map((sb, i) => '<div class="item nt"><span class="t"><b>' + esc(sb) + '</b><span class="sub">' + mov(catUse(t, c.id, sb)) + '</span></span><button class="btn sm ghost" data-sm="' + i + '">Modifica</button></div>').join('') + '</div>' + (noSub ? '<p class="small muted">' + mov(noSub) + ' senza sottocategoria.</p>' : '') : '<p class="small muted">Nessuna sottocategoria. Aggiungile se vuoi più dettaglio, per esempio dentro "Animali": Cibo, Veterinario.</p>') +
+    '<div class="card" id="ce-subs"><div class="spread"><span class="label">Sottocategorie</span>' + (c.subs.length > 1 ? '<button class="textlink small" id="cs-all">' + (selS.length === c.subs.length ? 'Nessuna' : 'Seleziona tutte') + '</button>' : '') + '</div>' +
+      (c.subs.length ? '<div class="list">' + c.subs.map((sb, i) => '<div class="item subrow"><input type="checkbox" data-spick="' + i + '"' + (CATX.ssel.has(sb) ? ' checked' : '') + ' aria-label="Seleziona ' + esc(sb) + '"><span class="t"><b>' + esc(sb) + '</b><span class="sub">' + movN(catUse(t, c.id, sb)) + '</span></span><button class="btn sm ghost" data-sm="' + i + '">Modifica</button></div>').join('') + '</div>' + (noSub ? '<p class="small muted">' + movN(noSub) + ' senza sottocategoria.</p>' : '') : '<p class="small muted">Nessuna sottocategoria. Aggiungile se vuoi più dettaglio, per esempio dentro "Animali": Cibo, Veterinario.</p>') +
+      (selS.length ? '<div class="card impbulk"><b>' + selS.length + (selS.length === 1 ? ' sottocategoria selezionata' : ' sottocategorie selezionate') + ' · ' + movN(selSN) + '</b><div class="field"><label for="cs-to">Sposta in</label><select id="cs-to">' + others.map(o => '<option value="' + o.id + '">' + esc(o.n) + '</option>').join('') + '<option value="__own">Diventano categorie a sé</option></select></div>' +
+        '<div class="row" style="flex-wrap:wrap"><button class="btn sm" id="cs-mv">Sposta</button><button class="btn sm danger" id="cs-del">Elimina</button><button class="textlink" id="cs-x">Deseleziona</button></div><span class="small muted">I movimenti le seguono. Se le elimini, i loro movimenti restano in ' + esc(c.n) + ' senza sottocategoria.</span></div>' : '') +
       '<div class="row"><input id="ce-sn" placeholder="Nuova sottocategoria" style="flex:1;width:auto"><button class="btn sm" id="ce-sa">Aggiungi</button></div></div>' +
-    '<div class="card"><span class="label">Sposta, unisci o elimina</span>' +
+    '<div class="card"><span class="label">Sposta, unisci o elimina la categoria</span>' +
       (others.length ? '<div class="field"><label for="ce-to">Categoria di destinazione</label><select id="ce-to">' + others.map(o => '<option value="' + o.id + '">' + esc(o.n) + '</option>').join('') + '</select></div>' +
         '<div class="row" style="flex-wrap:wrap"><button class="btn sm ghost" id="ce-in">Diventa sua sottocategoria</button><button class="btn sm ghost" id="ce-mg">Unisci</button></div>' +
         '<p class="small muted"><b style="color:var(--fg)">Diventa sua sottocategoria</b>: "' + esc(c.n) + '" entra nella categoria scelta come sottocategoria, con tutti i suoi movimenti.<br><b style="color:var(--fg)">Unisci</b>: i movimenti passano nella categoria scelta e le sottocategorie si sommano.</p>' : '') +
-      '<button class="btn sm danger" id="ce-del" style="align-self:flex-start">Elimina categoria</button>' + (n && others.length ? '<p class="small muted">Ha ' + mov(n) + ': prima di eliminarla li sposto nella categoria di destinazione scelta sopra.</p>' : '') + '</div></div>';
+      '<button class="btn sm danger" id="ce-del" style="align-self:flex-start">Elimina categoria</button>' + (n && others.length ? '<p class="small muted">Ha ' + movN(n) + ': prima di eliminarla li sposto nella categoria di destinazione scelta sopra.</p>' : '') + '</div></div>';
   const to = () => S.cats[t].find(x => x.id === val('ce-to'));
-  view.querySelectorAll('[data-ic]').forEach(b => b.onclick = () => { c.i = b.dataset.ic; save(); const y = window.scrollY; renderCats(); window.scrollTo({top:y}); });
-  view.querySelectorAll('[data-col]').forEach(b => b.onclick = () => { const v = b.dataset.col; c.col = v === 'rnd' ? CAT_COLS.filter(k => k !== catColor(t, c))[Math.floor(Math.random() * (CAT_COLS.length - 1))] : v; save(); const y = window.scrollY; renderCats(); window.scrollTo({top:y}); });
+  view.querySelectorAll('[data-ic]').forEach(b => b.onclick = () => { c.i = b.dataset.ic; save(); keepY(); });
+  view.querySelectorAll('[data-col]').forEach(b => b.onclick = () => { const v = b.dataset.col; c.col = v === 'rnd' ? CAT_COLS.filter(k => k !== catColor(t, c))[Math.floor(Math.random() * (CAT_COLS.length - 1))] : v; save(); keepY(); });
   view.querySelector('#ce-ok').onclick = () => { const nn = val('ce-n').trim(); if (!nn) return toast('Scrivi il nome');
     if (S.cats[t].some(x => x.id !== c.id && x.n.toLowerCase() === nn.toLowerCase())) return toast('Esiste già una categoria con questo nome: per metterle insieme usa Unisci');
-    c.n = nn; const d = document.getElementById('ce-d'); if (d && !!c.disc !== d.checked) { c.disc = d.checked; c.gx = 1; } save(); toast('Categoria salvata'); renderCats(); };
-  view.querySelector('#ce-sa').onclick = () => { const nn = val('ce-sn').trim(); if (!nn) return; if (c.subs.some(x => x.toLowerCase() === nn.toLowerCase())) return toast('C\'è già'); addSub(t, c, nn); save(); renderCats(); };
+    c.n = nn; const d = document.getElementById('ce-d'); if (d && !!c.disc !== d.checked) { c.disc = d.checked; c.gx = 1; } save(); toast('Categoria salvata'); keepY(); };
+  view.querySelector('#ce-sa').onclick = () => { const nn = val('ce-sn').trim(); if (!nn) return; if (c.subs.some(x => x.toLowerCase() === nn.toLowerCase())) return toast('C\'è già'); addSub(t, c, nn); save(); keepY(); };
+  view.querySelectorAll('[data-spick]').forEach(cb => cb.onchange = () => { const sb = c.subs[+cb.dataset.spick]; cb.checked ? CATX.ssel.add(sb) : CATX.ssel.delete(sb); keepY(); });
+  const csa = view.querySelector('#cs-all'); if (csa) csa.onclick = () => { if (selS.length === c.subs.length) CATX.ssel.clear(); else c.subs.forEach(sb => CATX.ssel.add(sb)); keepY(); };
+  const csx = view.querySelector('#cs-x'); if (csx) csx.onclick = () => { CATX.ssel.clear(); keepY(); };
+  const csm = view.querySelector('#cs-mv'); if (csm) csm.onclick = () => { const v = val('cs-to'), d = S.cats[t].find(x => x.id === v), list = selS.map(sb => '"' + esc(sb) + '"').join(', ');
+    confirmDo(list + (v === '__own' ? ' diventano categorie a sé' : ' passano in <b>' + esc(d.n) + '</b>') + (selSN ? ', con i loro ' + movN(selSN) : '') + '.', 'Sposta', () => { selS.forEach(sb => opSubMove(t, c, sb, v)); CATX.ssel.clear(); toast(v === '__own' ? 'Ora sono categorie' : 'Spostate in ' + d.n); keepY(); }); };
+  const csd = view.querySelector('#cs-del'); if (csd) csd.onclick = () => confirmDo('Elimini ' + selS.map(sb => '"' + esc(sb) + '"').join(', ') + '.' + (selSN ? ' I loro ' + movN(selSN) + ' restano in ' + esc(c.n) + ' senza sottocategoria.' : ''), 'Elimina', () => { selS.forEach(sb => opSubDel(t, c, sb)); CATX.ssel.clear(); toast('Sottocategorie eliminate'); keepY(); });
   view.querySelectorAll('[data-sm]').forEach(b => b.onclick = () => { const sb = c.subs[+b.dataset.sm], k = catUse(t, c.id, sb);
-    catPop('<div class="spread"><b style="font-size:1.1rem">' + esc(sb) + '</b><button class="textlink" data-x>Chiudi</button></div><span class="small muted">Sottocategoria di ' + esc(c.n) + ' · ' + mov(k) + '</span>' +
+    catPop('<div class="spread"><b style="font-size:1.1rem">' + esc(sb) + '</b><button class="textlink" data-x>Chiudi</button></div><span class="small muted">Sottocategoria di ' + esc(c.n) + ' · ' + movN(k) + '</span>' +
       '<div class="field"><label for="cp-n">Nome</label><div class="row"><input id="cp-n" value="' + esc(sb) + '" style="flex:1;width:auto"><button class="btn sm" id="cp-rn">Rinomina</button></div></div>' +
       '<div class="field"><label for="cp-to">Sposta in</label><div class="row"><select id="cp-to" style="flex:1;width:auto"><option value="__own">Diventa una categoria a sé</option>' + others.map(o => '<option value="' + o.id + '">' + esc(o.n) + '</option>').join('') + '</select><button class="btn sm" id="cp-mv">Sposta</button></div><span class="small muted">I movimenti la seguono.</span></div>' +
-      '<button class="btn sm danger" id="cp-del" style="align-self:flex-start">Elimina sottocategoria</button><span class="small muted">' + (k ? 'I ' + mov(k) + ' restano in ' + esc(c.n) + ', senza sottocategoria.' : '') + '</span>', (o, close) => {
-      const done = msg => { save(); close(); toast(msg); renderCats(); };
+      '<button class="btn sm danger" id="cp-del" style="align-self:flex-start">Elimina sottocategoria</button><span class="small muted">' + (k ? 'I ' + movN(k) + ' restano in ' + esc(c.n) + ', senza sottocategoria.' : '') + '</span>', (o, close) => {
+      const done = msg => { save(); close(); toast(msg); keepY(); };
       o.querySelector('#cp-rn').onclick = () => { const nn = o.querySelector('#cp-n').value.trim(); if (!nn || nn === sb) return close();
         recat(t, x => x.c === c.id && x.s === sb, x => x.s = nn); const i = c.subs.indexOf(sb); forgetSub(t, c, sb); if (!c.subs.includes(nn)) c.subs.splice(i, 0, nn); if (S.subDel) S.subDel = S.subDel.filter(q => q !== t + ':' + c.id + ':' + nn); done('Rinominata'); };
-      o.querySelector('#cp-mv').onclick = () => { const v = o.querySelector('#cp-to').value;
-        if (v === '__own') { if (S.cats[t].some(x => x.n.toLowerCase() === sb.toLowerCase())) return toast('Esiste già una categoria "' + sb + '": scegli quella dall\'elenco');
-          const nc = {id:'c' + uid(), n:sb, i:iconFor(sb) === 'dots' ? c.i : iconFor(sb), g:c.g, subs:[]}; S.cats[t].splice(S.cats[t].indexOf(c) + 1, 0, nc); recat(t, x => x.c === c.id && x.s === sb, x => { x.c = nc.id; x.s = ''; }); forgetSub(t, c, sb); return done('"' + sb + '" ora è una categoria'); }
-        const d = S.cats[t].find(x => x.id === v); recat(t, x => x.c === c.id && x.s === sb, x => x.c = d.id); addSub(t, d, sb); forgetSub(t, c, sb); done('Spostata in ' + d.n); };
-      o.querySelector('#cp-del').onclick = () => { recat(t, x => x.c === c.id && x.s === sb, x => x.s = ''); forgetSub(t, c, sb); done('Sottocategoria eliminata'); }; }); });
-  const confirmDo = (msg, label, f) => catPop('<b style="font-size:1.1rem">Sei sicuro?</b><p style="margin:0">' + msg + '</p><div class="row"><button class="btn" id="cp-ok">' + label + '</button><button class="btn ghost" data-x>Annulla</button></div>', (o, close) => { o.querySelector('#cp-ok').onclick = () => { f(); save(); close(); }; });
+      o.querySelector('#cp-mv').onclick = () => { const v = o.querySelector('#cp-to').value; opSubMove(t, c, sb, v); done(v === '__own' ? '"' + sb + '" ora è una categoria' : 'Spostata in ' + S.cats[t].find(x => x.id === v).n); };
+      o.querySelector('#cp-del').onclick = () => { opSubDel(t, c, sb); done('Sottocategoria eliminata'); }; }); });
   const bi = view.querySelector('#ce-in'); if (bi) bi.onclick = () => { const d = to();
-    confirmDo('"' + esc(c.n) + '" diventa una sottocategoria di <b>' + esc(d.n) + '</b>' + (n ? ' e i suoi ' + mov(n) + ' passano lì' : '') + '.' + (c.subs.length ? ' Le sue sottocategorie finiscono nella nota dei movimenti.' : ''), 'Sposta', () => {
-      recat(t, x => x.c === c.id, x => { if (x.s) x.n = [x.s, x.n].filter(Boolean).join(' · '); x.c = d.id; x.s = c.n; }); addSub(t, d, c.n); dropCat(t, c, d); toast('"' + c.n + '" ora è dentro ' + d.n); nav({screen:'cats', t, id:d.id}); }); };
+    confirmDo('"' + esc(c.n) + '" diventa una sottocategoria di <b>' + esc(d.n) + '</b>' + (n ? ' e i suoi ' + movN(n) + ' passano lì' : '') + '.' + (c.subs.length ? ' Le sue sottocategorie finiscono nella nota dei movimenti.' : ''), 'Sposta', () => { opCatInto(t, c, d); toast('"' + c.n + '" ora è dentro ' + d.n); nav({screen:'cats', t, id:d.id}); }); };
   const bm = view.querySelector('#ce-mg'); if (bm) bm.onclick = () => { const d = to();
-    confirmDo('"' + esc(c.n) + '" viene unita a <b>' + esc(d.n) + '</b>' + (n ? ': i suoi ' + mov(n) + ' passano lì' : '') + '. Poi "' + esc(c.n) + '" sparisce.', 'Unisci', () => {
-      recat(t, x => x.c === c.id, x => x.c = d.id); c.subs.forEach(sb => addSub(t, d, sb)); dropCat(t, c, d); toast('Unita a ' + d.n); nav({screen:'cats', t, id:d.id}); }); };
+    confirmDo('"' + esc(c.n) + '" viene unita a <b>' + esc(d.n) + '</b>' + (n ? ': i suoi ' + movN(n) + ' passano lì' : '') + '. Poi "' + esc(c.n) + '" sparisce.', 'Unisci', () => { opCatMerge(t, c, d); toast('Unita a ' + d.n); nav({screen:'cats', t, id:d.id}); }); };
   view.querySelector('#ce-del').onclick = () => { if (!others.length) return toast('Serve almeno una categoria');
     const d = n ? to() : null;
-    confirmDo(n ? 'Elimini "' + esc(c.n) + '". I suoi ' + mov(n) + ' passano in <b>' + esc(d.n) + '</b>.' : 'Elimini "' + esc(c.n) + '". Non ha movimenti.', 'Elimina', () => {
-      if (d) { recat(t, x => x.c === c.id, x => { x.c = d.id; if (x.s && !(d.subs || []).includes(x.s)) { x.n = [x.s, x.n].filter(Boolean).join(' · '); x.s = ''; } }); }
-      dropCat(t, c, d); toast('Categoria eliminata'); nav({screen:'cats', t}); }); };
+    confirmDo(n ? 'Elimini "' + esc(c.n) + '". I suoi ' + movN(n) + ' passano in <b>' + esc(d.n) + '</b>.' : 'Elimini "' + esc(c.n) + '". Non ha movimenti.', 'Elimina', () => { opCatDel(t, c, d); toast('Categoria eliminata'); nav({screen:'cats', t}); }); };
 }
 
 /* ---------- legenda ---------- */
@@ -2945,7 +2991,8 @@ function renderSettings(){
       (downloads ? '<button class="item" data-pdf="m"><span class="ic">' + ic('book') + '</span><span class="t"><b>Resoconto PDF del mese</b><span class="sub">Riepilogo, categorie, pilastri, obiettivi e movimenti</span></span>' + ic('right') + '</button><button class="item" data-pdf="y"><span class="ic">' + ic('book') + '</span><span class="t"><b>Resoconto PDF dell\'anno</b><span class="sub">Tutto l\'anno in corso</span></span>' + ic('right') + '</button>' +
         '<button class="item" id="s-bk"><span class="ic">' + ic('shield') + '</span><span class="t"><b>Backup completo</b><span class="sub">' + (S.lastBackup ? 'Ultimo il ' + dshort(S.lastBackup) : 'Sul telefono puoi mandarlo a Google Drive, email o dove vuoi') + '</span></span>' + ic('right') + '</button>' : '') +
       '<label class="item" for="s-rs" style="cursor:pointer"><span class="ic">' + ic('repeat') + '</span><span class="t"><b>Ripristina da un backup</b><span class="sub">Carica il file .json salvato in precedenza</span></span>' + ic('right') + '</label><input type="file" id="s-rs" accept=".json,.txt,application/json,text/plain" hidden>' +
-      '<button class="item" ' + nav$({screen:'cats'}) + '><span class="ic">' + ic('tag') + '</span><span class="t"><b>Gestisci categorie</b><span class="sub">Rinomina, sottocategorie, sposta, unisci, riordina</span></span>' + ic('right') + '</button>' +
+      '<button class="item" ' + nav$({screen:'cats', t:'out'}) + '><span class="ic" style="background:#E5484D;color:#fff">' + ic('tag') + '</span><span class="t"><b>Categorie uscite</b><span class="sub">Crea, rinomina, sottocategorie, sposta, unisci</span></span>' + ic('right') + '</button>' +
+      '<button class="item" ' + nav$({screen:'cats', t:'in'}) + '><span class="ic" style="background:#22A45D;color:#fff">' + ic('tag') + '</span><span class="t"><b>Categorie entrate</b><span class="sub">Crea, rinomina, sottocategorie, sposta, unisci</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'import'}) + '><span class="ic">' + ic('list') + '</span><span class="t"><b>Importa da un\'altra app</b><span class="sub">File CSV, per esempio da Fast Budget</span></span>' + ic('right') + '</button>' +
       (downloads ? '<button class="item" id="s-csv"><span class="ic">' + ic('list') + '</span><span class="t"><b>Esporta i movimenti in CSV</b><span class="sub">Da aprire con Excel o Fogli Google</span></span>' + ic('right') + '</button>' : '') +
       '<button class="item" ' + nav$({screen:'terms'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Termini e condizioni</b><span class="sub">Versione ' + TERMS_V + (S.termsAt ? ', accettata il ' + dshort(S.termsAt) : '') + '</span></span>' + ic('right') + '</button>' +

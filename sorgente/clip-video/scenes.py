@@ -121,7 +121,7 @@ def s_conti(t, W, H):
     put(c, b, W / 2, H * .17 if v else H * .2, back((t - 1.2) / .35), clamp((t - 1.2) / .1))
     if t > 3.6:
         st = text('NON MI DICE NULLA', F('anton', 120 if not v else 100), WHITE, 10, INK).rotate(-6, expand=True, resample=Image.BICUBIC)
-        put(c, st, W / 2, H * .42 if v else H * .84, 2 - ease((t - 3.6) / .2), 1)
+        put(c, st, W / 2, H * .93 if v else H * .84, 2 - ease((t - 3.6) / .2), 1)
     return c
 EV_CONTI = [(.2 + i * .22, pop(500 + i * 90), .6) for i in range(5)] + [(1.2, whoosh(5, .4), .6), (2.0, coin(), .5), (2.4, coin(), .4), (3.6, stamp(), 1)]
 
@@ -345,3 +345,22 @@ LONG = [('01_elenco_lungo_preciso_muto', 5.8, s_elenco, EV_ELENCO), ('02_app_che
         ('13_e_se_arrivi_prima', 5.8, s_ese, EV_ESE), ('14_palestra_21_tappe', 5.8, s_palestra, EV_PAL), ('15_gratis_dati_tuoi', 5.8, s_gratis, EV_GRATIS), ('16_scrivimi_test', 5.6, s_test, EV_TEST)]
 SHORT = [('01_elenco_muto', 5.8, s_elenco, EV_ELENCO), ('02_quattro_pilastri', 5.8, s_pilastri, EV_PIL), ('03_budget_gabbia', 6.0, s_gabbia, EV_GABBIA),
          ('04_analisi_non_elenco', 6.4, s_pdf, EV_PDF), ('05_palestra_21_tappe', 5.8, s_palestra, EV_PAL), ('06_scrivimi_test', 5.6, s_test, EV_TEST)]
+
+# finale · scarica l'app (blu notte)
+def s_scarica(t, W, H):
+    c = bg_navy(W, H, t); v = V(W, H)
+    lc = logo_card(230 if v else 190)
+    put(c, lc, W / 2 if v else W * .2, H * .2 if v else H * .5, back(t / .4), clamp(t / .2))
+    tx = W / 2 if v else W * .6
+    put(c, text('SCARICA', F('anton', 150), WHITE), tx, H * .4 if v else H * .2, back((t - .5) / .35), clamp((t - .5) / .1))
+    put(c, text("L'APP", F('anton', 190), AMBER), tx, H * .5 if v else H * .42, back((t - .9) / .35), clamp((t - .9) / .1))
+    p = 1 + 0.04 * math.sin((t - 2.0) * 2 * math.pi) if t > 2.0 else back((t - 1.6) / .3)
+    bx = rrect((700, 170), 85, AMBER2 + (255,)); bd = ImageDraw.Draw(bx); bd.text((350, 62), 'È GRATIS', font=F('anton', 70), fill=NAVY, anchor='mm'); bd.text((350, 125), 'link in descrizione  ↓', font=F('comf', 34), fill=NAVY, anchor='mm')
+    put(c, bx, tx, H * .64 if v else H * .7, p if t > 1.6 else 0, 1)
+    put(c, text('Buddy4Free Risparmio · Android', F('lora', 48), (220, 225, 240)), tx, H * .76 if v else H * .9, 1, clamp((t - 2.6) / .4))
+    return c
+EV_SCARICA = [(0, whoosh(19, .5), .5), (.5, pop(600), .6), (.9, hit(), .7), (1.6, pop(1000), .6), (2.6, chime(), .7)]
+
+LONG[-1] = ('16_scarica_l_app', 5.6, s_scarica, EV_SCARICA)
+SHORT = [('01_elenco_muto', 5.8, s_elenco, EV_ELENCO), ('02_fumetto_cinque_conti', 6.0, s_conti, EV_CONTI), ('03_quattro_pilastri', 5.8, s_pilastri, EV_PIL),
+         ('04_budget_gabbia', 6.0, s_gabbia, EV_GABBIA), ('05_mini_analisi_numeri', 5.8, s_numeri, EV_NUM), ('06_palestra_21_tappe', 5.8, s_palestra, EV_PAL), ('07_scarica_l_app', 5.6, s_scarica, EV_SCARICA)]

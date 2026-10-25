@@ -56,31 +56,49 @@ I tuoi dati restano sul tuo telefono: non c'è un account, non c'è un server ch
 Niente trading, niente consigli di investimento. Solo i tuoi soldi di tutti i giorni, sotto controllo.
 
 ### 9 · Chiusura
-L'app la sto per pubblicare sul Play Store, e mi servono persone che la provino prima di tutti.
-Se hai Android, scrivimi TEST nei commenti o in direct.
+L'app è gratuita, e la trovi al link in descrizione.
+Scaricala, segna le tue spese per un mese, e poi apri il resoconto: guarda cosa ti raccontano davvero i tuoi soldi.
 E se hai un'idea, dentro l'app c'è "Dammi un suggerimento": le leggo tutte, e le migliori diventano nuove funzioni.
 Ci vediamo nel prossimo video. E buon risparmio.
 
 ---
 
-## SHORT (circa 45 secondi, circa 110 parole)
+## SHORT (circa 60–75 secondi, circa 230 parole, stile "Video 60\"")
 
-**Titolo:** Segni ogni spesa… e poi? 📊
+**Titolo:** Segni ogni spesa… e poi?
 
-### 1 · Aggancio
-Segni ogni spesa al centesimo… e poi? Alla fine del mese hai solo un elenco.
+Segni ogni spesa, ogni giorno.
+Ogni caffè, ogni bolletta, al centesimo.
+E alla fine del mese… cosa ti resta?
+Un elenco.
+Lungo, preciso.
+E muto.
 
-### 2 · Pilastri
-Nella mia app non ci sono conti correnti: ci sono quattro pilastri. Conta a cosa servono i soldi, non in quale banca stanno.
+Ti dice quanto hai speso.
+Non ti dice mai cosa sta succedendo ai tuoi soldi.
 
-### 3 · Niente budget
-Niente budget da rispettare: registri, guardi i fatti, e decidi dopo.
+Per questo ho costruito un'app diversa.
 
-### 4 · Analisi e PDF
-Ogni mese un resoconto che non è un elenco: è un'analisi di cosa sta succedendo.
+Primo: niente conti correnti.
+Io ne ho più di cinque.
+E sapere quante monete ci sono in ogni portafoglio non mi dice nulla.
+Conta a cosa servono i soldi: vivere ogni giorno, gli imprevisti, i tuoi obiettivi, il tuo futuro.
+Quattro pilastri, non cinque conti.
 
-### 5 · Abitudini
-E una palestra del risparmio, per cambiare un'abitudine alla volta.
+Secondo: niente budget.
+Un limite deciso prima è una gabbia che salta alla prima cena fuori.
+E poi arrivano i sensi di colpa.
+Qui fai il contrario: registri, guardi i fatti, e decidi dopo.
 
-### 6 · Chiusura
-Gratis, senza pubblicità, e i dati restano sul tuo telefono. Si chiama Buddy4Free Risparmio. Vuoi provarla? Scrivimi TEST.
+Terzo: ogni mese non ricevi un elenco, ma un'analisi.
+Il mese in cui hai risparmiato di più.
+La voce che sta crescendo senza che te ne accorgessi.
+Quanti mesi ti copre il fondo di emergenza.
+
+E se non sai da dove iniziare, c'è una palestra del risparmio: ventuno tappe, una piccola abitudine alla volta.
+
+È gratis, senza pubblicità, e i tuoi dati restano sul tuo telefono.
+Si chiama Buddy4Free Risparmio.
+Scaricala dal link in descrizione, e alla fine del mese guarda cosa ti raccontano davvero i tuoi soldi.
+
+**Clip (7):** 01 elenco muto · 02 cinque conti · 03 quattro pilastri · 04 budget gabbia · 05 mini analisi · 06 palestra 21 tappe · 07 scarica l'app

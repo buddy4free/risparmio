@@ -852,6 +852,7 @@ function migrate(){
 }
 try { const raw = localStorage.getItem(LS_KEY); if (raw) { S = Object.assign(freshState(), JSON.parse(raw)); migrate(); } } catch(e) {}
 let R = S.setup ? {screen:'home'} : {screen:'welcome'};
+try { if (!localStorage.getItem('b4f-first')) localStorage.setItem('b4f-first', new Date().toISOString()); localStorage.setItem('b4f-opens', String(+(localStorage.getItem('b4f-opens') || 0) + 1)); } catch(e) {}
 /* riaprendo l'app torni dove eri (entro 2 ore) */
 try { const L = JSON.parse(localStorage.getItem('b4f-last') || 'null'); if (S.setup && L && Date.now() - L.t < 72e5 && L.r && !['welcome', 'setup', 'add', 'import', 'breath'].includes(L.r.screen)) R = L.r; } catch(e) {}
 let viewYM = curYM();
@@ -2676,11 +2677,25 @@ function renderLegend(){
 }
 
 /* ---------- impostazioni ---------- */
+async function diagStorage(){
+  const box = document.getElementById('s-diag'); if (!box) return;
+  let raw = '', first = '', opens = 0; try { raw = localStorage.getItem(LS_KEY) || ''; first = localStorage.getItem('b4f-first') || ''; opens = +(localStorage.getItem('b4f-opens') || 0); } catch(e) {}
+  let pers = null, est = null; try { if (navigator.storage) { pers = navigator.storage.persisted ? await navigator.storage.persisted() : null; est = navigator.storage.estimate ? await navigator.storage.estimate() : null; } } catch(e) {}
+  const app = window.matchMedia && matchMedia('(display-mode: standalone)').matches, ua = navigator.userAgent, br = /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /Chrome\//.test(ua) ? 'Chrome' : /Safari/.test(ua) ? 'Safari' : 'altro browser';
+  const row = (k, v, ok) => '<div class="spread small"><span class="muted">' + k + '</span><b' + (ok === false ? ' style="color:var(--critical)"' : ok ? ' style="color:var(--good)"' : '') + '>' + v + '</b></div>';
+  const when = t => t ? new Date(t).toLocaleString('it-IT', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : '–';
+  box.innerHTML = row('Dati salvati su questo telefono', raw ? Math.round(raw.length / 1024) + ' KB' : 'nessuno', !!raw) + row('Ultimo salvataggio', when(S.savedAt)) + row('Prima apertura su questo telefono', when(first)) + row('Aperture da allora', opens) +
+    row('Aperta come', app ? 'app installata' : 'pagina del browser') + row('Browser', br) + row('Archiviazione protetta', pers === null ? 'non disponibile' : pers ? 'sì' : 'no', pers === null ? undefined : pers) + (est && est.quota ? row('Spazio disponibile', Math.round(est.quota / 1048576) + ' MB') : '') +
+    '<p class="small muted">Se "Prima apertura" cambia ogni volta che riapri l\'app, il telefono sta cancellando i dati. Se le aperture aumentano e i dati restano, è tutto a posto.</p>' +
+    (pers === false ? '<button class="btn ghost sm" id="s-pers" style="align-self:flex-start">Proteggi i dati</button>' : '');
+  const pb = document.getElementById('s-pers'); if (pb) pb.onclick = async () => { let ok = false; try { ok = await navigator.storage.persist(); } catch(e) {} toast(ok ? 'Dati protetti' : 'Il browser non lo consente: usa l\'app installata e fai backup'); diagStorage(); };
+}
 function renderSettings(){
   view.innerHTML = '<div class="sec" style="gap:22px">' + backBtn('Home', {screen:'home'}) + '<div class="intro"><h2>Impostazioni</h2></div>' +
     '<div class="sec"><span class="label">Notifiche e promemoria</span><p class="small muted">Per ricevere le notifiche sul telefono, aggiungi ogni promemoria al tuo calendario: ti avviserà all\'orario scelto. Nell\'app installabile arriveranno le notifiche vere.</p>' + remRows('money') + remRows('well') + '</div>' +
     '<div class="sec"><span class="label">Visualizzazione</span><label class="check"><input type="checkbox" id="s-tips"' + (S.showTips ? ' checked' : '') + '> Mostra sempre le spiegazioni sotto i titoli</label><label class="check"><input type="checkbox" id="s-hide"' + (S.hide ? ' checked' : '') + '> Nascondi gli importi (lo stesso dell\'occhio in alto)</label></div>' +
     '<div class="sec"><span class="label">Condividi con gli amici</span><p class="small muted">Per invitare un amico mandagli questo link. Ognuno vede solo i propri dati, salvati sul proprio telefono.</p><div class="row"><input id="s-link" readonly value="' + APP_URL + '" style="flex:1;width:auto"><button class="btn sm" id="s-copy">Copia</button></div></div>' +
+    '<div class="sec"><span class="label">Controllo salvataggio</span><div class="card" id="s-diag" style="gap:6px"><p class="small muted">Verifico…</p></div></div>' +
     '<div class="sec"><span class="label">Dati</span><div class="list">' +
       (downloads ? '<button class="item" data-pdf="m"><span class="ic">' + ic('book') + '</span><span class="t"><b>Resoconto PDF del mese</b><span class="sub">Riepilogo, categorie, pilastri, obiettivi e movimenti</span></span>' + ic('right') + '</button><button class="item" data-pdf="y"><span class="ic">' + ic('book') + '</span><span class="t"><b>Resoconto PDF dell\'anno</b><span class="sub">Tutto l\'anno in corso</span></span>' + ic('right') + '</button>' +
         '<button class="item" id="s-bk"><span class="ic">' + ic('shield') + '</span><span class="t"><b>Backup completo</b><span class="sub">' + (S.lastBackup ? 'Ultimo il ' + dshort(S.lastBackup) : 'Salva un file con tutti i tuoi dati') + '</span></span>' + ic('right') + '</button>' : '') +
@@ -2704,6 +2719,7 @@ function renderSettings(){
   view.querySelector('#s-snd').onchange = e => { S.sound = e.target.checked; save(); };
   view.querySelector('#s-tips').onchange = e => { S.showTips = e.target.checked; save(); renderSettings(); };
   view.querySelector('#s-hide').onchange = e => { S.hide = e.target.checked; save(); render(); };
+  diagStorage();
   view.querySelector('#s-copy').onclick = () => { const i = view.querySelector('#s-link'); (navigator.clipboard ? navigator.clipboard.writeText(i.value) : Promise.reject()).then(() => toast('Link copiato')).catch(() => { i.select(); toast('Seleziona e copia il link'); }); };
   const msgs = {demo:'Il conto di esempio sostituisce tutti i tuoi dati attuali. Vuoi continuare?', setup:'La configurazione iniziale ricrea entrate e spese ricorrenti, obiettivo e saldi. I movimenti già registrati vengono cancellati. Continuare?', reset:'Vuoi cancellare tutti i dati? Non si può annullare.'};
   view.querySelectorAll('[data-ask]').forEach(b => b.onclick = () => { const k = b.dataset.ask, box = document.getElementById('ask');

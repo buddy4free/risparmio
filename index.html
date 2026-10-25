@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
 <link rel="manifest" href="manifest.webmanifest">
@@ -1210,7 +1212,7 @@ window.addEventListener('popstate', () => {
 });
 const TABS = [['home','Home','house'],['tx','Movimenti','list'],['stats','Statistiche','chart'],['pillars','Pilastri','pillars'],['gym','Palestra','dumbbell'],['well','Benessere','leaf']];
 const TAB_OF = {import:'home', privacy:'home', terms:'home', support:'home', whatif:'pillars', debts:'pillars', missions:'gym', mission:'gym', learn:'gym', lesson:'gym', wbi:'home', dues:'tx', an:'stats', home:'home', tx:'tx', stats:'stats', charts:'stats', add:'tx', review:'stats', pillars:'pillars', pillar:'pillars', goal:'pillars', gtips:'pillars', sim:'pillars', gym:'gym', read:'gym', champ:'gym', well:'well', breath:'well'};
-function backBtn(label, r){ return '<button class="back" ' + nav$(r) + '>' + ic('left') + label + '</button>'; }
+function backBtn(label, r){ return '<button class="back" ' + nav$(r) + '>' + ic('left') + esc(label) + '</button>'; }
 function render(){
   const inApp = S.setup && !['welcome','setup'].includes(R.screen);
   const tabs = document.getElementById('tabs'); tabs.hidden = !inApp || R.screen === 'add';
@@ -1428,7 +1430,7 @@ function todayList(){
   items.push({i:'list', n:'Registra le spese di oggi', d:S.tx.some(x => x.d === t) ? 'Fatto' : 'Due minuti, alle ' + S.times.track, done:S.tx.some(x => x.d === t), go:{screen:'add'}});
   items.push({i:'feet', n:'Passi', d:fmtN(W.steps || 0) + ' di 8.000', done:(W.steps || 0) >= 8000, go:{screen:'well'}});
   items.push({i:'wave', n:'Respirazione guidata', d:W.breath ? 'Fatta' : 'Alle ' + S.times.breath, done:!!W.breath, go:{screen:'breath'}});
-  upcomingDues().slice(0, 2).forEach(d => items.push({i:'calendar', n:'Scadenza: ' + d.n, d:dueState(d).l + ' · ' + eur2(d.a), done:false, go:{screen:'dues', open:d.id}}));
+  upcomingDues().slice(0, 2).forEach(d => items.push({i:'calendar', n:'Scadenza: ' + esc(d.n), d:dueState(d).l + ' · ' + eur2(d.a), done:false, go:{screen:'dues', open:d.id}}));
   if (new Date().getDate() <= 7 && !S.reviews[addMonths(curYM(), -1)]) items.push({i:'calendar', n:'Revisione mensile dei conti', d:'Il riepilogo di ' + ymLabel(addMonths(curYM(), -1), {month:'long'}), done:false, go:{screen:'review'}});
   return '<div class="list">' + items.map(x => '<button class="item" ' + nav$(x.go) + '><span class="ic' + (x.done ? ' y' : '') + '">' + ic(x.done ? 'check' : x.i) + '</span><span class="t"><b>' + x.n + '</b><span class="sub">' + esc(x.d) + '</span></span>' + ic('right') + '</button>').join('') + '</div>';
 }
@@ -1905,7 +1907,7 @@ function renderGoal(){
   const p = goalPlan(g), s = stats(curYM()), sv = avgSave();
   const disc = S.cats.out.filter(c => c.disc).map(c => [c, avgMonths(st => st.byCat[c.id] || 0, 3)]).filter(x => x[1] > 20).sort((a, b) => b[1] - a[1]).slice(0, 3);
   const ideas = disc.map(([c, a]) => { const cut = Math.round(a * .3); const newMonths = p.left && sv + cut > 0 ? Math.ceil(p.left / (Math.max(0, sv) + cut)) : null;
-    return {t:'Riduci ' + c.n.toLowerCase() + ' del 30%', d:'+' + eur(cut) + ' al mese. ' + (SAVE_TIPS[c.id] || ''), m:newMonths}; });
+    return {t:'Riduci ' + esc(c.n.toLowerCase()) + ' del 30%', d:'+' + eur(cut) + ' al mese. ' + (SAVE_TIPS[c.id] || ''), m:newMonths}; });
   const extra = [['usato','Vendi un oggetto che non usi','Subito, Vinted, eBay: registra l\'entrata come "Vendita usato" e mettila qui.'],['regali','Regali in denaro','Compleanni e feste: spostali direttamente nell\'obiettivo.'],['extra','Un\'entrata extra al mese','Ripetizioni, piccoli lavori, cashback: anche 50 € al mese accorciano la strada.']];
   const tip1 = ideas[0] ? 'Da valutare: ' + ideas[0].t.charAt(0).toLowerCase() + ideas[0].t.slice(1) + ', ' + ideas[0].d.split('. ')[0] + '.' : 'Vendi un oggetto che non usi e manda l\'entrata a questo obiettivo.';
   view.innerHTML = '<div class="sec" style="gap:18px">' + goalBack() + goalSwitch(g) +
@@ -2144,7 +2146,7 @@ function renderGoalTips(){
   const g = S.goals.find(x => x.id === R.id); if (!g) return nav({screen:'pillars'});
   const p = goalPlan(g), sv = Math.max(0, goalPace(g).pace);
   const disc = S.cats.out.filter(c => c.disc).map(c => [c, avgMonths(st => st.byCat[c.id] || 0, 3)]).filter(x => x[1] > 15).sort((a, b) => b[1] - a[1]).slice(0, 3);
-  const ideas = disc.map(([c, a]) => { const cut = Math.round(a * .3), m = p.left && sv + cut > 0 ? Math.ceil(p.left / (sv + cut)) : null; return {t:'Riduci ' + c.n.toLowerCase() + ' del 30%', d:'In media spendi ' + eur(Math.round(a)) + ' al mese: +' + eur(cut) + ' al mese per l\'obiettivo. ' + (SAVE_TIPS[c.id] || ''), m}; });
+  const ideas = disc.map(([c, a]) => { const cut = Math.round(a * .3), m = p.left && sv + cut > 0 ? Math.ceil(p.left / (sv + cut)) : null; return {t:'Riduci ' + esc(c.n.toLowerCase()) + ' del 30%', d:'In media spendi ' + eur(Math.round(a)) + ' al mese: +' + eur(cut) + ' al mese per l\'obiettivo. ' + (SAVE_TIPS[c.id] || ''), m}; });
   const extra = [['usato','Vendi un oggetto che non usi','Subito, Vinted, eBay: registra l\'entrata come "Vendita usato" e mandala direttamente a questo obiettivo.'],['regali','Regali in denaro','Compleanni e feste: alla voce "Dove va questa entrata?" scegli questo obiettivo.'],['freelance','Un\'entrata extra al mese','Ripetizioni, piccoli lavori, cashback: anche 50 € al mese accorciano la strada.']];
   const top = Object.entries(stats(curYM()).byCat).concat(Object.entries(stats(addMonths(curYM(), -1)).byCat)).sort((a, b) => b[1] - a[1]).map(x => x[0]);
   const MAP = {abbonamenti:2, bollette:3, alimentari:5, banca:7, assicurazioni:8, svago:11, trasporti:12, ristoranti:17, shopping:10, abbigliamento:10};
@@ -2249,7 +2251,7 @@ function coachMsgs(){
   const ess = avgEssential(); if (ess > 0) { const mo = pilBalance('emerg') / ess; if (mo < 3) out.push({i:'shield', c:'#d95926', t:'Il fondo di emergenza copre ' + mo.toFixed(1).replace('.', ',') + ' mesi di spese essenziali. L\'indicazione più diffusa è di avere da 3 a 6 mesi.', b:'Fondo di emergenza ÷ spese essenziali medie (' + eur(Math.round(ess)) + ' al mese)'}); }
   const prev = stats(addMonths(curYM(), -1));
   if (s.rate !== null && prev.rate !== null && Math.abs(s.rate - prev.rate) >= 5) out.push({i:'chart', c:s.rate > prev.rate ? '#22A45D' : '#d95926', t:'Il tasso di risparmio è ' + Math.round(s.rate) + '%, ' + (s.rate > prev.rate ? 'in crescita' : 'in calo') + ' di ' + Math.round(Math.abs(s.rate - prev.rate)) + ' punti rispetto al mese scorso.', b:'Entrate e uscite registrate'});
-  upcomingDues().slice(0, 1).forEach(d => out.unshift({i:'calendar', c:'#e3a008', t:(dueDays(d) < 0 ? d.n + ' è scaduto' : 'Tra ' + dueDays(d) + ' giorni scade ' + d.n) + ' (' + eur2(d.a) + ' ' + FREQ[d.freq][0] + '). Rinnovi, rinegozi, riduci o disdici?', b:'Il tuo calendario delle scadenze', go:{screen:'dues', open:d.id}}));
+  upcomingDues().slice(0, 1).forEach(d => out.unshift({i:'calendar', c:'#e3a008', t:(dueDays(d) < 0 ? esc(d.n) + ' è scaduto' : 'Tra ' + dueDays(d) + ' giorni scade ' + esc(d.n)) + ' (' + eur2(d.a) + ' ' + FREQ[d.freq][0] + '). Rinnovi, rinegozi, riduci o disdici?', b:'Il tuo calendario delle scadenze', go:{screen:'dues', open:d.id}}));
   const last = S.tx.map(x => x.d).sort().pop();
   if (last && daysBetween(last, today()) >= 3) out.push({i:'list', c:'#3987e5', t:'Non registri movimenti da ' + daysBetween(last, today()) + ' giorni: due minuti stasera tengono i dati affidabili.', b:'Data dell\'ultimo movimento'});
   return out.slice(0, 4);
@@ -2734,7 +2736,7 @@ function renderWhatIf(){
       '<span class="small">' + (gain > 0 ? '<b>' + gain + (gain === 1 ? ' mese' : ' mesi') + ' prima</b> rispetto a oggi (' + ym(eta1) + '). ' : !eta1 ? 'Senza cambiare nulla, a questo ritmo non ci arrivi. ' : '') + 'Metti da parte <b>' + eur(Math.round(pace2)) + ' al mese</b>.' + (!ok && mLeft > 0 ? ' Per arrivare in tempo mancano circa <b>' + eur(Math.max(0, Math.ceil(left2 / mLeft - pace2))) + ' al mese</b>: prova le opzioni qui sotto o una data più comoda.' : '') + '</span></div>' +
     '<div class="card"><span class="label">1 · Metto da parte in più ogni mese</span>' + chips('ex', [0, 25, 50, 100, 200, 300], W.extra, v => v ? '+' + v + ' €' : 'Niente') + cust('w-exc', W.extra, [0, 25, 50, 100, 200, 300], 'Altra cifra al mese') + '</div>' +
     '<div class="card"><span class="label">2 · Taglio qualcosa che si ripete</span>' +
-      (levs.length ? '<div class="levs">' + levs.map(l => '<button data-lev="' + l.id + '" aria-pressed="' + W.cuts.includes(l.id) + '"><span class="ck">' + ic('check') + '</span><span class="t"><b>' + l.n + '</b><span>' + l.d + ' · oggi ' + eur(Math.round(l.avg)) + ' al mese</span></span><b class="num" style="color:' + IN_COL + '">+' + eur(l.cut) + '</b></button>').join('') + '</div>'
+      (levs.length ? '<div class="levs">' + levs.map(l => '<button data-lev="' + l.id + '" aria-pressed="' + W.cuts.includes(l.id) + '"><span class="ck">' + ic('check') + '</span><span class="t"><b>' + esc(l.n) + '</b><span>' + l.d + ' · oggi ' + eur(Math.round(l.avg)) + ' al mese</span></span><b class="num" style="color:' + IN_COL + '">+' + eur(l.cut) + '</b></button>').join('') + '</div>'
         : '<p class="small muted">Quando avrai registrato qualche spesa che si ripete, come abbonamenti, colazioni al bar o la spesa, la trovi qui.</p>') + '</div>' +
     '<div class="card"><span class="label">3 · Un\'entrata in più ogni mese</span>' + chips('side', [0, 50, 100, 200, 400], W.side, v => v ? '+' + v + ' €' : 'Nessuna') + cust('w-sdc', W.side, [0, 50, 100, 200, 400], 'Altra cifra al mese') + '<span class="small muted">Ripetizioni, piccoli lavori, straordinari, un affitto, vendite online.</span></div>' +
     '<div class="card"><span class="label">4 · Arriva una somma una tantum</span>' + chips('once', [0, 200, 500, 1000, 2000], W.once, v => v ? eur(v) : 'Nessuna') + cust('w-onc', W.once, [0, 200, 500, 1000, 2000], 'Altra cifra') + '<span class="small muted">Una vendita dell\'usato, un regalo, la tredicesima, un bonus.</span></div>' +

@@ -163,6 +163,9 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .item.selrow{grid-template-columns:auto 1fr auto;cursor:pointer}
 .item.subrow{grid-template-columns:auto 1fr auto}
 .item.selrow input,.item.subrow input{width:22px;height:22px;margin:0;accent-color:var(--yellow)}
+.item.selrow.off{opacity:.45;cursor:default}
+.list .item.selrow{display:grid;width:100%;box-sizing:border-box}
+.item.selrow .amt{justify-self:end}
 .txfilt{display:flex;flex-direction:column;gap:8px}
 .txfilt select{width:100%}
 .item.nt{grid-template-columns:1fr auto}
@@ -1318,17 +1321,19 @@ function renderHome(){
 /* ---------- movimenti ---------- */
 let txFilter = 'all';
 /* filtri dei movimenti: categoria (TXC = {t, c, s}), periodo (mese, anno, tutto) */
-let TXC = null, TXP = 'm', TXY = +curYM().slice(0, 4), TXLIM = 300, TXREF = null;
+let TXC = null, TXP = 'm', TXY = +curYM().slice(0, 4), TXLIM = 300, TXREF = null, TXFR = addMonths(curYM(), -5), TXTO = curYM(), TXSEL = null, TXMV = {c:'', s:''};
 function renderTx(){
   const fresh = TXREF !== PREV; TXREF = PREV;
   if (R.cat) { TXBACK = PREV && PREV.screen !== 'tx' ? {screen:PREV.screen} : null; if (PREV && PREV.screen === 'stats' && ST.mode === 'm' && ST.ym) viewYM = ST.ym;
     TXC = {t:R.ct || 'out', c:R.cat, s:R.sub}; TXP = 'm'; R = {screen:'tx'}; }
-  else if (fresh && PREV && !['tx', 'add', 'cats'].includes(PREV.screen)) { TXC = null; TXBACK = null; }
+  else if (fresh && PREV && !['tx', 'add', 'cats'].includes(PREV.screen)) { TXC = null; TXBACK = null; TXSEL = null; }
   if (TXC && !S.cats[TXC.t].some(c => c.id === TXC.c)) TXC = null;
   if (!TXC) TXBACK = null;
   const first = [...S.tx.map(x => ymOf(x.d)), ...S.rec.map(r => r.from)].sort()[0] || curYM();
   const range = (a, b) => { const o = []; for (let m = a; m <= b; m = addMonths(m, 1)) o.push(m); return o; };
-  const months = TXP === 'm' ? [viewYM] : TXP === 'y' ? range(TXY + '-01', TXY + '-12').filter(m => m <= curYM()) : range(first < curYM() ? first : curYM(), curYM());
+  const pf = TXFR <= TXTO ? TXFR : TXTO, pt = TXFR <= TXTO ? TXTO : TXFR;
+  const months = TXP === 'm' ? [viewYM] : TXP === 'y' ? range(TXY + '-01', TXY + '-12').filter(m => m <= curYM()) : TXP === 'p' ? range(pf, pt).filter(m => m <= curYM()) : range(first < curYM() ? first : curYM(), curYM());
+  if (!months.length) months.push(curYM());
   let L = [].concat(...months.map(ym => monthTx(ym)));
   const XF = (S.xfers || []).filter(x => months.includes(ymOf(x.d))).map(x => Object.assign({xfer:true}, x));
   const inc = L.filter(x => x.t === 'in').reduce((t, x) => t + x.a, 0), out = L.filter(x => x.t === 'out').reduce((t, x) => t + x.a, 0);
@@ -1339,9 +1344,9 @@ function renderTx(){
   else L = L.concat(XF);
   L.sort((a, b) => b.d.localeCompare(a.d));
   const shown = L.slice(0, TXLIM), groups = {}; shown.forEach(x => (groups[x.d] = groups[x.d] || []).push(x));
-  const perLabel = TXP === 'm' ? ymLabel(viewYM) : TXP === 'y' ? 'Anno ' + TXY : 'Da ' + ymLabel(months[0], {month:'short', year:'numeric'});
-  const period = '<div class="seg3">' + [['m', 'Mese'], ['y', 'Anno'], ['a', 'Tutto']].map(q => '<button data-mode="' + q[0] + '" data-per="' + q[0] + '" aria-pressed="' + (TXP === q[0]) + '">' + q[1] + '</button>').join('') + '</div>' +
-    (TXP === 'm' ? monthNav() : TXP === 'y' ? '<div class="month"><button id="y-prev" aria-label="Anno precedente">' + ic('left') + '</button><b>' + TXY + '</b><button id="y-next" aria-label="Anno successivo"' + (TXY >= +curYM().slice(0, 4) ? ' disabled style="opacity:.3"' : '') + '>' + ic('right') + '</button></div>' : '<div class="month"><span></span><b>' + ymLabel(months[0], {month:'short', year:'numeric'}) + ' – oggi</b><span></span></div>');
+  const perLabel = TXP === 'm' ? ymLabel(viewYM) : TXP === 'y' ? 'Anno ' + TXY : TXP === 'p' ? ymLabel(months[0], {month:'short', year:'numeric'}) + ' – ' + ymLabel(months[months.length - 1], {month:'short', year:'numeric'}) : 'Da ' + ymLabel(months[0], {month:'short', year:'numeric'});
+  const period = '<div class="seg3" style="grid-template-columns:repeat(4,1fr)">' + [['m', 'Mese'], ['y', 'Anno'], ['p', 'Periodo'], ['a', 'Tutto']].map(q => '<button data-mode="' + q[0] + '" data-per="' + q[0] + '" aria-pressed="' + (TXP === q[0]) + '">' + q[1] + '</button>').join('') + '</div>' +
+    (TXP === 'm' ? monthNav() : TXP === 'y' ? '<div class="month"><button id="y-prev" aria-label="Anno precedente">' + ic('left') + '</button><b>' + TXY + '</b><button id="y-next" aria-label="Anno successivo"' + (TXY >= +curYM().slice(0, 4) ? ' disabled style="opacity:.3"' : '') + '>' + ic('right') + '</button></div>' : TXP === 'p' ? '<div class="grid2"><div class="field"><label for="tx-fr">Da</label><input id="tx-fr" type="month" value="' + TXFR + '" max="' + curYM() + '"></div><div class="field"><label for="tx-to">A</label><input id="tx-to" type="month" value="' + TXTO + '" max="' + curYM() + '"></div></div>' : '<div class="month"><span></span><b>' + ymLabel(months[0], {month:'short', year:'numeric'}) + ' – oggi</b><span></span></div>');
   const catSel = '<div class="txfilt"><select id="tx-c" aria-label="Filtra per categoria"><option value="">Tutte le categorie</option>' + [['out', 'Uscite'], ['in', 'Entrate']].map(([t, n]) => '<optgroup label="' + n + '">' + S.cats[t].map(c => '<option value="' + t + ':' + c.id + '"' + (TXC && TXC.t === t && TXC.c === c.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</optgroup>').join('') + '</select>' +
     (cat && (cat.subs || []).length ? '<select id="tx-s" aria-label="Filtra per sottocategoria"><option value="__all">Tutte le sottocategorie</option>' + cat.subs.map(sb => '<option value="' + esc(sb) + '"' + (TXC.s === sb ? ' selected' : '') + '>' + esc(sb) + '</option>').join('') + '<option value=""' + (TXC.s === '' ? ' selected' : '') + '>Senza sottocategoria</option></select>' : '') + '</div>';
   let summary;
@@ -1354,21 +1359,45 @@ function renderTx(){
       (subRows.length > 1 || (subRows[0] && subRows[0][0]) ? '<span class="label" style="margin-top:6px">Per sottocategoria · tocca per filtrare</span><div' + (subRows.length > 6 ? ' class="catscroll catscroll6"' : '') + '>' + hbarsHTML(subRows.map(r => ({n:r[0] || 'Senza sottocategoria', v:r[1], c:catColor(TXC.t, cat), go:null, sk:r[0]})), tot) + '</div>' : '') + '</div>';
   } else summary = '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur2(inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur2(out) + '</b></div></div>';
   const withY = TXP !== 'm', dl = d => dLabel(d) + (withY ? ' ' + d.slice(0, 4) : '');
+  /* selezione multipla: sposta in un'altra categoria o sottocategoria, oppure elimina */
+  const selectable = shown.filter(x => !x.xfer && !x.rec && !x.plan);
+  if (TXSEL) [...TXSEL].forEach(id => { if (!S.tx.some(x => x.id === id)) TXSEL.delete(id); });
+  const selTx = TXSEL ? S.tx.filter(x => TXSEL.has(x.id)) : [], selTypes = [...new Set(selTx.map(x => x.t))], selT = selTypes[0];
+  if (selT && !S.cats[selT].some(c => c.id === TXMV.c)) { TXMV.c = S.cats[selT][0].id; TXMV.s = ''; }
+  const mvCat = selT && catOf(selT, TXMV.c);
+  const selBar = () => !L.length || (!TXSEL && !selectable.length) ? '' : !TXSEL ? '<div class="spread"><span class="small muted">' + movN(L.length) + '</span><button class="textlink" id="tx-sel">Seleziona</button></div>'
+    : '<div class="spread"><button class="textlink" id="tx-sall">' + (selectable.length && selectable.every(x => TXSEL.has(x.id)) ? 'Nessuno' : 'Seleziona tutti quelli visibili') + '</button><button class="textlink" id="mv-x">Fatto</button></div>' +
+      '';
+  const selCard = () => !TXSEL ? '' : (selTx.length ? '<div class="card impbulk"><b>' + movN(selTx.length) + ' · ' + eur2(selTx.reduce((t, x) => t + x.a, 0)) + '</b>' +
+        (selTypes.length > 1 ? '<span class="small muted">Hai scelto entrate e uscite insieme: per spostarli seleziona solo uscite o solo entrate.</span><div class="row"><button class="btn sm danger" id="mv-del">Elimina</button></div>'
+          : '<div class="grid2"><div class="field"><label for="mv-c">Categoria</label><select id="mv-c">' + S.cats[selT].map(c => '<option value="' + c.id + '"' + (c.id === TXMV.c ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</select></div>' +
+            '<div class="field"><label for="mv-s">Sottocategoria</label><select id="mv-s"><option value="">Nessuna</option>' + (mvCat.subs || []).map(x => '<option value="' + esc(x) + '"' + (x === TXMV.s ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '<option value="__new">+ Nuova…</option></select></div></div>' +
+            '<div class="row"><button class="btn sm" id="mv-go">Sposta</button><button class="btn sm danger" id="mv-del">Elimina</button></div>') + '</div>' : '<div class="card impbulk"><span class="small">Tocca i movimenti da spostare o da eliminare.</span></div>');
   view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + '<button class="readcard" ' + nav$({screen:'dues'}) + '><span class="t"><b>' + ic('calendar') + ' Scadenze e rinnovi</b><span>' + ((S.dues || []).length ? (S.dues || []).length + ' in calendario' + (upcomingDues().length ? ' · <span style="color:var(--yellow);font-weight:700">' + upcomingDues().length + ' da decidere</span>' : '') : 'Assicurazioni, abbonamenti, bollo: ti avviso un mese prima') + '</span></span>' + ic('right') + '</button>' +
     (TXC && TXBACK ? backBtn((TABS.find(t => t[0] === TXBACK.screen) || [0, TXBACK.screen === 'charts' ? 'Grafici' : 'Indietro'])[1], TXBACK) : '') +
     period + catSel +
     (TXC ? '<div class="spread"><span class="chip" style="background:' + catColor(TXC.t, cat) + ';color:#fff">' + ic(cat.i) + esc(cat.n) + (TXC.s ? ' › ' + esc(TXC.s) : '') + '</span><button class="textlink" id="tx-clr">Togli il filtro</button></div>'
       : '<div class="filters">' + [['all','Tutti'],['out','Uscite'],['in','Entrate'],['xfer','Trasferimenti']].map(f => '<button data-f="' + f[0] + '" aria-pressed="' + (txFilter === f[0]) + '">' + f[1] + '</button>').join('') + '</div>') +
-    summary +
+    summary + selBar() +
     (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => '<div class="dayhead">' + dl(d) + '</div><div class="list">' + groups[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
       const c = catOf(x.t, x.c);
+      if (TXSEL) { const ok = !x.rec && !x.plan && S.tx.some(y => y.id === x.id); return '<label class="item selrow' + (ok ? '' : ' off') + '">' + (ok ? '<input type="checkbox" data-tsel="' + x.id + '"' + (TXSEL.has(x.id) ? ' checked' : '') + '>' : '<span class="small muted" title="Ricorrente: si modifica dalla serie">↻</span>') + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + '</span></span><span class="amt num" style="color:' + (x.t === 'in' ? IN_COL : OUT_COL) + '">' + (x.t === 'in' ? '+' : '−') + eur2(x.a).replace('−', '') + '</span></label>'; }
       return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan ? ' · previsto' : x.rec ? ' · ogni mese' : '') + '</span></span><span class="amt num" style="color:' + (x.t === 'in' ? IN_COL : OUT_COL) + '">' + (x.t === 'in' ? '+' : '−') + eur2(x.a).replace('−', '') + '</span></button>'; }).join('') + '</div>').join('') + '</div>' +
-      (L.length > shown.length ? '<button class="btn ghost" id="tx-more">Mostra altri ' + Math.min(300, L.length - shown.length) + ' (' + (L.length - shown.length) + ' in tutto)</button>' : '')
-      : '<div class="note">Nessun movimento' + (TXC ? ' con questo filtro' : '') + (TXP === 'm' ? ' a ' + ymLabel(viewYM, {month:'long'}) : TXP === 'y' ? ' nel ' + TXY : '') + '.' + (TXP === 'm' ? ' Prova "Anno" o "Tutto" per vedere un periodo più lungo.' : '') + '</div>') +
+      selCard() + (L.length > shown.length ? '<button class="btn ghost" id="tx-more">Mostra altri ' + Math.min(300, L.length - shown.length) + ' (' + (L.length - shown.length) + ' in tutto)</button>' : '')
+      : '<div class="note">Nessun movimento' + (TXC ? ' con questo filtro' : '') + (TXP === 'm' ? ' a ' + ymLabel(viewYM, {month:'long'}) : TXP === 'y' ? ' nel ' + TXY : TXP === 'p' ? ' nel periodo' : '') + '.' + (TXP === 'm' ? ' Prova "Anno" o "Tutto" per vedere un periodo più lungo.' : '') + '</div>') +
     (downloads && S.tx.length + S.rec.length ? '<button class="textlink" id="csv">Esporta tutti i movimenti in CSV</button>' : '') +
   '</div>';
   if (TXP === 'm') bindMonth(); bindDemo();
-  const rr = () => { TXLIM = 300; renderTx(); };
+  const rr = () => { TXLIM = 300; renderTx(); }, keepY = () => { const y = window.scrollY; renderTx(); window.scrollTo({top:y}); };
+  const fr = view.querySelector('#tx-fr'); if (fr) { fr.onchange = () => { TXFR = fr.value || TXFR; rr(); }; view.querySelector('#tx-to').onchange = e => { TXTO = e.target.value || TXTO; rr(); }; }
+  const sb = view.querySelector('#tx-sel'); if (sb) sb.onclick = () => { TXSEL = TXSEL ? null : new Set(); keepY(); };
+  const sa = view.querySelector('#tx-sall'); if (sa) sa.onclick = () => { const ids = selectable.map(x => x.id); if (ids.every(id => TXSEL.has(id))) ids.forEach(id => TXSEL.delete(id)); else ids.forEach(id => TXSEL.add(id)); keepY(); };
+  view.querySelectorAll('[data-tsel]').forEach(cb => cb.onchange = () => { cb.checked ? TXSEL.add(cb.dataset.tsel) : TXSEL.delete(cb.dataset.tsel); keepY(); });
+  const mc = view.querySelector('#mv-c'); if (mc) { mc.onchange = () => { TXMV.c = mc.value; TXMV.s = ''; keepY(); }; view.querySelector('#mv-s').onchange = e => { TXMV.s = e.target.value; if (TXMV.s === '__new') { TXMV.s = ''; catPop('<b style="font-size:1.1rem">Nuova sottocategoria di ' + esc(catOf(selT, TXMV.c).n) + '</b><input id="cp-n" placeholder="Nome"><div class="row"><button class="btn" id="cp-ok">Crea</button><button class="btn ghost" data-x>Annulla</button></div>', (o, close) => { o.querySelector('#cp-ok').onclick = () => { const n = o.querySelector('#cp-n').value.trim(); if (!n) return; addSub(selT, catOf(selT, TXMV.c), n); TXMV.s = n; save(); close(); keepY(); }; }); } else keepY(); }; }
+  const mg = view.querySelector('#mv-go'); if (mg) mg.onclick = () => { const d = catOf(selT, TXMV.c), list = S.tx.filter(x => TXSEL.has(x.id));
+    confirmDo('Sposti ' + movN(list.length) + ' in <b>' + esc(d.n) + (TXMV.s ? ' › ' + esc(TXMV.s) : '') + '</b>.', 'Sposta', () => { list.forEach(x => { x.c = d.id; x.s = TXMV.s; }); if (TXMV.s) addSub(selT, d, TXMV.s); toast(movN(list.length) + ' spostati in ' + d.n); TXSEL = new Set(); keepY(); }); };
+  const md = view.querySelector('#mv-del'); if (md) md.onclick = () => { const n = TXSEL.size; confirmDo('Elimini ' + movN(n) + '. Non si può annullare.', 'Elimina', () => { S.tx = S.tx.filter(x => !TXSEL.has(x.id)); toast(movN(n) + ' eliminati'); TXSEL = new Set(); keepY(); }); };
+  const mx = view.querySelector('#mv-x'); if (mx) mx.onclick = () => { TXSEL = null; keepY(); };
   view.querySelectorAll('[data-per]').forEach(b => b.onclick = () => { TXP = b.dataset.per; if (TXP === 'y') TXY = +viewYM.slice(0, 4); rr(); });
   const yp = view.querySelector('#y-prev'); if (yp) { yp.onclick = () => { TXY--; rr(); }; view.querySelector('#y-next').onclick = () => { if (TXY < +curYM().slice(0, 4)) { TXY++; rr(); } }; }
   view.querySelector('#tx-c').onchange = e => { const v = e.target.value; if (!v) TXC = null; else { const [t, c] = v.split(':'); TXC = {t, c}; } rr(); };

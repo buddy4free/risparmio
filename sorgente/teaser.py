@@ -116,10 +116,11 @@ def mix():
         a=int(t0*SR); b=min(n,a+len(s)); out[a:b]+=s[:b-a]*g
         if g>=.9: d=int(0.25*SR); e=min(n,a+d); duck[a:e]=np.minimum(duck[a:e],0.45+0.55*np.linspace(0,1,e-a))
     mu=mu/np.abs(mu).max()*10**(-15/20); out=out/np.abs(out).max()*10**(-7/20)
-    y=out+mu*duck; y=y/max(1,np.abs(y).max()/0.95)
+    y=out+(mu*duck if os.environ.get('MUSIC','1')=='1' else 0); y=y/max(1,np.abs(y).max()/0.95)
     import wave; w=wave.open(D+'audio.wav','wb'); w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR); w.writeframes((y*32767).astype('<i2').tobytes()); w.close()
 if __name__=='__main__':
-    with ProcessPoolExecutor() as ex: list(ex.map(frame,range(int(DUR*FPS))))
+    if not os.path.exists(D+'f/%04d.png'%(int(DUR*FPS)-1)):
+        with ProcessPoolExecutor() as ex: list(ex.map(frame,range(int(DUR*FPS))))
     mix()
-    subprocess.run(['ffmpeg','-y','-loglevel','error','-framerate',str(FPS),'-i',D+'f/%04d.png','-i',D+'audio.wav','-c:v','libx264','-preset','slow','-crf','19','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-shortest','-movflags','+faststart','/home/user/risparmio/store/teaser-tester.mp4'],check=True)
+    subprocess.run(['ffmpeg','-y','-loglevel','error','-framerate',str(FPS),'-i',D+'f/%04d.png','-i',D+'audio.wav','-c:v','libx264','-preset','slow','-crf','19','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-shortest','-movflags','+faststart',os.environ.get('OUT','/home/user/risparmio/store/teaser-tester.mp4')],check=True)
     print('ok')

@@ -32,7 +32,23 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      - name: Strumenti Android (SDK)
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [ -z "$SDK" ] || [ ! -d "$SDK" ]; then SDK="$HOME/android-sdk"; fi
+          echo "::notice::SDK in $SDK"
+          SM=$(ls "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)
+          if [ -z "$SM" ]; then
+            echo "::notice::Scarico gli strumenti Android"
+            mkdir -p "$SDK/cmdline-tools" && cd "$RUNNER_TEMP"
+            curl -sSfL -o clt.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip || { echo "::error::Download degli strumenti Android non riuscito"; exit 1; }
+            unzip -q clt.zip && rm -rf "$SDK/cmdline-tools/latest" && mv cmdline-tools "$SDK/cmdline-tools/latest"
+            SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          yes | "$SM" --sdk_root="$SDK" --licenses > /dev/null 2>&1 || true
+          "$SM" --sdk_root="$SDK" "platforms;android-36" "build-tools;36.0.0" "platform-tools" > "$RUNNER_TEMP/sdk.log" 2>&1 || { tail -5 "$RUNNER_TEMP/sdk.log" | while IFS= read -r l; do echo "::error::SDK: $l"; done; exit 1; }
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"; echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "sdk.dir=$SDK" > local.properties
 
       - name: Chiave di firma dai Secrets
         env:

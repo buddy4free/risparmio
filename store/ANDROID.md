@@ -6,7 +6,7 @@ Le modifiche al sito arrivano subito a tutti; un nuovo pacchetto serve solo se c
 
 ## Nuova versione del pacchetto
 1. GitHub → **Actions → App Android → Run workflow**.
-2. `version_code`: un numero **più alto** dell'ultimo caricato (ultimo: **3**). `version_name`: es. `1.0.2`.
+2. `version_code`: un numero **più alto** dell'ultimo caricato (ultimo caricato sulla Play Console: **2**). `version_name`: es. `1.0.2`.
 3. Dopo ~3 minuti, nella pagina del lavoro: **Artifacts → buddy4free-risparmio-vN-firmato** → dentro c'è `app-release.aab`.
 4. Play Console → traccia → **Crea nuova release** → carica l'`.aab` → invia in revisione.
 
@@ -21,3 +21,8 @@ altrimenti con il browser predefinito. I dati restano nel browser che apre l'app
 ## Da decidere prima della pubblicazione per tutti
 Soluzione definitiva per non dipendere dal browser del telefono (colori con Samsung Internet, notifiche, dati legati al browser):
 valutare un pacchetto con motore interno (WebView), con migrazione dei dati tramite backup.
+
+## In attesa del prossimo rilascio Android
+- **Icone più nitide** (già nel progetto, versione 3 compilata il 26/10/2026 ma **non caricata**).
+  Al prossimo rilascio: avviare il workflow con `version_code` **3** (o più alto) così include tutte le modifiche Android accumulate.
+  Il file compilato su GitHub scade dopo 7 giorni: se è scaduto basta rilanciare il workflow.

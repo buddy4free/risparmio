@@ -2111,9 +2111,12 @@ function renderStats(){
   const sv = inc - out, rate = inc > 0 ? sv / inc * 100 : null, b = band(rate);
   const lastYM = months[months.length - 1] || ST.ym, firstPrev = addMonths(months[0] || ST.ym, -1);
   const {label} = stPeriod();
-  /* i saldi iniziali inseriti alla configurazione non sono crescita: si contano come punto di partenza */
-  const startIn = id => pillarMoves(id).filter(m => m.n === 'Saldo iniziale' && ymOf(m.d) > firstPrev && ymOf(m.d) <= lastYM).reduce((t, m) => t + m.a, 0);
-  const pil = PILLARS.map(p => { const si = startIn(p.id); return {p, v:pilBalanceAt(p.id, lastYM), v0:pilBalanceAt(p.id, firstPrev) + si, si}; }), hasStart = pil.some(x => Math.abs(x.si) > 0.005);
+  /* il punto di partenza di ogni pilastro è il primo saldo inserito: il primo saldo dello storico (anche di anni fa) o, se non c'è storico, il saldo iniziale. Non conta come crescita */
+  const startOf = id => { const v = pilBalanceAt(id, lastYM), v0 = pilBalanceAt(id, firstPrev), hf = ((S.hist || {})[id] || []).map(h => h.ym).sort()[0];
+    const siM = pillarMoves(id).filter(m => m.n === 'Saldo iniziale'), sf = siM.map(m => ymOf(m.d)).sort()[0];
+    if (hf && (!sf || hf <= sf)) { if (hf <= firstPrev) return {v, v0, st:false}; return hf >= lastYM ? {v, v0:v, st:true} : {v, v0:pilBalanceAt(id, hf), st:true}; }
+    const si = siM.filter(m => ymOf(m.d) > firstPrev && ymOf(m.d) <= lastYM).reduce((t, m) => t + m.a, 0); return {v, v0:v0 + si, st:Math.abs(si) > 0.005}; };
+  const pil = PILLARS.map(p => Object.assign({p}, startOf(p.id))), hasStart = pil.some(x => x.st);
   const totP = pil.reduce((t, x) => t + x.v, 0), totP0 = pil.reduce((t, x) => t + x.v0, 0);
   let trendHTML;
   if (ST.mode === 'm') {
@@ -2164,7 +2167,7 @@ function renderStats(){
       '<div class="carousel"><div class="slide">' + hbarsHTML(pil.map(x => ({n:x.p.n, v:x.v, c:x.p.c, tile:'<span class="ic" style="background:' + x.p.c + '">' + ic(x.p.i) + '</span>', sub:(x.v - x.v0 >= 0 ? '+' : '−') + eur(Math.abs(x.v - x.v0)), go:{screen:'pillar', id:x.p.id}}))) + '</div><div class="slide">' + (totP > 0 ? donutHTML(pil.filter(x => x.v > 0).map(x => ({n:x.p.short || x.p.n, v:x.v, c:x.p.c})), pil.reduce((t, x) => t + Math.max(0, x.v), 0)) : '<p class="small muted">Ancora nessun saldo nei pilastri.</p>') + '</div></div><div class="dots"><i class="on"></i><i></i></div>' +
       (d => { const endD = ym => { const [y, m] = ym.split('-').map(Number); return new Date(y, m, 0).toLocaleDateString('it-IT', {day:'numeric', month:'long', year:'numeric'}); },
         fine = lastYM >= curYM() ? 'oggi' : 'il ' + endD(lastYM), da = 'il ' + endD(firstPrev);
-      return '<p class="small muted">Quanto hai in ogni pilastro ' + (fine === 'oggi' ? 'a oggi' : 'al ' + endD(lastYM)) + '. Il numero piccolo sotto ogni cifra è quanto è cambiato <b style="color:var(--fg)">tra ' + da + ' e ' + fine + '</b>, cioè durante ' + (ST.mode === 'm' ? ymLabel(ST.ym, {month:'long'}) : ST.mode === 'y' ? 'il ' + ST.y : 'il periodo scelto') + ': non è un confronto con il periodo precedente.' + (hasStart ? ' I saldi iniziali inseriti quando hai iniziato a usare l\'app sono il punto di partenza, non contano come crescita.' : '') + ' In totale il tuo patrimonio ' + (Math.abs(d) < 0.5 ? 'è rimasto uguale' : (d > 0 ? 'è cresciuto di ' : 'è sceso di ') + '<b style="color:' + (d > 0 ? 'var(--good)' : 'var(--critical)') + '">' + (d > 0 ? '+' : '−') + eur(Math.abs(d)) + '</b>') + '.</p></div>'; })(totP - totP0) +
+      return '<p class="small muted">Quanto hai in ogni pilastro ' + (fine === 'oggi' ? 'a oggi' : 'al ' + endD(lastYM)) + '. Il numero piccolo sotto ogni cifra è quanto è cambiato <b style="color:var(--fg)">tra ' + da + ' e ' + fine + '</b>, cioè durante ' + (ST.mode === 'm' ? ymLabel(ST.ym, {month:'long'}) : ST.mode === 'y' ? 'il ' + ST.y : 'il periodo scelto') + ': non è un confronto con il periodo precedente.' + (hasStart ? ' Il primo saldo che hai inserito per un pilastro, nello storico o all\'inizio, è il suo punto di partenza: la crescita si conta da lì.' : '') + ' In totale il tuo patrimonio ' + (Math.abs(d) < 0.5 ? 'è rimasto uguale' : (d > 0 ? 'è cresciuto di ' : 'è sceso di ') + '<b style="color:' + (d > 0 ? 'var(--good)' : 'var(--critical)') + '">' + (d > 0 ? '+' : '−') + eur(Math.abs(d)) + '</b>') + '.</p></div>'; })(totP - totP0) +
     slideCard('Quanto hai speso · ' + eur(out), outRows, out, 'Nessuna uscita nel periodo.', synthHTML('out', outRows, out, prevOut, prevLabel)) +
     slideCard('Da dove arrivano le entrate · ' + eur(inc), inRows, inc, 'Nessuna entrata nel periodo.', synthHTML('in', inRows, inc, prevIn, prevLabel)) +
     trendHTML + cmp +

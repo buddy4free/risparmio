@@ -865,7 +865,7 @@ const SAVE_TIPS = {
   tasse:'Segna le scadenze in calendario: pagare in ritardo costa sanzioni e interessi.',
   altro:'Dai una categoria precisa a queste spese: è il primo passo per capire dove vanno.'
 };
-const KINDS = [['viaggio','Viaggio','plane'],['auto','Auto','car'],['casa','Casa','house'],['emergenza','Fondo emergenza','shield'],['personale','Altro obiettivo','target']];
+const KINDS = [['viaggio','Viaggio','plane'],['auto','Auto','car'],['casa','Casa','house'],['emergenza','Fondo emergenza','shield'],['patrimonio','Patrimonio totale','pillars'],['personale','Altro obiettivo','target']];
 const PILLARS = [
   {id:'liq', n:'Liquidità', short:'Liquidità', c:'#3987e5', i:'wallet', d:'Il conto corrente di tutti i giorni: qui arrivano le entrate ed escono le spese, se non scegli diversamente.'},
   {id:'emerg', n:'Fondo di emergenza', short:'Emergenza', c:'#d95926', i:'shield', d:'La riserva per gli imprevisti: un guasto, una spesa medica, un periodo senza lavoro.'},
@@ -1165,7 +1165,9 @@ function txEffects(){
   _eff = out; _effKey = key; return out;
 }
 const effSum = k => txEffects().filter(e => e.k === k).reduce((t, e) => t + e.a, 0);
-function goalSaved(g){ return g.kind === 'emergenza' ? pilBalance('emerg') : g.saved + effSum('g:' + g.id); }
+/* obiettivi collegati ai pilastri (niente salvadanaio proprio): fondo emergenza e patrimonio totale */
+const linkedGoal = g => !!g && (g.kind === 'emergenza' || g.kind === 'patrimonio');
+function goalSaved(g){ return g.kind === 'emergenza' ? pilBalance('emerg') : g.kind === 'patrimonio' ? PILLARS.reduce((t, p) => t + pilBalance(p.id), 0) : g.saved + effSum('g:' + g.id); }
 function destLabel(k){ if (k.startsWith('g:')) { const g = S.goals.find(x => 'g:' + x.id === k); return 'Salvadanaio · ' + (g ? g.name : 'obiettivo'); } return (PILLARS.find(p => p.id === k) || {}).n || k; }
 function destColor(k){ return k.startsWith('g:') ? PCOL.goal : PCOL[k]; }
 function adjPil(k, v){ if (k.startsWith('g:')) { const g = S.goals.find(x => 'g:' + x.id === k); if (!g) return; if (g.kind === 'emergenza') S.pil.emerg += v; else g.saved += v; } else S.pil[k] = (S.pil[k] || 0) + v; }
@@ -1173,7 +1175,7 @@ function transfer(from, to, a, note, d){ a = Math.round(a * 100) / 100; if (!(a 
   S.xfers = S.xfers || []; S.xfers.push({id, d, from, to, a, n:note || ''});
   adjPil(from, -a); adjPil(to, a); addMove(from, -a, 'Verso ' + destLabel(to), d, id); addMove(to, a, 'Da ' + destLabel(from), d, id); }
 function deleteXfer(id){ const x = (S.xfers || []).find(y => y.id === id); if (!x) return; adjPil(x.from, x.a); adjPil(x.to, -x.a); S.moves = S.moves.filter(m => m.x !== id); S.xfers = S.xfers.filter(y => y.id !== id); }
-const xferOpts = () => ['liq', 'emerg'].concat(S.goals.filter(g => g.kind !== 'emergenza').map(g => 'g:' + g.id)).concat(['inv']);
+const xferOpts = () => ['liq', 'emerg'].concat(S.goals.filter(g => !linkedGoal(g)).map(g => 'g:' + g.id)).concat(['inv']);
 const destBal = k => { if (k.startsWith('g:')) { const g = S.goals.find(x => 'g:' + x.id === k); return g ? goalSaved(g) : 0; } return pilBalance(k); };
 function goalTarget(g){ return g.kind === 'emergenza' && !g.target ? targets().emerg : g.target; }
 function goalPlan(g){
@@ -1182,13 +1184,13 @@ function goalPlan(g){
   return {left, months, need:Math.ceil(left / months), pct:Math.min(100, goalTarget(g) ? goalSaved(g) / goalTarget(g) * 100 : 0)};
 }
 const mainGoal = () => S.goals.find(g => g.id === S.mainGoal) || S.goals[0] || null;
-const goalTotal = () => S.goals.filter(g => g.kind !== 'emergenza').reduce((t, g) => t + goalSaved(g), 0);
+const goalTotal = () => S.goals.filter(g => !linkedGoal(g)).reduce((t, g) => t + goalSaved(g), 0);
 /* Suggest how to split this month's savings: fill liquidity, then emergency, then goals by need, then invest */
 function splitPlan(){
   const T = targets(), out = []; let rest = Math.max(0, Math.floor((pilBalance('liq') - T.liq) / 10) * 10);
   const take = (k, label, gap) => { const v = Math.min(rest, Math.max(0, Math.round(gap))); if (v > 0) { out.push({k, label, v}); rest -= v; } };
   take('emerg', 'Fondo di emergenza', T.emerg - pilBalance('emerg'));
-  S.goals.filter(g => g.kind !== 'emergenza').forEach(g => take('g:' + g.id, g.name, Math.min(goalPlan(g).need, goalPlan(g).left)));
+  S.goals.filter(g => !linkedGoal(g)).forEach(g => take('g:' + g.id, g.name, Math.min(goalPlan(g).need, goalPlan(g).left)));
   if (rest > 0) out.push({k:'inv', label:'Investimenti a lungo termine', v:rest});
   return out;
 }
@@ -1198,7 +1200,7 @@ function nextMove(){
   const L = pilBalance('liq'), E = pilBalance('emerg');
   if (L < T.liq) return {t:'Liquidità: ' + eur(L) + ' su ' + eur(T.liq), d:'Sul conto hai meno della soglia che hai scelto (' + S.liqMonths + (S.liqMonths === 1 ? ' mese' : ' mesi') + ' di spese). Mancano ' + eur(T.liq - L) + ': le prossime entrate la faranno salire.', go:{screen:'pillars'}};
   if (E < T.emerg) return {t:'Fondo di emergenza: ' + eur(E) + ' su ' + eur(T.emerg), d:'Mancano ' + eur(T.emerg - E) + ' alla cifra che copre ' + S.emergMonths + ' mesi di spese essenziali. Sei tu a decidere quanto e quando aggiungere.', go:{screen:'pillars'}};
-  const g = S.goals.find(x => x.kind !== 'emergenza' && goalPlan(x).left > 0);
+  const g = S.goals.find(x => !linkedGoal(x) && goalPlan(x).left > 0);
   if (g) return {t:'Obiettivo «' + g.name + '»', d:'Per arrivare entro ' + ymLabel(g.date) + ' il passo è di ' + eur(goalPlan(g).need) + ' al mese. Puoi vedere a che punto sei e le idee per arrivarci prima.', go:{screen:'goal', id:g.id}};
   return {t:'Liquidità, emergenza e obiettivi sono in pari', d:'Il quarto pilastro sono gli investimenti a lungo termine. In Palestra → Impara trovi lezioni per capire come funzionano; per scelte personali rivolgiti a un consulente indipendente.', go:{screen:'learn'}};
 }
@@ -1388,7 +1390,7 @@ function renderSetup(){
     const pl = id => { const p = PILLARS.find(x => x.id === id); return '<i class="dot" style="background:' + p.c + '"></i>' + p.n; };
     body = '<div class="intro"><h2>Da dove parti</h2><p class="muted">I tuoi soldi stanno in 4 contenitori, i pilastri. Scrivi quanto hai oggi in ognuno: una stima basta.</p></div>' +
       money('su-liq', pl('liq'), SU.liq, 'Quanto hai sul conto corrente per le spese di tutti i giorni.') + money('su-em', pl('emerg'), SU.em, 'Quanto hai già messo da parte solo per gli imprevisti.') +
-      (SU.kind !== 'emergenza' && !SU.noGoal ? money('su-gs', pl('goal'), SU.gs, 'Quanto hai già messo da parte per il tuo obiettivo: ' + esc(SU.gname || '') + '.') : '') + money('su-inv', pl('inv'), SU.inv, 'Fondo pensione, ETF, altri investimenti a lungo termine.');
+      (!['emergenza', 'patrimonio'].includes(SU.kind) && !SU.noGoal ? money('su-gs', pl('goal'), SU.gs, 'Quanto hai già messo da parte per il tuo obiettivo: ' + esc(SU.gname || '') + '.') : '') + money('su-inv', pl('inv'), SU.inv, 'Fondo pensione, ETF, altri investimenti a lungo termine.');
     next = () => { SU.liq = parseAmt(val('su-liq')); SU.em = parseAmt(val('su-em')); SU.gs = parseAmt(val('su-gs')); SU.inv = parseAmt(val('su-inv')); return true; };
   } else {
     body = '<div class="intro"><h2>I tuoi promemoria</h2><p class="muted">Scegli gli orari. Dopo potrai aggiungerli al calendario del telefono, dalle Impostazioni e dalla sezione Benessere, per ricevere le notifiche.</p></div>' +
@@ -1406,7 +1408,7 @@ function finishSetup(){
   const keepTimes = S.times, keepTerms = [S.terms, S.termsAt];
   S = freshState(); S.times = keepTimes; S.terms = keepTerms[0]; S.termsAt = keepTerms[1]; S.est = {out:SU.est || 0}; S.recAsked = true; S.pilFrom = today();
   S.pil = {liq:SU.liq || 0, emerg:SU.em || 0, inv:SU.inv || 0};
-  const g = SU.noGoal ? null : {id:uid(), kind:SU.kind, name:SU.gname, target:SU.gt || 0, date:SU.date, saved:SU.kind === 'emergenza' ? 0 : (SU.gs || 0)};
+  const g = SU.noGoal ? null : {id:uid(), kind:SU.kind, name:SU.gname, target:SU.gt || 0, date:SU.date, saved:['emergenza', 'patrimonio'].includes(SU.kind) ? 0 : (SU.gs || 0)};
   S.goals = g ? [g] : []; S.mainGoal = g ? g.id : null;
   addMove('liq', S.pil.liq, 'Saldo iniziale'); addMove('emerg', S.pil.emerg, 'Saldo iniziale'); addMove('inv', S.pil.inv, 'Saldo iniziale'); if (g && g.saved) addMove('g:' + g.id, g.saved, 'Saldo iniziale');
   S.setup = true; S.gym.start = today();
@@ -1740,7 +1742,7 @@ function renderXfer(){
 /* un rimborso è un'uscita con importo negativo: riduce la spesa della sua categoria e rientra nel pilastro */
 const isRf = x => x.t === 'out' && x.a < 0;
 const txAmt = x => '<span class="amt num" style="color:' + (x.t === 'in' || isRf(x) ? IN_COL : OUT_COL) + '">' + (x.t === 'in' || isRf(x) ? '+' : '−') + eur2(Math.abs(x.a)) + '</span>';
-function destOptions(t){ return ['liq', 'emerg'].concat(S.goals.filter(g => g.kind !== 'emergenza').map(g => 'g:' + g.id)).concat(t === 'in' ? ['inv'] : []); }
+function destOptions(t){ return ['liq', 'emerg'].concat(S.goals.filter(g => !linkedGoal(g)).map(g => 'g:' + g.id)).concat(t === 'in' ? ['inv'] : []); }
 const TYPE = {out:['Uscita','#E5484D','Una spesa: soldi che escono','cart'], in:['Entrata','#22A45D','Stipendio, regali, vendite: soldi che arrivano','plus'], xfer:['Trasferimento','#3987e5','Sposta soldi tra i tuoi pilastri','repeat']};
 function renderChooser(){
   F = null;
@@ -1902,7 +1904,7 @@ function renderAdd(){
 
 /* ---------- pillars & goals ---------- */
 const pilBalance = k => k === 'goal' ? goalTotal() : (S.pil[k] || 0) + effSum(k);
-const pilTarget = k => { const T = targets(); return k === 'goal' ? S.goals.filter(g => g.kind !== 'emergenza').reduce((t, g) => t + g.target, 0) : (T[k] || 0); };
+const pilTarget = k => { const T = targets(); return k === 'goal' ? S.goals.filter(g => !linkedGoal(g)).reduce((t, g) => t + g.target, 0) : (T[k] || 0); };
 function pillarChart(){
   const rows = PILLARS.map(p => ({p, v:Math.max(0, pilBalance(p.id)), t:pilTarget(p.id)}));
   /* se un pilastro è molto più grande degli altri, la sua colonna viene "spezzata" e la scala segue gli altri */
@@ -1949,7 +1951,7 @@ function renderPillars(){
   const total = PILLARS.reduce((t, p) => t + pilBalance(p.id), 0);
   view.innerHTML = '<div class="sec" style="gap:22px">' + demoBar() + '<div class="intro"><div class="spread"><h2>I 4 pilastri</h2><button class="btn sm" ' + nav$({screen:'add', xfer:true}) + '>' + ic('repeat') + 'Sposta soldi</button></div><div class="row"><button class="readcard" ' + nav$({screen:'sim'}) + '><span class="t"><b>' + ic('chart') + ' Simulatore del futuro</b><span>Quanto possono diventare i tuoi risparmi</span></span>' + ic('right') + '</button></div><div class="row"><button class="readcard debtcard" ' + nav$({screen:'debts'}) + '><span class="t"><b>' + ic('bank') + ' Finanziamenti e debiti</b><span>' + ((S.debts || []).length ? eur(S.debts.reduce((t, d) => t + debtInfo(d).pv, 0)) + ' di debito residuo · fuori dai pilastri' : 'Mutui, prestiti e rate: restano fuori dai pilastri') + '</span></span>' + ic('right') + '</button></div><p class="muted">Si riempiono in ordine: prima la liquidità, poi il fondo di emergenza, poi il salvadanaio degli obiettivi, poi gli investimenti.</p></div>' +
     '<div class="card"><div class="spread"><span class="label">Patrimonio nei pilastri</span><b class="num" style="font-family:var(--display);font-size:1.5rem">' + eur(total) + '</b></div><div class="carousel"><div class="slide">' + pillarChart() + '</div><div class="slide">' + pillarEquity() + '</div></div><div class="dots"><i class="on"></i><i></i></div><span class="small muted" style="text-align:center">Scorri per vedere l\'andamento nel tempo · tocca un pilastro qui sotto per i dettagli</span></div>' +
-    PILLARS.map((p, i) => { const v = pilBalance(p.id), t = pilTarget(p.id), ng = S.goals.filter(g => g.kind !== 'emergenza').length;
+    PILLARS.map((p, i) => { const v = pilBalance(p.id), t = pilTarget(p.id), ng = S.goals.filter(g => !linkedGoal(g)).length;
       return '<button class="pillar pmini" style="--pc:' + p.c + '" ' + nav$({screen:'pillar', id:p.id}) + '><span class="head"><span class="ic" style="background:' + p.c + '">' + ic(p.i) + '</span><span class="t"><b>' + (i + 1) + '. ' + p.n + '</b>' + (p.id === 'goal' ? '<span>' + (ng === 1 ? '1 obiettivo' : ng + ' obiettivi') + '</span>' : '') + '</span>' + ic('right') + '</span>' +
         '<span class="pnum"><b>' + eur(v) + '</b><span class="muted">' + (t ? 'su ' + eur(t) + ' · ' + Math.min(100, Math.round(v / t * 100)) + '%' : 'senza tetto') + '</span></span>' +
         (t ? '<span class="pbar"><i style="width:' + Math.min(100, Math.max(0, v / t * 100)) + '%;background:' + p.c + '"></i></span>' : '') + '</button>'; }).join('') +
@@ -1978,7 +1980,7 @@ function bindPil(again){
   });
 }
 function addMove(k, a, n, d, x){ if (!a) return; S.moves.push(Object.assign({d:d || today(), k, a:Math.round(a * 100) / 100, n:n || ''}, x ? {x} : {})); if (S.moves.length > 600) S.moves.shift(); }
-function pillarMoves(id){ const gk = m => S.goals.find(g => 'g:' + g.id === m.k); return S.moves.concat(txEffects()).filter(m => { if (m.hx) return false; const g = gk(m); if (id === 'goal') return m.k.startsWith('g:') && (!g || g.kind !== 'emergenza'); if (id === 'emerg') return m.k === 'emerg' || !!(g && g.kind === 'emergenza'); return m.k === id; }); }
+function pillarMoves(id){ const gk = m => S.goals.find(g => 'g:' + g.id === m.k); return S.moves.concat(txEffects()).filter(m => { if (m.hx) return false; const g = gk(m); if (id === 'goal') return m.k.startsWith('g:') && (!g || !linkedGoal(g)); if (id === 'emerg') return m.k === 'emerg' || !!(g && g.kind === 'emergenza'); return m.k === id; }); }
 /* storico dei saldi: i saldi di fine mese inseriti a mano diventano movimenti di allineamento.
    Ognuno sta all'inizio del mese dopo, quindi cambia solo lo storico precedente e mai il saldo di oggi.
    Si ricalcolano dal più recente al più vecchio, così ogni saldo resta quello inserito. */
@@ -2006,7 +2008,7 @@ function renderPillar(){
   view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn('Pilastri', {screen:'pillars'}) +
     '<div class="intro"><span class="label" style="color:' + p.c + '">Pilastro ' + (PILLARS.indexOf(p) + 1) + ' di 4</span><h2>' + p.n + '</h2><p class="muted small">' + p.d + '</p></div>' +
     (p.id === 'liq' || p.id === 'emerg' ? targetBox(p.id) : '') +
-    (p.id === 'goal' ? '<div class="list">' + S.goals.filter(g => g.kind !== 'emergenza').map(g => { const pl = goalPlan(g), gs = goalStatus(g); return '<button class="item" ' + nav$({screen:'goal', id:g.id}) + '><span class="ic" style="background:' + gs.c + ';color:#000">' + ic(KINDS.find(k => k[0] === g.kind)[2]) + '</span><span class="t"><b>' + esc(g.name) + (S.mainGoal === g.id ? ' <span class="y">★</span>' : '') + '</b><span class="sub">' + eur(goalSaved(g)) + ' di ' + eur(goalTarget(g)) + ' · entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + '</span></span><span class="small num">' + Math.round(pl.pct) + '%</span></button>'; }).join('') + '</div><button class="btn sm" style="align-self:flex-start" ' + nav$({screen:'goal', id:'new'}) + '>' + ic('plus') + 'Nuovo obiettivo</button>' : '') +
+    (p.id === 'goal' ? '<div class="list">' + S.goals.filter(g => !linkedGoal(g)).map(g => { const pl = goalPlan(g), gs = goalStatus(g); return '<button class="item" ' + nav$({screen:'goal', id:g.id}) + '><span class="ic" style="background:' + gs.c + ';color:#000">' + ic(KINDS.find(k => k[0] === g.kind)[2]) + '</span><span class="t"><b>' + esc(g.name) + (S.mainGoal === g.id ? ' <span class="y">★</span>' : '') + '</b><span class="sub">' + eur(goalSaved(g)) + ' di ' + eur(goalTarget(g)) + ' · entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + '</span></span><span class="small num">' + Math.round(pl.pct) + '%</span></button>'; }).join('') + '</div><button class="btn sm" style="align-self:flex-start" ' + nav$({screen:'goal', id:'new'}) + '>' + ic('plus') + 'Nuovo obiettivo</button>' : '') +
     (p.id === 'inv' ? '<button class="readcard" ' + nav$({screen:'sim'}) + '><span class="t"><b>' + ic('chart') + ' Simulatore del futuro</b><span>Prova capitale, risparmio mensile, anni e rendimento</span></span>' + ic('right') + '</button><p class="small muted">Nessun tetto: qui va il denaro che non ti serve per molti anni. Le informazioni nell\'app non sono una consulenza finanziaria.</p>' : '') +
     (p.id !== 'goal' ? '<div class="row"><button class="btn sm" data-mv="' + p.id + '" data-sign="1">Aggiungi</button><button class="btn ghost sm" data-mv="' + p.id + '" data-sign="-1">Preleva</button><button class="textlink" data-set="' + p.id + '">Correggi il saldo</button></div><div id="mv-' + p.id + '"></div>' +
       '<details class="histbox"' + (R.hist ? ' open' : '') + '><summary>' + ic('calendar') + ' Ricostruisci lo storico</summary><p class="small muted">Hai i saldi del passato, per esempio dagli estratti conto o dal vecchio programma? Scrivi quanto c\'era in questo pilastro alla fine di un mese: il grafico qui sotto si aggiorna e il saldo di oggi non cambia. Puoi aggiungerne quanti vuoi, anche uno per anno.</p>' +
@@ -2032,8 +2034,9 @@ function renderPillar(){
 
 function goalBack(){ const f = GOAL_FROM || {screen:'pillars'}, P = PILLARS.find(x => x.id === f.id); const n = f.screen === 'pillar' && P ? P.short : (TABS.find(t => t[0] === f.screen) || [0, 'Indietro'])[1]; return backBtn(n, f.id ? {screen:f.screen, id:f.id} : {screen:f.screen}); }
 function goalSwitch(g){ const L = S.goals; if (L.length < 2) return ''; return '<div class="gswitch">' + L.map(x => '<button class="chip" ' + nav$({screen:'goal', id:x.id}) + ' aria-pressed="' + (x.id === g.id) + '">' + ic(KINDS.find(k => k[0] === x.kind)[2]) + esc(x.name) + '</button>').join('') + '</div>'; }
-function goalShare(g){ const sv = Math.max(0, avgSave()), act = S.goals.filter(x => goalPlan(x).left > 0), tot = act.reduce((t, x) => t + goalPlan(x).need, 0), need = goalPlan(g).need; return Math.floor(Math.min(need, tot ? sv * need / tot : sv) / 10) * 10; }
+function goalShare(g){ const sv = Math.max(0, avgSave()), act = S.goals.filter(x => x.kind !== 'patrimonio' && goalPlan(x).left > 0), tot = act.reduce((t, x) => t + goalPlan(x).need, 0), need = goalPlan(g).need; return Math.floor(Math.min(need, tot && g.kind !== 'patrimonio' ? sv * need / tot : sv) / 10) * 10; }
 function autoTip(g){ const p = goalPlan(g), a = goalShare(g), sv = Math.round(Math.max(0, avgSave()));
+  if (g.kind === 'patrimonio') return a >= p.need ? 'Al ritmo attuale ci sei: in media ti avanzano <b>' + eur(sv) + ' al mese</b> e ne servono ' + eur(p.need) + '. Conta tutto quello che resta, in qualunque pilastro.' : 'In media ti avanzano <b>' + eur(sv) + ' al mese</b>, dopo tutte le spese: per arrivare in tempo ne servirebbero ' + eur(p.need) + '. Qui conta tutto quello che resta, in qualunque pilastro: con E se…? puoi provare una data o una cifra più comode.';
   if (a >= p.need) return 'Potresti valutare un bonifico automatico di <b>' + eur(p.need) + '</b> il giorno dopo lo stipendio: in base ai tuoi movimenti rientra in quello che ti avanza in media ogni mese (' + eur(sv) + ').';
   if (a >= 20) return 'Una cifra da valutare: un bonifico automatico intorno a <b>' + eur(a) + ' al mese</b>, il giorno dopo lo stipendio. È la parte di quello che ti avanza in media (' + eur(sv) + ' al mese, dopo tutte le spese) che resterebbe a questo obiettivo. Per arrivare in tempo ne servirebbero ' + eur(p.need) + ': con E se…? puoi provare altre strade o una data più comoda.';
   return 'Oggi a fine mese avanza poco: si potrebbe valutare di partire con 20-30 € al mese e cercare spazio in una spesa che si ripete. Per arrivare in tempo servirebbero ' + eur(p.need) + ' al mese: con E se…? puoi provare una data o una cifra più comode.'; }
@@ -2048,17 +2051,17 @@ function renderGoal(){
       '<div class="field"><label for="g-n">Nome</label><input id="g-n" value="' + esc(R.name ?? g.name) + '" placeholder="Es. Auto nuova"></div>' +
       '<div class="field"><label for="g-t">Cifra da raggiungere</label><div class="eur"><input id="g-t" inputmode="none" readonly data-pad value="' + (R.target ?? (g.target || '')) + '"></div>' + (k === 'emergenza' ? '<span class="small muted">Lascia vuoto per usare il calcolo automatico (' + eur(targets().emerg) + ').</span>' : '') + '</div>' +
       '<div class="field"><label for="g-d">Entro</label><input id="g-d" type="month" min="' + addMonths(curYM(), 1) + '" value="' + (R.date || g.date) + '"></div>' +
-      (k !== 'emergenza' ? '<div class="field"><label for="g-s">Già messo da parte</label><div class="eur"><input id="g-s" inputmode="none" readonly data-pad value="' + (isNew ? '' : goalSaved(g) || '') + '"></div></div>' : '') +
+      (!['emergenza', 'patrimonio'].includes(k) ? '<div class="field"><label for="g-s">Già messo da parte</label><div class="eur"><input id="g-s" inputmode="none" readonly data-pad value="' + (isNew ? '' : goalSaved(g) || '') + '"></div></div>' : '') +
       '<p class="small muted" id="g-hint"></p><button class="btn wide" id="g-ok">Salva</button>' + (!isNew ? '<button class="btn danger" id="g-del">Elimina obiettivo</button>' : '') + '</div>';
     view.querySelectorAll('[data-k]').forEach(b => b.onclick = () => nav(Object.assign({}, R, {kind:b.dataset.k, name:val('g-n'), target:val('g-t'), date:val('g-d')})));
-    const hint = () => { const t = parseAmt(val('g-t')), d = val('g-d') || g.date, m = Math.max(1, monthsBetween(curYM(), d)), have = k === 'emergenza' ? 0 : parseAmt(val('g-s')) || 0, sv = Math.max(0, Math.round(avgSave()));
+    const hint = () => { const t = parseAmt(val('g-t')), d = val('g-d') || g.date, m = Math.max(1, monthsBetween(curYM(), d)), have = k === 'emergenza' ? 0 : k === 'patrimonio' ? goalSaved({kind:'patrimonio'}) : parseAmt(val('g-s')) || 0, sv = Math.max(0, Math.round(avgSave()));
       document.getElementById('g-hint').innerHTML = t > 0 ? 'Ti servono <b style="color:var(--fg)">' + eur(Math.max(0, Math.ceil((t - have) / m))) + ' al mese</b> per ' + m + (m === 1 ? ' mese' : ' mesi') + '. ' + (sv ? 'Oggi risparmi in media ' + eur(sv) + ' al mese: a questo ritmo entro quella data metteresti da parte circa ' + eur(have + sv * m) + '.' : '') : (sv ? 'Non sai che cifra scegliere? Oggi risparmi in media ' + eur(sv) + ' al mese: in 12 mesi sarebbero circa ' + eur(sv * 12) + '.' : ''); };
     ['g-t', 'g-d', 'g-s'].forEach(id => { const e = document.getElementById(id); if (e) e.oninput = hint; }); hint();
     view.querySelector('#g-ok').onclick = () => {
       const name = val('g-n').trim() || KINDS.find(x => x[0] === k)[1], target = parseAmt(val('g-t')), date = val('g-d') || g.date;
       if (!target && k !== 'emergenza') return toast('Inserisci la cifra');
-      const wanted = k === 'emergenza' ? 0 : parseAmt(val('g-s'));
-      Object.assign(g, {kind:k, name, target, date, saved:k === 'emergenza' ? 0 : wanted - effSum('g:' + g.id)});
+      const wanted = ['emergenza', 'patrimonio'].includes(k) ? 0 : parseAmt(val('g-s'));
+      Object.assign(g, {kind:k, name, target, date, saved:['emergenza', 'patrimonio'].includes(k) ? 0 : wanted - effSum('g:' + g.id)});
       if (isNew) { S.goals.push(g); if (!S.mainGoal) S.mainGoal = g.id; }
       save(); toast('Obiettivo salvato'); nav({screen:'goal', id:g.id});
     };
@@ -2074,11 +2077,12 @@ function renderGoal(){
   view.innerHTML = '<div class="sec" style="gap:18px">' + goalBack() + goalSwitch(g) +
     (p.left ? '<div class="card tipstop"><span class="label">' + ic('star') + ' Suggerimenti per arrivarci prima</span><ul class="tiplist"><li>' + autoTip(g) + '</li><li>' + esc(tip1) + '</li></ul>' + TIP_NOTE + '<button class="btn sm" style="align-self:flex-start" ' + nav$({screen:'gtips', id:g.id}) + '>Tutti i suggerimenti</button></div>' : '') +
     goalCardHTML(g, true) +
-    '<div class="row"><button class="btn" id="g-add">' + ic('plus') + 'Accantona</button><button class="btn ghost" ' + nav$({screen:'goal', id:g.id, editing:true}) + '>Modifica</button>' + (S.mainGoal !== g.id ? '<button class="textlink" id="g-main">Rendi principale</button>' : '') + '</div><div id="g-box"></div>' +
+    '<div class="row">' + (g.kind === 'patrimonio' ? '<button class="btn" ' + nav$({screen:'pillars'}) + '>' + ic('pillars') + 'I tuoi 4 pilastri</button>' : '<button class="btn" id="g-add">' + ic('plus') + 'Accantona</button>') + '<button class="btn ghost" ' + nav$({screen:'goal', id:g.id, editing:true}) + '>Modifica</button>' + (S.mainGoal !== g.id ? '<button class="textlink" id="g-main">Rendi principale</button>' : '') + '</div><div id="g-box"></div>' +
     '<button class="esebtn" ' + nav$({screen:'whatif', id:g.id}) + '><span class="marker">E se…?</span><span>Quando arrivi con qualche euro in più, e cosa potresti permetterti</span>' + ic('right') + '</button>' +
   '</div>';
   const mn = view.querySelector('#g-main'); if (mn) mn.onclick = () => { S.mainGoal = g.id; save(); toast('Ora è il tuo obiettivo principale'); renderGoal(); };
-  view.querySelector('#g-add').onclick = () => {
+  if (g.kind === 'patrimonio') { const n = document.createElement('p'); n.className = 'small muted'; n.textContent = 'Questo obiettivo segue da solo la somma dei 4 pilastri: liquidità, fondo emergenza, salvadanaio e investimenti. Per farlo crescere registra entrate e uscite e aggiorna i saldi dei pilastri.'; const r0 = view.querySelector('#g-box'); if (r0) r0.before(n); }
+  if (view.querySelector('#g-add')) view.querySelector('#g-add').onclick = () => {
     const box = document.getElementById('g-box');
     box.innerHTML = '<div class="sec" style="gap:8px"><div class="row"><div class="eur" style="flex:1"><input id="ga-in" inputmode="none" readonly data-pad placeholder="' + p.need + '"></div><button class="btn sm" id="ga-ok">Accantona</button></div><label class="check small"><input type="checkbox" id="ga-liq" checked> Prendi i soldi dalla liquidità (' + eur(pilBalance('liq')) + ')</label></div>';
     box.querySelector('#ga-ok').onclick = () => { const a = parseAmt(val('ga-in') || p.need); if (!(a > 0)) return; if (document.getElementById('ga-liq').checked) transfer('liq', 'g:' + g.id, a); else { adjPil('g:' + g.id, a); addMove('g:' + g.id, a, 'Accantonamento'); } save(); toast('+' + eur2(a) + ' per ' + g.name); renderGoal(); };
@@ -2256,8 +2260,9 @@ function renderStats(){
 const STAGES = [[25,'#d95926','Si parte'],[50,'#e3a008','Verso metà strada'],[75,'#a8c23a','Oltre metà strada'],[100,'#22A45D','Quasi arrivato'],[Infinity,'#22A45D','Obiettivo raggiunto']];
 const stageOf = pct => pct >= 100 ? STAGES[4] : STAGES.find(s => pct < s[0]);
 function goalPace(g){
-  const keys = ['g:' + g.id].concat(g.kind === 'emergenza' ? ['emerg'] : []);
-  const mv = S.moves.concat(txEffects()).filter(m => keys.includes(m.k) && m.n !== 'Saldo iniziale' && m.n !== 'Correzione del saldo');
+  const keys = ['g:' + g.id].concat(g.kind === 'emergenza' ? ['emerg'] : []), all = g.kind === 'patrimonio';
+  const inPil = k => ['liq', 'emerg', 'inv'].includes(k) || (k.startsWith('g:') && !linkedGoal(S.goals.find(x => 'g:' + x.id === k)));
+  const mv = S.moves.concat(txEffects()).filter(m => (all ? inPil(m.k) : keys.includes(m.k)) && !m.hx && m.n !== 'Saldo iniziale' && m.n !== 'Correzione del saldo');
   const first = mv.length ? mv.map(m => ymOf(m.d)).sort()[0] : null;
   let n = first ? Math.min(3, monthsBetween(first, curYM())) : 0;
   let sum;
@@ -2415,7 +2420,7 @@ function coachMsgs(){
     if (p.left && any && pace > 0) { const eta = addMonths(curYM(), Math.ceil(p.left / pace)), d = monthsBetween(eta, g.date);
       out.push({i:'target', c:d >= 0 ? '#22A45D' : '#d95926', t:'Se mantieni questo ritmo (' + eur(Math.round(pace)) + ' al mese), raggiungerai «' + g.name + '» ' + (d > 0 ? 'con ' + d + (d === 1 ? ' mese' : ' mesi') + ' di anticipo.' : d === 0 ? 'proprio alla scadenza.' : 'con ' + (-d) + (d === -1 ? ' mese' : ' mesi') + ' di ritardo: servirebbero ' + eur(p.need) + ' al mese.'), b:'Media degli accantonamenti degli ultimi mesi'}); }
     else if (p.left) out.push({i:'target', c:'#e3a008', t:'Per «' + g.name + '» non hai ancora accantonato nulla: servono ' + eur(p.need) + ' al mese fino a ' + ymLabel(g.date, {month:'long', year:'numeric'}) + '.', b:'Cifra mancante divisa per i mesi alla scadenza'}); }
-  S.goals.filter(x => x.kind !== 'emergenza' && x !== g).forEach(x => { const p = goalPlan(x); if (p.left && monthsBetween(curYM(), x.date) <= 3) out.push({i:'calendar', c:'#e3a008', t:'Hai previsto «' + x.name + '» entro ' + ymLabel(x.date, {month:'long'}) + ', ma mancano ' + eur(p.left) + ': servono ' + eur(p.need) + ' al mese.', b:'Obiettivi con scadenza entro 3 mesi'}); });
+  S.goals.filter(x => !linkedGoal(x) && x !== g).forEach(x => { const p = goalPlan(x); if (p.left && monthsBetween(curYM(), x.date) <= 3) out.push({i:'calendar', c:'#e3a008', t:'Hai previsto «' + x.name + '» entro ' + ymLabel(x.date, {month:'long'}) + ', ma mancano ' + eur(p.left) + ': servono ' + eur(p.need) + ' al mese.', b:'Obiettivi con scadenza entro 3 mesi'}); });
   const avg = {}; S.cats.out.forEach(c => { avg[c.id] = [1, 2, 3].reduce((t, k) => t + (stats(addMonths(curYM(), -k)).byCat[c.id] || 0), 0) / 3; });
   const spikes = S.cats.out.map(c => ({c, a:s.byCat[c.id] || 0, m:avg[c.id]})).filter(x => x.m > 0 && x.a - x.m >= 15 && x.a / x.m >= 1.15).sort((a, b) => (b.a - b.m) - (a.a - a.m));
   spikes.slice(0, 2).forEach(x => out.push({i:x.c.i, c:OUT_COL, t:'Questo mese le spese per ' + x.c.n.toLowerCase() + ' sono già aumentate del ' + Math.round((x.a / x.m - 1) * 100) + '%: ' + eur(x.a) + ' contro una media di ' + eur(Math.round(x.m)) + '.', b:'Mese in corso rispetto alla media dei 3 mesi precedenti'}));
@@ -3946,7 +3951,7 @@ function renderCatEdit(t){
 /* ---------- legenda ---------- */
 function renderLegend(){
   const sw = (c, t, d) => '<div class="lg"><i style="background:' + c + '"></i><span><b>' + t + '</b>' + (d ? '<br><span class="small muted">' + d + '</span>' : '') + '</span></div>';
-  const goals = S.goals.filter(g => g.kind !== 'emergenza');
+  const goals = S.goals.filter(g => !linkedGoal(g));
   view.innerHTML = '<div class="sec" style="gap:22px">' + backBtn('Indietro', S.setup ? {screen:'home'} : {screen:'welcome'}) + '<div class="intro"><h2>Legenda</h2><p class="muted">Cosa significano le voci e i colori dell\'app.</p></div>' +
     '<div class="card"><span class="label">I 4 pilastri: dove stanno i tuoi soldi</span>' + PILLARS.map(p => sw(p.c, p.n, p.d)).join('') +
       '<p class="small muted">Il <b style="color:var(--fg)">Salvadanaio</b> contiene uno o più <b style="color:var(--fg)">obiettivi</b>, ognuno con il nome che gli hai dato. Per questo nei movimenti trovi "Salvadanaio · ' + esc(goals[0] ? goals[0].name : 'nome obiettivo') + '": il pilastro e, dopo il punto, l\'obiettivo.</p></div>' +

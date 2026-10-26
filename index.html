@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Wc+RgyydSh9zRDeT58zsLvKL3iba2uc/nQRlwjqI0wU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-RmB8xWZCh4b1AJiyGt7F509ZXgBRRarf+Zcr6Way4oA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -2523,7 +2523,7 @@ const MISSIONS = [
 const MLEVELS = [[0, 'Principiante'], [50, 'In allenamento'], [120, 'Allenato'], [220, 'Esperto'], [350, 'Maestro del risparmio']];
 const MAX_ACTIVE = 2;
 function mState(){ S.mis = S.mis || {active:{}, done:[]}; return S.mis; }
-function mXP(){ return mState().done.reduce((t, d) => t + d.xp, 0) + Object.keys(S.learn || {}).filter(k => lessonPerfect(k)).length * 10 + ((S.qd || {}).ok || 0) * 2; }
+function mXP(){ return mState().done.reduce((t, d) => t + d.xp, 0) + Object.keys(S.learn || {}).reduce((t, k) => t + Math.min(10, (S.learn[k].quiz || 0) * 2), 0) + ((S.qd || {}).ok || 0) * 2; }
 function mLevel(){ const x = mXP(); let i = 0; MLEVELS.forEach((l, k) => { if (x >= l[0]) i = k; }); const next = MLEVELS[i + 1]; return {x, name:MLEVELS[i][1], i, next, pct:next ? (x - MLEVELS[i][0]) / (next[0] - MLEVELS[i][0]) * 100 : 100}; }
 function mProgress(M, st){
   if (M.type === 'days') return st.log.filter(e => e.ok).length;
@@ -2698,9 +2698,9 @@ function renderLearn(){
   S.learn = S.learn || {};
   const done = LESSONS.filter(l => (S.learn[l.id] || {}).quiz !== undefined).length;
   const CATS = [['risp', 'Educazione al risparmio'], ['fin', 'Educazione finanziaria'], ['debt', 'Debiti e finanziamenti']];
-  const row = (l, i) => { const st = S.learn[l.id] || {}, u = lessonOpen(l.id), next = !u && lessonNext() === l.id, ok = lessonPerfect(l.id);
+  const row = (l, i) => { const st = S.learn[l.id] || {}, u = lessonOpen(l.id), next = !u && lessonNext() === l.id, ok = lessonDone(l.id);
     if (!u) return '<div class="item off" aria-disabled="true"><span class="ic">🔒</span><span class="t"><b>' + l.t + '</b><span class="sub">' + (next ? 'Si sblocca domani' : 'Si sblocca più avanti, una lezione al giorno') + '</span></span></div>';
-    return '<button class="item" ' + nav$({screen:'lesson', id:l.id}) + '><span class="ic' + (ok ? ' y' : '') + '">' + (ok ? ic('check') : (i + 1)) + '</span><span class="t"><b>' + l.t + '</b><span class="sub">' + (st.quiz !== undefined ? 'Quiz: ' + st.quiz + ' su ' + l.q.length : '5 minuti · ' + l.q.length + ' domande · nuova') + '</span></span>' + ic('right') + '</button>'; };
+    return '<button class="item" ' + nav$({screen:'lesson', id:l.id}) + '><span class="ic' + (ok ? ' y' : '') + '">' + (ok ? ic('check') : (i + 1)) + '</span><span class="t"><b>' + l.t + '</b><span class="sub">' + (st.quiz !== undefined ? 'Fatta' + (st.ans ? ' · ' + st.quiz + ' su ' + l.q.length + ' giuste' : '') : '5 minuti · ' + l.q.length + ' domande · nuova') + '</span></span>' + ic('right') + '</button>'; };
   view.innerHTML = '<div class="sec" style="gap:20px">' + gymTabs('learn') +
     '<div class="intro"><span class="marker y" style="font-size:1.05rem">Impara</span><h2>Una domanda al giorno</h2><p class="muted">Un minuto al giorno per allenare la testa ai soldi, poi una lezione nuova al giorno, con 5 domande. ' + done + ' di ' + LESSONS.length + ' completate.</p></div>' + qCard() +
     '<div class="note">Contenuti educativi e generali. Non sono consigli su cosa comprare o vendere: per scelte personali rivolgiti a un consulente finanziario indipendente.</div>' +
@@ -2711,13 +2711,13 @@ function renderLearn(){
 function renderLesson(){
   const l = LESSONS.find(x => x.id === R.id); if (!l) return nav({screen:'learn'});
   if (R.from !== 'debts' && !lessonOpen(l.id)) return nav({screen:'learn'});
-  S.learn = S.learn || {}; const ans = R.ans || (S.learn[l.id] || {}).ans || [];
+  S.learn = S.learn || {}; const st = S.learn[l.id] || {}, old = !R.ans && !st.ans && st.quiz !== undefined, ans = R.ans || st.ans || (old ? l.q.map(q => q.a) : []);
   const allA = ans.length === l.q.length && ans.every(a => a !== undefined && a !== null);
   view.innerHTML = '<div class="sec" style="gap:20px">' + (R.from === 'debts' ? backBtn('Debiti', {screen:'debts'}) : backBtn('Impara', {screen:'learn'})) + '<div class="intro"><span class="label">Lezione · 5 minuti</span><h2>' + l.t + '</h2></div>' +
     '<div class="tip">' + l.p.map((p, i) => '<p' + (i ? '' : ' class="lead"') + '>' + p + '</p>').join('') + '</div>' +
     (l.link ? '<button class="readcard" ' + nav$({screen:l.link[1]}) + '><span class="t"><b>' + ic('chart') + ' ' + l.link[0] + '</b><span>Mettilo in pratica con i tuoi numeri</span></span>' + ic('right') + '</button>' : '') +
     '<div class="card"><span class="label">Verifica: ' + l.q.length + ' domande</span>' + l.q.map((q, qi) => '<div class="sec" style="gap:8px"><b>' + (qi + 1) + '. ' + q.q + '</b><div class="quiz-opt">' + q.o.map((o, oi) => { const picked = ans[qi] === oi, cls = ans[qi] !== undefined ? (oi === q.a ? 'right' : picked ? 'wrong' : '') : ''; return '<button data-q="' + qi + '" data-o="' + oi + '" class="' + cls + '"' + (ans[qi] !== undefined ? ' disabled' : '') + '>' + o + '</button>'; }).join('') + '</div></div>').join('') +
-      (allA ? '<p><b>' + ans.filter((a, i) => a === l.q[i].a).length + ' su ' + l.q.length + '.</b> ' + (ans.every((a, i) => a === l.q[i].a) ? 'Perfetto: +10 punti nelle Sfide.' : 'Le risposte giuste sono quelle in verde.') + '</p><div class="row"><button class="btn sm" ' + nav$({screen:'learn'}) + '>Torna alle lezioni</button></div>' : '') + '</div>' +
+      (allA ? '<p>' + (old ? 'Lezione già fatta: qui sopra trovi le risposte giuste.' : (n => '<b>' + n + ' su ' + l.q.length + ' giuste</b>: +' + n * 2 + ' punti nelle Sfide.' + (n < l.q.length ? ' Le risposte giuste sono quelle in verde.' : ''))(ans.filter((a, i) => a === l.q[i].a).length)) + '</p><div class="row"><button class="btn sm" ' + nav$({screen:'learn'}) + '>Torna alle lezioni</button></div>' : '') + '</div>' +
     '<p class="small muted">Contenuto educativo e generale, non è una consulenza finanziaria.</p></div>';
   view.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { const a = ans.slice(); a[+b.dataset.q] = +b.dataset.o; const y = window.scrollY;
     if (a.filter(x => x !== undefined).length === l.q.length) { const sc = a.filter((x, i) => x === l.q[i].a).length; const o = S.learn[l.id] || {}; S.learn[l.id] = Object.assign({}, o, {quiz:Math.max(sc, o.quiz || 0), d:today(), f:o.f || o.d || today(), ans:a}, sc === l.q.length ? {p:1} : {}); save(); }

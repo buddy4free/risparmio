@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-5Gva816z8m7U8chr6OEzVHRIQiLCDDzbmVJuGqQ/Y9A='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-nlNlMmyHGIe8Y+XUP8AASZkYuV9Mgr3GIhlhKWbCzCM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -2190,14 +2190,15 @@ function renderStats(){
       '<div class="carousel"><div class="slide">' + hbarsHTML(pil.map(x => ({n:x.p.n, v:x.v, c:x.p.c, tile:'<span class="ic" style="background:' + x.p.c + '">' + ic(x.p.i) + '</span>', sub:(x.v - x.v0 >= 0 ? '+' : '−') + eur(Math.abs(x.v - x.v0)), go:{screen:'pillar', id:x.p.id}}))) + '</div><div class="slide">' + (totP > 0 ? donutHTML(pil.filter(x => x.v > 0).map(x => ({n:x.p.short || x.p.n, v:x.v, c:x.p.c})), pil.reduce((t, x) => t + Math.max(0, x.v), 0)) : '<p class="small muted">Ancora nessun saldo nei pilastri.</p>') + '</div></div><div class="dots"><i class="on"></i><i></i></div>' +
       (d => { const endD = ym => { const [y, m] = ym.split('-').map(Number); return new Date(y, m, 0).toLocaleDateString('it-IT', {day:'numeric', month:'long', year:'numeric'}); },
         fine = lastYM >= curYM() ? 'oggi' : 'il ' + endD(lastYM), da = 'il ' + endD(firstPrev);
-      return '<p class="small muted">Quanto hai in ogni pilastro ' + (fine === 'oggi' ? 'a oggi' : 'al ' + endD(lastYM)) + '. Il numero piccolo sotto ogni cifra è quanto è cambiato <b style="color:var(--fg)">tra ' + da + ' e ' + fine + '</b>, cioè durante ' + (ST.mode === 'm' ? ymLabel(ST.ym, {month:'long'}) : ST.mode === 'y' ? 'il ' + ST.y : 'il periodo scelto') + ': non è un confronto con il periodo precedente.' + (hasStart ? ' Il primo saldo che hai inserito per un pilastro, nello storico o all\'inizio, è il suo punto di partenza: la crescita si conta da lì.' : '') + ' In totale il tuo patrimonio ' + (Math.abs(d) < 0.5 ? 'è rimasto uguale' : (d > 0 ? 'è cresciuto di ' : 'è sceso di ') + '<b style="color:' + (d > 0 ? 'var(--good)' : 'var(--critical)') + '">' + (d > 0 ? '+' : '−') + eur(Math.abs(d)) + '</b>') + '.</p></div>'; })(totP - totP0) +
+      return '<p class="small muted" style="margin-bottom:0">In totale il tuo patrimonio ' + (Math.abs(d) < 0.5 ? 'è rimasto uguale' : (d > 0 ? 'è cresciuto di ' : 'è sceso di ') + '<b style="color:' + (d > 0 ? 'var(--good)' : 'var(--critical)') + '">' + (d > 0 ? '+' : '−') + eur(Math.abs(d)) + '</b>') + ' <button class="infobtn" id="pat-i" aria-label="Come si calcola" aria-expanded="false">i</button></p>' +
+        '<p class="infonote" id="pat-d" hidden>Saldi ' + (fine === 'oggi' ? 'a oggi' : 'al ' + endD(lastYM)) + '. Il numero piccolo sotto ogni cifra è quanto è cambiato tra ' + da + ' e ' + fine + '.' + (hasStart ? ' Il primo saldo inserito per un pilastro, nello storico o all\'inizio, è il suo punto di partenza: la crescita si conta da lì.' : '') + '</p></div>'; })(totP - totP0) +
     slideCard('Quanto hai speso · ' + eur(out), outRows, out, 'Nessuna uscita nel periodo.', synthHTML('out', outRows, out, prevOut, prevLabel)) +
     slideCard('Da dove arrivano le entrate · ' + eur(inc), inRows, inc, 'Nessuna entrata nel periodo.', synthHTML('in', inRows, inc, prevIn, prevLabel)) +
     trendHTML + cmp +
     (!S.reviews[addMonths(curYM(), -1)] ? '<button class="readcard" ' + nav$({screen:'review'}) + '><span class="t"><b>' + ic('calendar') + ' Revisione mensile di ' + ymLabel(addMonths(curYM(), -1), {month:'long'}) + '</b><span>15 minuti per tenere la rotta</span></span>' + ic('right') + '</button>' : '') +
   '</div>';
   bindDemo();
-  bindStPeriod();
+  bindStPeriod(); const pi = view.querySelector('#pat-i'); if (pi) pi.onclick = () => { const d = view.querySelector('#pat-d'), on = d.hidden; d.hidden = !on; pi.classList.toggle('on', on); pi.setAttribute('aria-expanded', on); };
     bindCarousels();
 }
 

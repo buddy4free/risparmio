@@ -1079,9 +1079,11 @@ function recDates(r, ym){
   else { const idx = monthsBetween(r.from, ym); if (idx < 0 || idx % every) return out; if (r.count && idx / every >= r.count) return out; out.push(ym + '-' + pad(Math.min(r.day || 1, last))); }
   return out.filter(d => !(r.until && d > r.until) && !(r.to && ymOf(d) > r.to) && !(r.skip || []).includes(ym) && !(r.skip || []).includes(d));
 }
+const lastYM = () => { const f = S.tx.map(x => ymOf(x.d)).sort().pop(); return f && f > curYM() ? f : curYM(); };
+const navMaxYM = () => { const a = addMonths(curYM(), 12), f = lastYM(); return f > a ? f : a; };
 function monthTx(ym){
-  const list = S.tx.filter(x => ymOf(x.d) === ym);
-  if (ym <= curYM()) S.rec.forEach(r => { if (r.from > ym) return; recDates(r, ym).forEach(d => list.push({id:'r:' + r.id + ':' + d, rec:r.id, t:r.t, c:r.c, s:r.s, a:r.a, d, n:r.n, p:r.p, plan:d > today()})); });
+  const t = today(), list = S.tx.filter(x => ymOf(x.d) === ym).map(x => x.d > t ? Object.assign({}, x, {plan:true}) : x);
+  S.rec.forEach(r => { if (r.from > ym) return; recDates(r, ym).forEach(d => list.push({id:'r:' + r.id + ':' + d, rec:r.id, t:r.t, c:r.c, s:r.s, a:r.a, d, n:r.n, p:r.p, plan:d > today()})); });
   return list.sort((a, b) => b.d.localeCompare(a.d));
 }
 function stats(ym){
@@ -1257,8 +1259,8 @@ function render(){
 }
 function demoBar(){ return S.demo ? '<div class="demo"><span>Stai guardando dati di esempio.</span><button id="demo-end">Inizia con i tuoi dati</button></div>' : ''; }
 function bindDemo(){ const b = document.getElementById('demo-end'); if (b) b.onclick = () => { S = freshState(); save(); nav({screen:'setup', i:0}); }; }
-function monthNav(){ return '<div class="month"><button id="m-prev" aria-label="Mese precedente">' + ic('left') + '</button><b>' + ymLabel(viewYM) + '</b><button id="m-next" aria-label="Mese successivo"' + (viewYM >= curYM() ? ' disabled style="opacity:.3"' : '') + '>' + ic('right') + '</button></div>'; }
-function bindMonth(){ view.querySelector('#m-prev').onclick = () => { viewYM = addMonths(viewYM, -1); render(); }; view.querySelector('#m-next').onclick = () => { if (viewYM < curYM()) { viewYM = addMonths(viewYM, 1); render(); } }; }
+function monthNav(){ return '<div class="month"><button id="m-prev" aria-label="Mese precedente">' + ic('left') + '</button><b>' + ymLabel(viewYM) + '</b><button id="m-next" aria-label="Mese successivo"' + (viewYM >= navMaxYM() ? ' disabled style="opacity:.3"' : '') + '>' + ic('right') + '</button></div>'; }
+function bindMonth(){ view.querySelector('#m-prev').onclick = () => { viewYM = addMonths(viewYM, -1); render(); }; view.querySelector('#m-next').onclick = () => { if (viewYM < navMaxYM()) { viewYM = addMonths(viewYM, 1); render(); } }; }
 
 /* ---------- welcome & setup ---------- */
 /* video guida: incolla qui i link quando i video sono pubblicati (vuoti = non compaiono) */
@@ -1497,7 +1499,7 @@ function txMonths(){
   const first = [...S.tx.map(x => ymOf(x.d)), ...S.rec.map(r => r.from)].sort()[0] || curYM();
   const range = (a, b) => { const o = []; for (let m = a; m <= b; m = addMonths(m, 1)) o.push(m); return o; };
   const pf = TXFR <= TXTO ? TXFR : TXTO, pt = TXFR <= TXTO ? TXTO : TXFR;
-  const months = TXP === 'm' ? [viewYM] : TXP === 'y' ? range(TXY + '-01', TXY + '-12').filter(m => m <= curYM()) : TXP === 'p' ? range(pf, pt).filter(m => m <= curYM()) : range(first < curYM() ? first : curYM(), curYM());
+  const end = lastYM(), months = TXP === 'm' ? [viewYM] : TXP === 'y' ? range(TXY + '-01', TXY + '-12').filter(m => m <= end) : TXP === 'p' ? range(pf, pt).filter(m => m <= end) : range(first < curYM() ? first : curYM(), end);
   if (!months.length) months.push(curYM());
   return months;
 }
@@ -1585,7 +1587,7 @@ function renderTx(){
   } else summary = '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur2(inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur2(out) + '</b></div></div>';
   const withY = TXP !== 'm', dl = d => dLabel(d) + (withY ? ' ' + d.slice(0, 4) : '');
   /* selezione multipla: sposta in un'altra categoria o sottocategoria, oppure elimina */
-  const selectable = shown.filter(x => !x.xfer && !x.rec && !x.plan);
+  const selectable = shown.filter(x => !x.xfer && !x.rec);
   if (TXSEL) [...TXSEL].forEach(id => { if (!S.tx.some(x => x.id === id)) TXSEL.delete(id); });
   const selTx = TXSEL ? S.tx.filter(x => TXSEL.has(x.id)) : [], selTypes = [...new Set(selTx.map(x => x.t))], selT = selTypes[0];
   if (selT && !S.cats[selT].some(c => c.id === TXMV.c)) { TXMV.c = S.cats[selT][0].id; TXMV.s = ''; }
@@ -1607,8 +1609,8 @@ function renderTx(){
     summary + selBar() +
     (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => '<div class="dayhead">' + dl(d) + '</div><div class="list">' + groups[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
       const c = catOf(x.t, x.c);
-      if (TXSEL) { const ok = !x.rec && !x.plan && S.tx.some(y => y.id === x.id); return '<label class="item selrow' + (ok ? '' : ' off') + '">' + (ok ? '<input type="checkbox" data-tsel="' + x.id + '"' + (TXSEL.has(x.id) ? ' checked' : '') + '>' : '<span class="small muted" title="Ricorrente: si modifica dalla serie">↻</span>') + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (isRf(x) ? ' · rimborso' : '') + '</span></span>' + txAmt(x) + '</label>'; }
-      return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan ? ' · previsto' : x.rec ? ' · ' + recFreq(S.rec.find(r => r.id === x.rec) || {}, true) : '') + (isRf(x) ? ' · <b style="color:' + IN_COL + '">rimborso</b>' : '') + '</span></span>' + txAmt(x) + '</button>'; }).join('') + '</div>').join('') + '</div>' +
+      if (TXSEL) { const ok = !x.rec && S.tx.some(y => y.id === x.id); return '<label class="item selrow' + (ok ? '' : ' off') + '">' + (ok ? '<input type="checkbox" data-tsel="' + x.id + '"' + (TXSEL.has(x.id) ? ' checked' : '') + '>' : '<span class="small muted" title="Ricorrente: si modifica dalla serie">↻</span>') + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (isRf(x) ? ' · rimborso' : '') + '</span></span>' + txAmt(x) + '</label>'; }
+      return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan && !x.rec ? ' · programmata il ' + dshort(x.d) : x.plan ? ' · previsto' : x.rec ? ' · ' + recFreq(S.rec.find(r => r.id === x.rec) || {}, true) : '') + (isRf(x) ? ' · <b style="color:' + IN_COL + '">rimborso</b>' : '') + '</span></span>' + txAmt(x) + '</button>'; }).join('') + '</div>').join('') + '</div>' +
       selCard() + (L.length > shown.length ? '<button class="btn ghost" id="tx-more">Mostra altri ' + Math.min(300, L.length - shown.length) + ' (' + (L.length - shown.length) + ' in tutto)</button>' : '')
       : '<div class="note">Nessun movimento' + (TXC || TXQ ? ' con questo filtro' : '') + (TXP === 'm' ? ' a ' + ymLabel(viewYM, {month:'long'}) : TXP === 'y' ? ' nel ' + TXY : TXP === 'p' ? ' nel periodo' : '') + '.' + (TXP === 'm' ? ' Prova "Anno" o "Tutto" per vedere un periodo più lungo.' : '') + '</div>') +
     (downloads && S.tx.length + S.rec.length ? '<button class="textlink" id="csv">Esporta tutti i movimenti in CSV</button>' : '') +
@@ -1727,7 +1729,7 @@ function renderAdd(){
       (F.end === 'count' ? '<div class="row"><input id="r-ct" type="number" min="1" max="520" value="' + F.count + '" style="width:90px"><span>volte</span></div>' : '') +
       (F.end === 'until' ? '<input id="r-ut" type="date" value="' + (F.until || dayOffset(F.d, 365)) + '">' : '') + '</div>' : '';
     body = (F.rf ? '<p class="small muted" style="margin:0">Rimborso di <b style="color:var(--fg)">' + esc(cur.n + (F.s ? ' › ' + F.s : '')) + '</b>: scrivi solo quanto ti è tornato.</p>' : '') + '<label class="amount t-' + F.t + '"><span>€</span><input id="f-a" inputmode="decimal" placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"></label><button class="btn savebig" type="button" data-savebig>' + ic('check') + 'Salva</button>' +
-      '<div class="grid2"><div class="field"><label for="f-d">Data</label><input id="f-d" type="date" value="' + F.d + '"' + (F.rec ? '' : ' max="' + today() + '"') + '></div><div class="field"><label for="f-n">Nota</label><input id="f-n" placeholder="Facoltativa" value="' + esc(F.n) + '"></div></div>' +
+      '<div class="grid2"><div class="field"><label for="f-d">Data</label><input id="f-d" type="date" value="' + F.d + '"></div><div class="field"><label for="f-n">Nota</label><input id="f-n" placeholder="Facoltativa" value="' + esc(F.n) + '"></div></div>' +
       (F.rf ? '<input type="checkbox" id="f-rec" hidden>' : '<label class="check"><input type="checkbox" id="f-rec"' + (F.rec ? ' checked' : '') + (R.edit && !F.recId ? ' disabled' : '') + '> Si ripete</label>' + opt) +
       (R.edit ? '<div id="delwrap" class="sec">' + (F.recId ? '<button class="btn danger" data-del="one">Elimina solo questa volta</button><button class="btn danger" data-del="stop">Interrompi da qui in poi</button>' : '<button class="btn danger" data-del="one">Elimina</button>') + '</div>' : '');
   }
@@ -1764,8 +1766,8 @@ function renderAdd(){
     else if (R.edit) Object.assign(S.tx.find(x => x.id === R.edit), {t:F.t, c:F.c, s:F.s, a, d:F.d, n:F.n, p:F.p});
     else if (F.rec) S.rec.push(Object.assign({id:uid(), t:F.t, c:F.c, s:F.s, a, n:F.n, from:ymOf(F.d), to:null, skip:[], p:F.p}, recFields));
     else S.tx.push(Object.assign({id:uid(), t:F.t, c:F.c, s:F.s, a, d:F.d, n:F.n, p:F.p}, F.d < pilFrom() ? {f:1} : {}));
-    save(); toast((R.edit ? 'Aggiornato' : (F.t === 'in' ? 'Entrata salvata' : 'Uscita salvata')) + ' · ' + (F.t === 'in' ? '+' : '−') + eur2(a) + (F.t === 'in' ? ' in ' : ' da ') + destLabel(F.p));
-    viewYM = ymOf(F.d) > curYM() ? curYM() : ymOf(F.d); F = null; nav({screen:R.back || 'tx'});
+    save(); toast((R.edit ? 'Aggiornato' : (F.t === 'in' ? 'Entrata ' : 'Uscita ') + (!F.rec && F.d > today() ? 'programmata per il ' + dshort(F.d) : 'salvata')) + ' · ' + (F.t === 'in' ? '+' : '−') + eur2(a) + (F.t === 'in' ? ' in ' : ' da ') + destLabel(F.p));
+    viewYM = F.rec && ymOf(F.d) > curYM() ? curYM() : ymOf(F.d); F = null; nav({screen:R.back || 'tx'});
   };
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     if (F.recId) { const r = S.rec.find(x => x.id === F.recId), dd = F.recKey.length === 10 ? F.recKey : F.d; if (b.dataset.del === 'one') (r.skip = r.skip || []).push(dd); else { r.until = dayOffset(dd, -1); r.to = null; if (r.until < (r.start || r.from + '-01')) S.rec = S.rec.filter(x => x.id !== r.id); } }
@@ -2287,7 +2289,7 @@ function coachMsgs(){
   const prev = stats(addMonths(curYM(), -1));
   if (s.rate !== null && prev.rate !== null && Math.abs(s.rate - prev.rate) >= 5) out.push({i:'chart', c:s.rate > prev.rate ? '#22A45D' : '#d95926', t:'Il tasso di risparmio è ' + Math.round(s.rate) + '%, ' + (s.rate > prev.rate ? 'in crescita' : 'in calo') + ' di ' + Math.round(Math.abs(s.rate - prev.rate)) + ' punti rispetto al mese scorso.', b:'Entrate e uscite registrate'});
   upcomingDues().slice(0, 1).forEach(d => out.unshift({i:'calendar', c:'#e3a008', t:(dueDays(d) < 0 ? esc(d.n) + ' è scaduto' : 'Tra ' + dueDays(d) + ' giorni scade ' + esc(d.n)) + ' (' + eur2(d.a) + ' ' + FREQ[d.freq][0] + '). Rinnovi, rinegozi, riduci o disdici?', b:'Il tuo calendario delle scadenze', go:{screen:'dues', open:d.id}}));
-  const last = S.tx.map(x => x.d).sort().pop();
+  const last = S.tx.map(x => x.d).filter(d => d <= today()).sort().pop();
   if (last && daysBetween(last, today()) >= 3) out.push({i:'list', c:'#3987e5', t:'Non registri movimenti da ' + daysBetween(last, today()) + ' giorni: due minuti stasera tengono i dati affidabili.', b:'Data dell\'ultimo movimento'});
   return out.slice(0, 4);
 }
@@ -2469,7 +2471,7 @@ function mProgress(M, st){
   if (M.type === 'count' || M.type === 'compare') return st.log.length;
   if (M.type === 'amount') return st.log.reduce((t, e) => t + e.a, 0);
   if (M.auto === 'usato') return S.tx.filter(x => x.t === 'in' && x.c === 'usato' && x.d >= st.start).length;
-  if (M.auto === 'track') return new Set(S.tx.filter(x => x.d >= st.start).map(x => x.d)).size;
+  if (M.auto === 'track') return new Set(S.tx.filter(x => x.d >= st.start && x.d <= today()).map(x => x.d)).size;
   return 0;
 }
 let mTarget = (M, st) => M.type === 'amount' || M.type === 'roundup' ? st.target : M.n;

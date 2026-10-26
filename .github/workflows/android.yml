@@ -32,6 +32,8 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - uses: android-actions/setup-android@v3
+
       - name: Chiave di firma dai Secrets
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -50,7 +52,12 @@ jobs:
           VERSION_NAME: ${{ inputs.version_name }}
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon bundleRelease
+          set -o pipefail
+          if ! ./gradlew --no-daemon bundleRelease 2>&1 | tee "$RUNNER_TEMP/gradle.log"; then
+            grep -E "What went wrong|error:|Error|FAILURE|Exception|e: " "$RUNNER_TEMP/gradle.log" | head -15 | while IFS= read -r l; do echo "::error::$l"; done
+            tail -25 "$RUNNER_TEMP/gradle.log" | tr '\n' '|' | sed 's/^/::error::FINE: /'; echo
+            exit 1
+          fi
 
       - name: Controlla che sia firmato con la chiave di caricamento giusta
         if: env.SIGNED == 'yes'

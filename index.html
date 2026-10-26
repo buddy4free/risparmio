@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-IE76BtkcB3pIct+14CyEHT2uQ+KrWu3K8KwvQHXSc9E='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-tjWrUx/HnxKyWf2UICChMMEL1rP6WLFJPgLM/hMALsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1555,12 +1555,15 @@ function samsungPop(){ if (!samsungDim() || document.getElementById('catpop') ||
     '<button class="btn" id="sam-ok" style="align-self:stretch">Ho capito</button><button class="textlink small" id="sam-later" style="align-self:center">Ricordamelo la prossima volta</button>', (o, close) => {
     o.querySelector('#sam-ok').onclick = () => { S.samsungSeen = 1; save(); close(); };
     o.querySelector('#sam-later').onclick = close; }, true); }
+/* revisione del mese chiuso: in cima alla Home finché non la fai (o scegli "Più tardi"), solo se quel mese ha dei movimenti */
+function reviewTop(){ const pm = addMonths(curYM(), -1); if (viewYM !== curYM() || S.demo || S.reviews[pm] || S.reviewLater === pm || !monthTx(pm).length) return '';
+  return '<div class="sec" style="gap:6px"><button class="readcard" ' + nav$({screen:'review'}) + '><span class="t"><b>' + ic('calendar') + ' Revisione mensile di ' + ymLabel(pm, {month:'long'}) + '</b><span>Il mese è chiuso: 15 minuti per tenere la rotta</span></span>' + ic('right') + '</button><button class="textlink small" id="rv-later" style="align-self:flex-end">Più tardi</button></div>'; }
 function renderHome(){
   if (!S.setup) return nav({screen:'welcome'});
   const s = stats(viewYM), mv = nextMove(), ins = insights(viewYM);
   const sp = viewYM === curYM() ? splitPlan() : [];
   const nCat = Object.keys(s.byCat).length;
-  view.innerHTML = '<div class="sec" style="gap:24px">' + demoBar() + monthNav() + rateHero(s) + oldRecNotice() + backupNotice() +
+  view.innerHTML = '<div class="sec" style="gap:24px">' + demoBar() + monthNav() + reviewTop() + rateHero(s) + oldRecNotice() + backupNotice() +
     '<div class="card"><div class="spread"><span class="label">Dove vanno i tuoi soldi</span>' + (nCat > 4 ? '<span class="small muted">scorri ↓</span>' : '') + '</div><div class="catscroll">' + catBars(s, 99) + '</div><button class="textlink small" data-allout style="align-self:flex-start">Vedi tutte le uscite del mese</button></div>' +
     goalsCarousel() + wbCard() + coachHTML() +
     '<div class="card"><span class="label">La tua prossima mossa</span><h3>' + mv.t + '</h3><p class="muted">' + mv.d + '</p>' +
@@ -1569,6 +1572,7 @@ function renderHome(){
     '<div class="sec"><span class="label">Oggi</span>' + todayList() + '</div>' +
   '</div>';
   bindMonth(); bindDemo(); bindOldRec(); bindBackupNotice();
+  const rl = document.getElementById('rv-later'); if (rl) rl.onclick = () => { S.reviewLater = addMonths(curYM(), -1); save(); renderHome(); };
   view.querySelectorAll('.catscroll .hbar, [data-allout]').forEach(b => { b.removeAttribute('data-nav'); b.onclick = () => { txFilter = 'out'; nav({screen:'tx'}); }; });
   supportPopup();
   const spg = document.getElementById('sp-go'); if (spg) spg.onclick = () => { sp.forEach(x => transfer('liq', x.k, x.v)); save(); toast('Fatto: soldi spostati nei pilastri'); renderHome(); };

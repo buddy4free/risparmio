@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-v3Swzs6iA9XjxU39fn0Gu+qdPAxlOUOu6Ig8qvXMDVA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-TCpZQv+GpaXI4uqAPuRNKBn0lmLXYoN0HqZmq95Z9Yo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1606,7 +1606,7 @@ function renderTx(){
   const shown = L.slice(0, TXLIM), groups = {}; shown.forEach(x => (groups[x.d] = groups[x.d] || []).push(x));
   const perLabel = TXP === 'm' ? ymLabel(viewYM) : TXP === 'y' ? 'Anno ' + TXY : TXP === 'p' ? ymLabel(months[0], {month:'short', year:'numeric'}) + ' – ' + ymLabel(months[months.length - 1], {month:'short', year:'numeric'}) : 'Da ' + ymLabel(months[0], {month:'short', year:'numeric'});
   const period = txPeriodHTML(months);
-  const catSel = '<div class="txfilt"><div class="txq">' + ic('list') + '<input id="tx-q" type="search" placeholder="Cerca nella nota, nella categoria o nell\'importo" value="' + esc(TXQ) + '" aria-label="Cerca nei movimenti">' + (TXQ ? '<button id="tx-qx" aria-label="Cancella la ricerca">×</button>' : '') + '</div><select id="tx-c" aria-label="Filtra per categoria"><option value="">Tutte le categorie</option>' + [['out', 'Uscite'], ['in', 'Entrate']].map(([t, n]) => '<optgroup label="' + n + '">' + S.cats[t].map(c => '<option value="' + t + ':' + c.id + '"' + (TXC && TXC.t === t && TXC.c === c.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</optgroup>').join('') + '</select>' +
+  const catSel = '<div class="txfilt"><div class="txq">' + ic('list') + '<input id="tx-q" type="search" placeholder="Cerca nella nota, nella categoria o nell\'importo" value="' + esc(TXQ) + '" aria-label="Cerca nei movimenti">' + (TXQ ? '<button id="tx-qx" aria-label="Cancella la ricerca">×</button>' : '') + '</div>' + (txFilter === 'xfer' && !TXC ? '' : '<select id="tx-c" aria-label="Filtra per categoria"><option value="">' + (txFilter === 'out' ? 'Tutte le categorie di uscita' : txFilter === 'in' ? 'Tutte le categorie di entrata' : 'Tutte le categorie') + '</option>' + [['out', 'Uscite'], ['in', 'Entrate']].filter(([t]) => !['in', 'out'].includes(txFilter) || txFilter === t || (TXC && TXC.t === t)).map(([t, n]) => '<optgroup label="' + n + '">' + S.cats[t].map(c => '<option value="' + t + ':' + c.id + '"' + (TXC && TXC.t === t && TXC.c === c.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</optgroup>').join('') + '</select>') +
     (cat && (cat.subs || []).length ? '<select id="tx-s" aria-label="Filtra per sottocategoria"><option value="__all">Tutte le sottocategorie</option>' + cat.subs.map(sb => '<option value="' + esc(sb) + '"' + (TXC.s === sb ? ' selected' : '') + '>' + esc(sb) + '</option>').join('') + '<option value=""' + (TXC.s === '' ? ' selected' : '') + '>Senza sottocategoria</option></select>' : '') + '</div>';
   let summary;
   if (TXC) { const tot = L.filter(x => !x.plan).reduce((t, x) => t + x.a, 0), real = L.filter(x => !x.plan).length, col = TXC.t === 'in' ? IN_COL : OUT_COL;
@@ -1662,7 +1662,7 @@ function renderTx(){
   const mx = view.querySelector('#mv-x'); if (mx) mx.onclick = () => { TXSEL = null; keepY(); };
   const tq = view.querySelector('#tx-q'); let qt; if (tq) { tq.oninput = () => { clearTimeout(qt); qt = setTimeout(() => { TXQ = tq.value; const pos = tq.selectionStart; rr(); const n = view.querySelector('#tx-q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } }, 300); }; }
   const tqx = view.querySelector('#tx-qx'); if (tqx) tqx.onclick = () => { TXQ = ''; rr(); };
-  view.querySelector('#tx-c').onchange = e => { const v = e.target.value; if (!v) TXC = null; else { const [t, c] = v.split(':'); TXC = {t, c}; } rr(); };
+  const txc = view.querySelector('#tx-c'); if (txc) txc.onchange = e => { const v = e.target.value; if (!v) TXC = null; else { const [t, c] = v.split(':'); TXC = {t, c}; } rr(); };
   const ts = view.querySelector('#tx-s'); if (ts) ts.onchange = e => { TXC.s = e.target.value === '__all' ? undefined : e.target.value; rr(); };
   const tc = view.querySelector('#tx-clr'); if (tc) tc.onclick = () => { TXC = null; TXBACK = null; rr(); };
   if (TXC) { const subs = [...view.querySelectorAll('.card .hbars > .hbar')]; subs.forEach(h => { h.style.cursor = 'pointer'; h.onclick = () => { const n = h.querySelector('.t > span').textContent; TXC.s = n === 'Senza sottocategoria' ? '' : n; rr(); }; }); }

@@ -36,8 +36,9 @@ jobs:
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          if [ -z "$KS" ]; then echo "::error::Manca il secret ANDROID_KEYSTORE_BASE64"; exit 1; fi
+          if [ -z "$KS" ]; then echo "::warning::Manca il secret ANDROID_KEYSTORE_BASE64: creo solo un pacchetto di prova NON firmato"; echo "SIGNED=no" >> "$GITHUB_ENV"; exit 0; fi
           echo "$KS" | base64 -d > "$RUNNER_TEMP/upload.keystore"
+          echo "SIGNED=yes" >> "$GITHUB_ENV"
           echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/upload.keystore" >> "$GITHUB_ENV"
 
       - name: Compila il pacchetto
@@ -52,6 +53,7 @@ jobs:
           ./gradlew --no-daemon bundleRelease
 
       - name: Controlla che sia firmato con la chiave di caricamento giusta
+        if: env.SIGNED == 'yes'
         run: |
           FP=$(keytool -printcert -jarfile app/build/outputs/bundle/release/app-release.aab | grep -m1 "SHA256:" | awk '{print $2}')
           echo "Impronta: $FP"
@@ -62,6 +64,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: buddy4free-risparmio-v${{ inputs.version_code }}
+          name: buddy4free-risparmio-v${{ inputs.version_code }}${{ env.SIGNED == 'yes' && '' || '-PROVA-non-firmato' }}
           path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 7

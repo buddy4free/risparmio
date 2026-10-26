@@ -18,7 +18,9 @@ Buddy4Free Risparmio nasce dal canale YouTube Buddy4Free, dove parliamo di minim
 
 📊 ENTRATE E USCITE CHIARE
 • Registri un movimento in pochi tocchi, con categorie e sottocategorie già pronte (e personalizzabili)
-• Movimenti ricorrenti: stipendio, affitto, abbonamenti si ripetono da soli
+• Movimenti ricorrenti: stipendio, affitto, abbonamenti si ripetono da soli, e li ritrovi tutti in un'unica schermata
+• Scontrino in foto (beta): l'app legge totale, data e negozio e ti propone la categoria, direttamente sul telefono
+• Spese programmate: segna oggi il bollo o l'assicurazione del mese prossimo
 • Il tuo tasso di risparmio del mese, con colori che dicono subito come stai andando
 • Statistiche per mese, anno o periodo, con grafici a barre e a cerchio
 
@@ -30,7 +32,7 @@ Un viaggio, l'auto, la casa o la cifra che vuoi tu. L'app ti mostra il passo giu
 Con "E se…?" provi cosa cambia con qualche euro in più, tagliando un abbonamento o con un'entrata extra, e immagini cosa potresti permetterti.
 
 💪 LA PALESTRA DEL RISPARMIO
-21 tappe pratiche, sfide come "7 giorni senza…" o "Arrotonda il resto", lezioni brevi di educazione finanziaria e libri consigliati.
+21 tappe pratiche, una al giorno, sfide come "7 giorni senza…" o "Arrotonda il resto". In Impara: la domanda del giorno, una lezione nuova al giorno con 5 domande e il libro della settimana.
 
 🏦 FINANZIAMENTI E DEBITI
 Mutuo, prestiti, rate: quanto ti costano davvero, quanto risparmieresti chiudendoli prima e come leggere il TAEG.

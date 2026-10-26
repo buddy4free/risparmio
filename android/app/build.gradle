@@ -55,7 +55,7 @@ android {
     namespace "com.buddy4free.risparmio"
     defaultConfig {
         applicationId "com.buddy4free.risparmio"
-        minSdkVersion 21
+        minSdkVersion 24
         targetSdkVersion 36
         // numero e nome della versione: si scelgono quando si avvia la compilazione su GitHub
         versionCode Integer.parseInt(System.getenv("VERSION_CODE") ?: "2")

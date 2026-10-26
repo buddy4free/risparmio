@@ -156,6 +156,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .clnew{padding:0 14px 14px 62px}
 .list .item.off{opacity:.55}
 .ocrcat{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:14px;padding:12px}.ocrtxt{white-space:pre-wrap;font-size:.72rem;max-height:160px;overflow:auto;margin:6px 0 0}
+.qmini{display:flex;align-items:center;gap:12px;width:100%;text-align:left;color:inherit;padding:12px 14px}.qmini .t{flex:1;display:flex;flex-direction:column;min-width:0}.qmini .sub{font-size:.8rem;color:var(--muted)}.qmini .qmore{font-size:.8rem;font-weight:700;color:var(--yellow)}
 .qday{display:flex;flex-direction:column;gap:12px;border-color:var(--yellow)}.qday .qq{font-size:1.08rem;line-height:1.35}
 .cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
 .cats button{border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.74rem;font-weight:600;line-height:1.15;text-align:center;min-height:78px}
@@ -1220,7 +1221,8 @@ function histPush(){ try { if (navigator.userActivation && !navigator.userActiva
 function histHome(){ const k = hIdx(); if (k > 0 && !HIGN) { HIGN = 1; try { history.go(-k); } catch (e) { HIGN = 0; } } }
 const GOAL_SCR = ['goal', 'whatif', 'gtips', 'read'];
 const SCROLL = {}, skey = r => r.screen + ':' + (r.id || '');
-function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function nav(r, back){
+  if (r && r.screen === 'learn' && typeof QOPEN !== 'undefined') QOPEN = false; SCROLL[skey(R)] = window.scrollY; stopBreath(); const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   if (r.screen === 'home') { NAVSTACK.length = 0; histHome(); } else if (!back && R && !same(R, r)) histPush();
   if (r.screen !== 'home' && !back && R && !same(R, r) && !(R.screen === 'add' && r.screen === 'add') && !['welcome', 'setup'].includes(R.screen)) { /* tornare a una schermata già aperta (Annulla, Salva) vale come andare indietro */ const k = NAVSTACK.findLastIndex(x => same(x, r)); if (k >= 0) NAVSTACK.length = k; else { NAVSTACK.push(R); if (NAVSTACK.length > 60) NAVSTACK.shift(); } } else if (back && NAVSTACK.length && same(NAVSTACK[NAVSTACK.length - 1], r)) NAVSTACK.pop();
   if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; PREV = R; R = r; try { localStorage.setItem('b4f-last', JSON.stringify({r, t:Date.now()})); } catch(e) {} render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
@@ -2663,14 +2665,20 @@ const QUIZ = [
 ];
 function qState(){ S.qd = S.qd || {n:0, ok:0, streak:0, last:null}; return S.qd; }
 function qToday(){ const st = qState(); return st.last === today() ? st : null; }
+let QOPEN = false;
 function qCard(){
   const st = qState(), done = st.last === today(), i = done ? st.ans.i : st.n % QUIZ.length, Q = QUIZ[i], L = Q.l && LESSONS.find(x => x.id === Q.l);
+  /* già fatta oggi: una riga compatta, che si riapre toccandola */
+  if (done && !QOPEN) return '<button class="card qmini" id="qd-open" aria-expanded="false"><span class="ic y">' + ic('check') + '</span><span class="t"><b>Domanda del giorno fatta</b><span class="sub">' + (st.ans.a === Q.a ? 'Risposta giusta, +2 punti' : 'Risposta da ripassare') + (st.streak > 1 ? ' · ' + st.streak + ' giorni di fila' : '') + ' · la prossima domani</span></span><span class="qmore">Rivedi</span></button>';
   return '<div class="card qday"><div class="spread"><span class="label">Domanda del giorno · ' + (i + 1) + ' di ' + QUIZ.length + '</span>' + (st.streak > 1 ? '<span class="small y">' + st.streak + ' giorni di fila</span>' : '') + '</div><b class="qq">' + Q.q + '</b>' +
     '<div class="quiz-opt">' + Q.o.map((o, oi) => '<button data-qd="' + oi + '" class="' + (done ? (oi === Q.a ? 'right' : oi === st.ans.a ? 'wrong' : '') : '') + '"' + (done ? ' disabled' : '') + '>' + o + '</button>').join('') + '</div>' +
-    (done ? '<p class="small" style="margin:0"><b>' + (st.ans.a === Q.a ? 'Esatto! +2 punti.' : 'Non proprio.') + '</b> ' + Q.e + '</p>' + (L ? '<button class="textlink small" style="align-self:flex-start" ' + nav$({screen:'lesson', id:L.id}) + '>Approfondisci: ' + L.t + '</button>' : '') + '<span class="small muted">La prossima domanda arriva domani.</span>' : '') + '</div>';
+    (done ? '<p class="small" style="margin:0"><b>' + (st.ans.a === Q.a ? 'Esatto! +2 punti.' : 'Non proprio.') + '</b> ' + Q.e + '</p>' + (L ? '<button class="textlink small" style="align-self:flex-start" ' + nav$({screen:'lesson', id:L.id}) + '>Approfondisci: ' + L.t + '</button>' : '') + '<div class="spread"><span class="small muted">La prossima domanda arriva domani.</span>' + (QOPEN ? '<button class="textlink small" id="qd-close">Chiudi</button>' : '') + '</div>' : '') + '</div>';
 }
-function bindQ(re){ view.querySelectorAll('[data-qd]').forEach(b => b.onclick = () => { const st = qState(); if (st.last === today()) return; const i = st.n % QUIZ.length, a = +b.dataset.qd;
-  st.streak = st.last === dayOffset(today(), -1) ? (st.streak || 0) + 1 : 1; st.last = today(); st.n++; if (a === QUIZ[i].a) st.ok = (st.ok || 0) + 1; st.ans = {i, a}; save(); const y = window.scrollY; re(); window.scrollTo({top:y}); }); }
+function bindQ(re){ const keep = () => { const y = window.scrollY; re(); window.scrollTo({top:y}); };
+  const op = view.querySelector('#qd-open'); if (op) op.onclick = () => { QOPEN = true; keep(); };
+  const cl = view.querySelector('#qd-close'); if (cl) cl.onclick = () => { QOPEN = false; keep(); };
+  view.querySelectorAll('[data-qd]').forEach(b => b.onclick = () => { const st = qState(); if (st.last === today()) return; const i = st.n % QUIZ.length, a = +b.dataset.qd;
+  QOPEN = true; st.streak = st.last === dayOffset(today(), -1) ? (st.streak || 0) + 1 : 1; st.last = today(); st.n++; if (a === QUIZ[i].a) st.ok = (st.ok || 0) + 1; st.ans = {i, a}; save(); const y = window.scrollY; re(); window.scrollTo({top:y}); }); }
 /* le lezioni arrivano a 5 domande; le risposte giuste non stanno sempre nella stessa posizione */
 const EXTRA_Q = {
   infl:[{q:'Per quali soldi l\'inflazione è un problema minore?', o:['Quelli di tutti i giorni e il fondo di emergenza','Quelli che restano fermi per molti anni','Nessuno'], a:0},{q:'Quanto è stata l\'inflazione media in Italia nel 2022?', o:['L\'8,1%','Circa il 2%','Il 15%'], a:0},{q:'La cifra scritta sul conto si chiama…', o:['Valore nominale','Valore reale','Valore netto'], a:0}],

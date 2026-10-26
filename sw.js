@@ -1,5 +1,5 @@
 /* Buddy4Free Risparmio: copia locale dell'app per l'uso senza connessione */
-const CACHE = 'b4f-202610261717';
+const CACHE = 'b4f-202610261723';
 const FILES = ["./", "index.html", "manifest.webmanifest", "fonts/fonts.css", "fonts/archivo.woff2", "fonts/figtree.woff2", "fonts/permanentmarker.woff2", "vendor/jspdf.umd.min.js", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png"];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== CACHE && x !== 'b4f-rem').map(x => caches.delete(x)))).then(() => self.clients.claim())); });

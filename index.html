@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-fKjEqT2/toVzlzYmlZMT6Ht/P5Xz6ydqNfDR1wRnUk0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-/JABRx+Mj3DAyoqFGyrTs944wK99eLd7eEeDmZ/Ez3I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -171,6 +171,11 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .list .item.off{opacity:.55}
 .ocrcat{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:14px;padding:12px}.ocrtxt{white-space:pre-wrap;font-size:.72rem;max-height:160px;overflow:auto;margin:6px 0 0}
 .qmini{display:flex!important;flex-direction:row!important;justify-content:flex-start!important;align-items:center;gap:12px;width:100%;text-align:left;color:inherit;padding:12px 14px}.qmini .t{flex:1;display:flex;flex-direction:column;min-width:0}.qmini .sub{font-size:.8rem;color:var(--muted)}.qmini .qmore{font-size:.8rem;font-weight:700;color:var(--yellow)}
+.amount{position:relative;cursor:pointer}.amount input{cursor:pointer;caret-color:transparent}.amtx{position:absolute;right:0;bottom:-22px;font-style:normal;font-size:.85rem;font-weight:700;color:var(--yellow)}
+.kpad{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 12px calc(12px + env(safe-area-inset-bottom,0px));background:#0b0b0b;border-top:1px solid var(--line);max-width:560px;margin:0 auto}
+.kpad button{height:58px;border:0;border-radius:16px;background:var(--soft);color:var(--fg);font-family:var(--display);font-size:1.55rem;font-weight:800;display:grid;place-items:center;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.kpad button:active{transform:scale(.96);background:var(--soft2)}.kpad .kop{color:var(--yellow)}.kpad .kok{background:var(--yellow);color:#000}.kpad .kok .i{width:30px;height:30px;stroke-width:3}
+body.kpon #tabs,body.kpon .savebig,body.kpon #delwrap{display:none!important}body.kpon .app{padding-bottom:calc(300px + env(safe-area-inset-bottom,0px))}
 .qday{display:flex;flex-direction:column;gap:12px;border-color:var(--yellow)}.qday .qq{font-size:1.08rem;line-height:1.35}
 .cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
 .cats button{border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.74rem;font-weight:600;line-height:1.15;text-align:center;min-height:78px}
@@ -1275,7 +1280,7 @@ function phoneBack(){
   if (pop) { if (pop.id === 'psheet') { ST.sheet = false; render(); } else pop.remove(); return true; }
   if (R.screen === 'add' && F && !R.edit && !R.editX && F.t !== 'xfer' && F.step && F.step !== 'cat') {
     const CT = F.rf ? 'out' : F.t, hasSub = F.c && (catOf(CT, F.c).subs || []).length, fa = document.getElementById('f-a');
-    if (fa) { F.a = fa.value; F.d = val('f-d') || F.d; F.n = val('f-n'); }
+    if (fa) { F.a = padVal(); F.d = val('f-d') || F.d; F.n = val('f-n'); }
     F.step = F.step === 'amt' ? 'dest' : F.step === 'dest' && hasSub && (S.catView || 'list') !== 'list' ? 'sub' : 'cat'; if (F.step === 'cat') F.open = F.c; render(); window.scrollTo({top:0}); return true; }
   if (R.screen === 'an' && AN.c) { if (AN.s !== null) AN.s = null; else AN.c = null; render(); return true; }
   if (R.screen === 'tx' && TXSEL) { TXSEL = null; render(); return true; }
@@ -1301,7 +1306,7 @@ function render(){
   const tabs = document.getElementById('tabs'); tabs.hidden = !inApp || R.screen === 'add';
   tabs.firstElementChild.innerHTML = TABS.map(t => '<button data-tab="' + t[0] + '" aria-current="' + (TAB_OF[R.screen] === t[0]) + '">' + ic(t[2]) + t[1] + '</button>').join('');
   tabs.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => nav({screen:b.dataset.tab}));
-  document.getElementById('fab').hidden = !inApp || ['add', 'breath'].includes(R.screen); dialClose();
+  document.body.classList.remove('kpon'); document.getElementById('fab').hidden = !inApp || ['add', 'breath'].includes(R.screen); dialClose();
   document.getElementById('fab').innerHTML = ic('plus');
   document.getElementById('topbar').hidden = R.screen === 'welcome' || R.screen === 'add';
   document.getElementById('gear').hidden = true; document.getElementById('help').hidden = true;
@@ -1724,18 +1729,15 @@ function renderXfer(){
   if (!opts.includes(F.to) || F.to === F.from) F.to = opts.find(k => k.startsWith('g:') && k !== F.from) || opts.find(k => k !== F.from);
   const chips = (side, cur) => '<div class="subs">' + opts.map(k => '<button data-' + side + '="' + k + '" aria-pressed="' + (cur === k) + '"' + (side === 'to' && k === F.from ? ' disabled' : '') + '><i class="dot" style="background:' + destColor(k) + '"></i>' + esc(destLabel(k)) + ' <span class="muted" style="font-weight:500;margin-left:4px">' + eur(destBal(k)) + '</span></button>').join('') + '</div>';
   view.innerHTML = '<div class="sec" style="gap:18px">' + formBar('Trasferimento') +
-    '<label class="amount t-xfer"><span>€</span><input id="f-a" inputmode="decimal" placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"></label><button class="btn savebig" type="button" data-savebig>' + ic('check') + 'Salva</button>' +
+    '<label class="amount t-xfer"><span>€</span><input id="f-a" inputmode="none" readonly placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"><em id="f-x" class="amtx"></em></label><button class="btn savebig" type="button" data-savebig>' + ic('check') + 'Salva</button>' +
     '<div class="sec" style="gap:8px"><span class="label">Da</span>' + chips('from', F.from) + '</div>' +
     '<div class="sec" style="gap:8px"><span class="label">A</span>' + chips('to', F.to) + '</div>' +
     '<div class="grid2"><div class="field"><label for="f-d">Data</label><input id="f-d" type="date" value="' + F.d + '" max="' + today() + '"></div><div class="field"><label for="f-n">Nota</label><input id="f-n" placeholder="Facoltativa" value="' + esc(F.n) + '"></div></div>' +
-    '<p class="small muted">Sposta soldi tra i tuoi pilastri, per esempio dalla liquidità al salvadanaio di un obiettivo. Non è un\'entrata né un\'uscita: il tasso di risparmio non cambia.</p></div>';
-  const keep = () => { F.a = val('f-a'); F.d = val('f-d') || today(); F.n = val('f-n'); };
+    '<p class="small muted">Sposta soldi tra i tuoi pilastri, per esempio dalla liquidità al salvadanaio di un obiettivo. Non è un\'entrata né un\'uscita: il tasso di risparmio non cambia.</p></div>' + (F.kp !== false && (F.kp || !R.editX) ? padHTML() : '');
+  const keep = () => { F.a = padVal(); F.d = val('f-d') || today(); F.n = val('f-n'); };
   view.querySelectorAll('[data-from]').forEach(b => b.onclick = () => { keep(); F.from = b.dataset.from; renderAdd(); });
   view.querySelectorAll('[data-to]').forEach(b => b.onclick = () => { keep(); F.to = b.dataset.to; renderAdd(); });
-  const fa = document.getElementById('f-a');
-  fa.onfocus = () => setTimeout(() => window.scrollTo({top:0}), 120);
-  fa.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('f-save').click(); } };
-  if (!F.a) setTimeout(() => fa.focus(), 50);
+  if (F.kp === undefined) F.kp = !R.editX; bindPad();
   view.querySelector('#f-save').onclick = () => {
     keep(); const a = parseAmt(F.a);
     if (!(a > 0)) return toast('Inserisci un importo');
@@ -1757,7 +1759,37 @@ function renderChooser(){
       '<span class="label" style="margin-top:12px">Gestisci</span><div class="cman2"><button ' + nav$({screen:'cats', t:'in'}) + ' class="cmanage" style="--tc:#22A45D"><span class="ic">' + ic('tag') + '</span><span class="t"><b>Categorie entrate</b></span></button>' +
       '<button ' + nav$({screen:'cats', t:'out'}) + ' class="cmanage" style="--tc:#E5484D"><span class="ic">' + ic('tag') + '</span><span class="t"><b>Categorie uscite</b></span></button></div></div></div>';
 }
+/* ---------- tastiera dell'app per gli importi: numeri, virgola, + e −, conferma con ✓ ---------- */
+const PAD_KEYS = ['7', '8', '9', 'del', '4', '5', '6', '+', '1', '2', '3', '-', 'C', '0', ',', 'ok'];
+const padNums = x => String(x || '').replace(/\s/g, '').replace(/−/g, '-').split(/[+-]/);
+function padEval(x){ const s = String(x || '').replace(/\s/g, '').replace(/−/g, '-').replace(/[+-]$/, ''); if (!s) return null;
+  if (!/^\d+(,\d{0,2})?([+-]\d+(,\d{0,2})?)*$/.test(s)) return null;
+  const parts = s.match(/[+-]?[^+-]+/g) || []; return Math.round(parts.reduce((t, p) => t + parseFloat(p.replace(',', '.')), 0) * 100) / 100; }
+const padFmt = v => (Math.round(v * 100) % 100 ? v.toFixed(2) : String(Math.round(v))).replace('.', ',');
+/* il valore da salvare: se c'è un calcolo a metà, vale il risultato */
+function padVal(){ const v = val('f-a'); return /[+−-]/.test(v) ? (n => n === null ? v : padFmt(n))(padEval(v)) : v; }
+function padHTML(){ return '<div class="kpad" id="kpad" role="group" aria-label="Tastiera per l\'importo">' + PAD_KEYS.map(k => '<button type="button" data-k2="' + k + '" class="' + (k === 'ok' ? 'kok' : /[+\-C]|del/.test(k) ? 'kop' : '') + '" aria-label="' + ({del:'Cancella', ok:'Conferma l\'importo', '+':'Più', '-':'Meno', C:'Azzera'}[k] || k) + '">' + (k === 'del' ? '⌫' : k === 'ok' ? ic('check') : k === '-' ? '−' : k) + '</button>').join('') + '</div>'; }
+function padPress(k){ const fa = document.getElementById('f-a'); if (!fa) return; let s = fa.value.replace(/−/g, '-'); const cur = padNums(s).pop();
+  if (/^\d$/.test(k)) { if (/,\d{2}$/.test(cur) || (!cur.includes(',') && cur.replace(/^0+/, '').length >= 7)) return; s = (cur === '0' ? s.slice(0, -1) : s) + k; }
+  else if (k === ',') { if (cur.includes(',')) return; s += cur === '' ? '0,' : ','; }
+  else if (k === '+' || k === '-') { if (!s) return; s = /[+-]$/.test(s) ? s.slice(0, -1) + k : s.replace(/,$/, '') + k; }
+  else if (k === 'del') s = s.slice(0, -1);
+  else if (k === 'C') s = '';
+  else if (k === 'ok') { const n = padEval(s); if (!(n > 0)) { toast(n === null || !s ? 'Scrivi un importo' : 'Il totale deve essere più di zero'); return; } fa.value = padFmt(n); padShow(); F.kp = false; F.a = fa.value; renderAdd(); return; }
+  fa.value = s.replace(/-/g, '−'); padShow(); }
+function padShow(){ const fa = document.getElementById('f-a'), x = document.getElementById('f-x'); if (!fa || !x) return; const s = fa.value, n = /[+−-]./.test(s) ? padEval(s) : null; x.textContent = n === null ? '' : '= ' + eur2(n); }
+function bindPad(){ const fa = document.getElementById('f-a'); if (!fa) return;
+  if (F.kp === undefined) F.kp = !R.edit;
+  document.body.classList.toggle('kpon', !!F.kp);
+  const open = () => { if (F.kp) return; F.kp = true; F.d = val('f-d') || F.d; F.n = val('f-n'); renderAdd(); };
+  fa.onclick = open; const lab = fa.closest('.amount'); if (lab) lab.onclick = open;
+  view.querySelectorAll('[data-k2]').forEach(b => { b.onclick = () => { padPress(b.dataset.k2); if (navigator.vibrate) try { navigator.vibrate(6); } catch(e) {} }; });
+  padShow(); }
+/* anche da tastiera fisica (computer) */
+document.addEventListener('keydown', e => { if (!document.getElementById('kpad') || !F || !F.kp || /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '') && document.activeElement.id !== 'f-a') return;
+  const m = {Backspace:'del', Enter:'ok', Escape:'ok', '.':',', ',':',', '+':'+', '-':'-', Delete:'C'}; const k = /^\d$/.test(e.key) ? e.key : m[e.key]; if (!k) return; e.preventDefault(); padPress(k); });
 function renderAdd(){
+  document.body.classList.remove('kpon');
   if (!R.type && !R.edit && !R.editX && !R.xfer) return renderChooser();
   if (!F || F.key !== JSON.stringify(R)) {
     F = {key:JSON.stringify(R), t:R.xfer || R.editX ? 'xfer' : (R.type || 'out'), c:null, s:'', a:'', d:today(), n:'', rec:!!R.rec, every:1, unit:'m', end:'never', count:12, until:'', newCat:false, newSub:false, icon:'dots', p:'liq', step:'cat'};
@@ -1797,16 +1829,16 @@ function renderAdd(){
       '<span class="label">Fino a</span><div class="bigchips">' + [['never', 'Sempre'], ['count', 'Un numero di volte'], ['until', 'Una data']].map(o => '<button data-end="' + o[0] + '" aria-pressed="' + (F.end === o[0]) + '">' + o[1] + '</button>').join('') + '</div>' +
       (F.end === 'count' ? '<div class="row"><input id="r-ct" type="number" min="1" max="520" value="' + F.count + '" style="width:90px"><span>volte</span></div>' : '') +
       (F.end === 'until' ? '<input id="r-ut" type="date" value="' + (F.until || dayOffset(F.d, 365)) + '">' : '') + '</div>' : '';
-    body = (F.rf ? '<p class="small muted" style="margin:0">Rimborso di <b style="color:var(--fg)">' + esc(cur.n + (F.s ? ' › ' + F.s : '')) + '</b>: scrivi solo quanto ti è tornato.</p>' : '') + '<label class="amount t-' + F.t + '"><span>€</span><input id="f-a" inputmode="decimal" placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"></label><button class="btn savebig" type="button" data-savebig>' + ic('check') + 'Salva</button>' +
+    body = (F.rf ? '<p class="small muted" style="margin:0">Rimborso di <b style="color:var(--fg)">' + esc(cur.n + (F.s ? ' › ' + F.s : '')) + '</b>: scrivi solo quanto ti è tornato.</p>' : '') + '<label class="amount t-' + F.t + '"><span>€</span><input id="f-a" inputmode="none" readonly placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"><em id="f-x" class="amtx"></em></label><button class="btn savebig" type="button" data-savebig>' + ic('check') + 'Salva</button>' +
       '<div class="grid2"><div class="field"><label for="f-d">Data</label><input id="f-d" type="date" value="' + F.d + '"></div><div class="field"><label for="f-n">Nota</label><input id="f-n" placeholder="Facoltativa" value="' + esc(F.n) + '"></div></div>' +
       (F.rf ? '<input type="checkbox" id="f-rec" hidden>' : '<label class="check"><input type="checkbox" id="f-rec"' + (F.rec ? ' checked' : '') + (R.edit && !F.recId ? ' disabled' : '') + '> Si ripete</label>' + opt) +
       (R.edit ? '<div id="delwrap" class="sec">' + (F.recId ? '<button class="btn danger" data-del="one">Elimina solo questa volta</button><button class="btn danger" data-del="stop">Interrompi da qui in poi</button>' : '<button class="btn danger" data-del="one">Elimina</button>') + '</div>' : '');
   }
   view.innerHTML = '<div class="sec" style="gap:16px">' + formBar(F.rf ? (R.edit ? 'Modifica rimborso' : 'Nuovo rimborso') : (R.edit ? 'Modifica ' : 'Nuova ') + T[0].toLowerCase()) +
     '<div class="stepbar"><span class="label">Passo ' + stepNo + ' di ' + steps + '</span><div class="qbar"><i style="width:' + stepNo / steps * 100 + '%;background:' + T[1] + '"></i></div></div>' +
-    (crumbs ? '<div class="crumbs">' + crumbs + '</div>' : '') + body + '</div>';
+    (crumbs ? '<div class="crumbs">' + crumbs + '</div>' : '') + body + '</div>' + (F.step === 'amt' && (F.kp || (F.kp === undefined && !R.edit)) ? padHTML() : '');
   const saveBtn = document.getElementById('f-save'); saveBtn.hidden = F.step !== 'amt';
-  const keep = () => { if (F.step !== 'amt') return; F.a = val('f-a'); F.d = val('f-d') || today(); F.n = val('f-n'); F.rec = document.getElementById('f-rec').checked;
+  const keep = () => { if (F.step !== 'amt') return; F.a = padVal(); F.d = val('f-d') || today(); F.n = val('f-n'); F.rec = document.getElementById('f-rec').checked;
     if (F.rec && document.getElementById('r-ev')) { F.every = Math.max(1, +val('r-ev') || 1); F.unit = val('r-un'); if (document.getElementById('r-ct')) F.count = Math.max(1, +val('r-ct') || 1); if (document.getElementById('r-ut')) F.until = val('r-ut'); } };
   const go = st => { keep(); const O = {cat:0, sub:1, dest:2, amt:3}; if (O[st] > O[F.step]) histPush(); F.step = st; renderAdd(); window.scrollTo({top:0}); };
   view.querySelectorAll('[data-step]').forEach(b => b.onclick = () => { if (b.dataset.step === 'cat') { F.open = F.c; F.newSub = false; } go(b.dataset.step); });
@@ -1827,7 +1859,7 @@ function renderAdd(){
   const fr = document.getElementById('f-rec'); if (fr) fr.onchange = () => { keep(); renderAdd(); };
   const ru = document.getElementById('r-un'); if (ru) ru.onchange = () => keep();
   const fa = document.getElementById('f-a');
-  if (fa) { fa.onfocus = () => setTimeout(() => window.scrollTo({top:0}), 120); fa.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); } }; if (!R.edit && !F.a) setTimeout(() => fa.focus(), 60); }
+  if (fa) bindPad(); else document.body.classList.remove('kpon');
   saveBtn.onclick = () => {
     keep(); const a = parseAmt(F.a);
     if (!(a > 0)) return toast('Inserisci un importo');

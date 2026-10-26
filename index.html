@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-EZM88mwYoeICBEknj6pRkCumpqdnOEf/DXptvjGJTQ0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VKtnmun+b9+VYKEc2z0Ay+eso0S8ZENWXRm02X9sGH4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1230,10 +1230,11 @@ function dialToggle(){
   if (dialOpen()) return dialClose();
   const fab = document.getElementById('fab'), o = document.createElement('div'); o.id = 'dial';
   const it = (k, l, c, icon) => '<button data-dial="' + k + '" style="--dc:' + c + '"><span class="dl">' + l + '</span><span class="di">' + icon + '</span></button>';
-  o.innerHTML = '<div class="dialbg"></div><div class="dialitems">' + it('cats', 'Gestisci categorie', '#5f5f5a', ic('tag')) + it('xfer', 'Trasferimento', '#3987e5', ic('repeat')) + it('in', 'Entrata', '#22A45D', '<b>+</b>') + it('out', 'Uscita', '#E5484D', '<b>−</b>') + '</div>';
+  const rec = R.screen === 'rec'; /* da Ricorrenti il + crea direttamente una voce che si ripete */
+  o.innerHTML = '<div class="dialbg"></div><div class="dialitems">' + (rec ? it('in', 'Entrata ricorrente', '#22A45D', '<b>+</b>') + it('out', 'Uscita ricorrente', '#E5484D', '<b>−</b>') : it('cats', 'Gestisci categorie', '#5f5f5a', ic('tag')) + it('xfer', 'Trasferimento', '#3987e5', ic('repeat')) + it('in', 'Entrata', '#22A45D', '<b>+</b>') + it('out', 'Uscita', '#E5484D', '<b>−</b>')) + '</div>';
   document.body.appendChild(o); fab.classList.add('open'); histPush();
   o.querySelector('.dialbg').onclick = dialClose;
-  o.querySelectorAll('[data-dial]').forEach(b => b.onclick = () => { const k = b.dataset.dial; dialClose(); F = null; nav(k === 'cats' ? {screen:'cats', t:'out'} : {screen:'add', type:k}); });
+  o.querySelectorAll('[data-dial]').forEach(b => b.onclick = () => { const k = b.dataset.dial; dialClose(); F = null; nav(k === 'cats' ? {screen:'cats', t:'out'} : rec ? {screen:'add', type:k, rec:1, back:'rec'} : {screen:'add', type:k}); });
 }
 document.getElementById('fab').onclick = dialToggle;
 document.getElementById('gear').innerHTML = ic('gear');
@@ -1722,7 +1723,7 @@ function renderChooser(){
 function renderAdd(){
   if (!R.type && !R.edit && !R.editX && !R.xfer) return renderChooser();
   if (!F || F.key !== JSON.stringify(R)) {
-    F = {key:JSON.stringify(R), t:R.xfer || R.editX ? 'xfer' : (R.type || 'out'), c:null, s:'', a:'', d:today(), n:'', rec:false, every:1, unit:'m', end:'never', count:12, until:'', newCat:false, newSub:false, icon:'dots', p:'liq', step:'cat'};
+    F = {key:JSON.stringify(R), t:R.xfer || R.editX ? 'xfer' : (R.type || 'out'), c:null, s:'', a:'', d:today(), n:'', rec:!!R.rec, every:1, unit:'m', end:'never', count:12, until:'', newCat:false, newSub:false, icon:'dots', p:'liq', step:'cat'};
     if (R.edit) {
       if (R.edit.startsWith('r:')) { const [, rid, dk] = R.edit.split(':'); const r = S.rec.find(x => x.id === rid);
         if (r) Object.assign(F, {t:r.t, c:r.c, s:r.s, a:String(r.a).replace('.', ','), d:dk.length === 10 ? dk : dk + '-' + pad(r.day), n:r.n, rec:true, recId:rid, recKey:dk, p:r.p || 'liq', every:r.every || 1, unit:r.unit || 'm', end:r.count ? 'count' : r.until ? 'until' : 'never', count:r.count || 12, until:r.until || ''}); }
@@ -2388,7 +2389,7 @@ function renderRec(){
     (S.rec.length ? '<div class="filters">' + [['all', 'Tutte'], ['out', 'Uscite'], ['in', 'Entrate']].map(f => '<button data-rf="' + f[0] + '" aria-pressed="' + (RECF === f[0]) + '">' + f[1] + '</button>').join('') + '</div>' : '') +
     (on.length ? '<div><span class="label">Attive · ' + on.length + '</span><div class="list">' + on.map(x => row(x.r, x.next)).join('') + '</div></div>' : '<div class="note">' + (S.rec.length && RECF !== 'all' ? 'Nessuna ' + (RECF === 'in' ? 'entrata' : 'uscita') + ' ricorrente attiva.' : 'Non hai ancora movimenti ricorrenti.') + '</div>') +
     (off.length ? '<details class="recend"><summary class="label">Terminate · ' + off.length + '</summary><div class="list">' + off.map(x => row(x.r, x.last, true)).join('') + '</div></details>' : '') +
-    '<div class="card"><p class="small" style="margin:0">Per aggiungerne una: tocca <b>+</b>, scegli entrata o uscita e spunta <b>Si ripete</b>.</p></div></div>';
+    '<div class="card"><p class="small" style="margin:0">Per aggiungerne una tocca <b>+</b> e scegli entrata o uscita ricorrente.</p></div></div>';
   view.querySelectorAll('[data-rf]').forEach(b => b.onclick = () => { RECF = b.dataset.rf; renderRec(); });
 }
 function renderDues(){

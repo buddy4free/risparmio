@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-DSpuxav1Ov5iOeKZ3Wq4TsUNqq+O5IfcEURlUbr4Y6I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-yoW0NK/Fo/y5UF5PpeMBh+evJM3P3y32i7hcy9J9uc0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -3929,9 +3929,13 @@ function notifCard(){
     '<p class="small muted" style="margin:0">Al massimo una al giorno: la domanda del giorno, la tappa della palestra o, la sera, un controllo delle spese. È il telefono a decidere il momento preciso, di giorno.</p>' +
     (on && S.notif.periodic === false ? '<p class="small" style="margin:0;color:var(--yellow)">Questo telefono non permette avvisi automatici all\'app: ricevi solo la notifica di prova. Per gli avvisi usa il calendario qui sotto.</p>' : '') +
     (den ? '<p class="small" style="margin:0;color:var(--yellow)">Le notifiche sono bloccate sul telefono: tocca il pulsante qui sotto e ti dico dove sbloccarle.</p>' : '') +
+    '<p class="small muted" style="margin:0" id="nt-diag">Dettagli tecnici: permesso ' + Notification.permission + ' · copia offline ' + (navigator.serviceWorker.controller ? 'sì' : 'no') + ' · avvisi automatici ' + (S.notif && S.notif.periodic ? 'sì' : 'no') + ' · ' + (/SamsungBrowser/.test(navigator.userAgent) ? 'Samsung Internet' : 'Chrome') + '</p>' +
     '<div class="row">' + (on ? '<button class="btn sm ghost" id="nt-off">Spegni</button><button class="btn sm" id="nt-try">Notifica di prova</button>' : '<button class="btn sm" id="nt-on">' + (den ? 'Sblocca le notifiche' : 'Attiva le notifiche') + '</button>') + '</div></div>';
 }
-async function notifTry(body){ try { const reg = await navigator.serviceWorker.ready; await reg.showNotification('Buddy4Free Risparmio', {body, icon:'icons/icon-192.png', badge:'icons/icon-192.png', tag:'b4f-test', data:{go:'home'}}); } catch(e) { toast('Il telefono non ha mostrato la notifica'); } }
+async function notifTry(body){ const d = document.getElementById('nt-diag');
+  try { const reg = await navigator.serviceWorker.ready; await reg.showNotification('Buddy4Free Risparmio', {body, icon:'icons/icon-192.png', badge:'icons/icon-192.png', tag:'b4f-test', data:{go:'home'}});
+    const n = (await reg.getNotifications({tag:'b4f-test'})).length; if (d) d.textContent += ' · prova: inviata' + (n ? ' e presente' : ', non presente'); toast(n ? 'Notifica inviata: se non la vedi, è Android a nasconderla' : 'Notifica inviata ma il telefono non la mostra'); }
+  catch(e) { if (d) d.textContent += ' · prova: errore ' + String(e && e.message || e).slice(0, 80); toast('Il telefono non ha accettato la notifica'); } }
 /* notifiche bloccate: il telefono non chiede più il permesso, quindi spieghiamo dove sbloccarle */
 function notifHelp(){ const sam = /SamsungBrowser/.test(navigator.userAgent);
   catPop('<b style="font-size:1.1rem">Sblocca le notifiche</b><p class="small" style="margin:0">Le notifiche risultano bloccate e il telefono non ripropone più la domanda. Si sbloccano così:</p><ol class="small" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">' +

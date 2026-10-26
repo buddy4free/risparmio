@@ -1152,7 +1152,10 @@ function avgMonths(fn, n){
 function prevMonthsWithData(n){ const m = []; for (let i = 1; i <= 6 && m.length < n; i++) { const ym = addMonths(curYM(), -i); if (stats(ym).out > 0) m.push(ym); } return m; }
 function avgOut(){ const m = prevMonthsWithData(3); if (m.length) return m.reduce((t, ym) => t + stats(ym).out, 0) / m.length; return Math.max(stats(curYM()).out, (S.est || {}).out || 0); }
 function avgEssential(){ const m = prevMonthsWithData(3); if (m.length) return m.reduce((t, ym) => { const s = stats(ym); return t + s.out - s.disc; }, 0) / m.length; const s = stats(curYM()); return Math.max(s.out - s.disc, ((S.est || {}).out || 0) * .8); }
-const avgSave = () => avgMonths(s => s.save, 3);
+/* media robusta: tutti i mesi disponibili (al massimo 24); da 6 mesi in su si tolgono il più alto e il più basso, così un mese eccezionale non sposta la media */
+function robustAvg(vals){ if (!vals.length) return 0; const v = vals.slice(); if (v.length >= 6) { v.sort((a, b) => a - b); v.shift(); v.pop(); } return v.reduce((t, x) => t + x, 0) / v.length; }
+function saveMonths(){ const ms = []; for (let i = 1; i <= 24; i++) { const ym = addMonths(curYM(), -i); if (monthTx(ym).length) ms.push(stats(ym).save); } return ms; }
+const avgSave = () => { const ms = saveMonths(); return ms.length ? robustAvg(ms) : stats(curYM()).save; };
 const targets = () => ({liq:S.tgt.liq || Math.round(avgOut() * S.liqMonths / 50) * 50, emerg:S.tgt.emerg || Math.round(avgEssential() * S.emergMonths / 50) * 50});
 /* Entrate e uscite muovono i pilastri: di default entrano ed escono dalla liquidità, oppure dal pilastro scelto nel movimento */
 const pilFrom = () => S.pilFrom || today();
@@ -1445,8 +1448,9 @@ function loadDemo(){
   }
   S.goals = [{id:'g1', kind:'viaggio', name:'Viaggio in Giappone', target:3000, date:addMonths(curYM(), 10), saved:0}];
   S.pil = {liq:0, emerg:0, inv:0};
-  const hist = [[-11,'liq',900,'Saldo iniziale'],[-11,'emerg',600,'Saldo iniziale'],[-11,'inv',2000,'Saldo iniziale'],[-9,'inv',200,'PAC mensile'],[-8,'emerg',300,'Accantonamento'],[-7,'inv',200,'PAC mensile'],[-6,'liq',300,'Accantonamento'],[-6,'g:g1',250,'Accantonamento'],[-5,'emerg',300,'Accantonamento'],[-5,'inv',200,'PAC mensile'],[-4,'emerg',-150,'Riparazione auto'],[-3,'g:g1',200,'Accantonamento'],[-3,'inv',300,'PAC mensile'],[-2,'emerg',450,'Accantonamento'],[-2,'liq',250,'Accantonamento'],[-1,'g:g1',200,'Accantonamento'],[-1,'emerg',300,'Accantonamento'],[-1,'inv',300,'PAC mensile']];
+  const hist = [[-11,'liq',900,'Saldo iniziale'],[-11,'emerg',600,'Saldo iniziale'],[-11,'inv',2000,'Saldo iniziale'],[-9,'inv',200,'PAC mensile'],[-8,'emerg',300,'Accantonamento'],[-7,'inv',200,'PAC mensile'],[-6,'liq',300,'Accantonamento'],[-6,'g:g1',250,'Accantonamento'],[-5,'emerg',300,'Accantonamento'],[-5,'inv',200,'PAC mensile'],[-4,'emerg',-150,'Riparazione auto'],[-3,'g:g1',200,'Accantonamento'],[-3,'inv',300,'PAC mensile'],[-2,'emerg',450,'Accantonamento'],[-2,'liq',250,'Accantonamento'],[-1,'g:g1',200,'Accantonamento'],[-1,'emerg',300,'Accantonamento'],[-1,'inv',300,'PAC mensile'],[-1,'inv',165,'Correzione del saldo']];
   hist.forEach(([m, k, a, n]) => { const d = addMonths(curYM(), m) + '-02'; addMove(k, a, n, d); if (k.startsWith('g:')) S.goals[0].saved += a; else S.pil[k] += a; });
+  S.invPaid = {[addMonths(curYM(), -11) + '-02']:2000};
   S.mainGoal = 'g1';
   S.gym = {start:dayOffset(today(), -3), log:[0, 1, 2].map(i => ({day:i, d:dayOffset(today(), i - 3), found:i === 2 ? 60 : 0, note:''}))};
   save();
@@ -1970,16 +1974,18 @@ function bindPil(again){
     const box = document.getElementById('mv-' + k);
     const viaLiq = !set && k !== 'liq';
     box.innerHTML = '<div class="sec" style="gap:8px;margin-top:4px"><div class="row"><div class="eur" style="flex:1"><input id="mv-in" inputmode="none" readonly data-pad="' + (set ? 'neg' : '') + '" placeholder="' + (set ? 'Saldo reale di oggi' : 'Importo') + '"></div><button class="btn sm" id="mv-ok">' + (set ? 'Salva' : sign > 0 ? 'Aggiungi' : 'Preleva') + '</button></div>' +
+      (set && k === 'inv' ? (() => { const v = invPaidAt(curYM()); return '<div class="field"><label for="mv-p">Totale versato finora (facoltativo)</label><div class="eur"><input id="mv-p" inputmode="none" readonly data-pad value="' + (v === null ? '' : Math.round(v * 100) / 100) + '"></div><span class="small muted">Quanto hai messo tu in totale, senza guadagni e perdite. La differenza con il saldo è il plus/minus.</span></div>'; })() : '') +
       (viaLiq ? '<label class="check small"><input type="checkbox" id="mv-liq" checked> ' + (sign > 0 ? 'Prendi i soldi dalla liquidità' : 'Rimetti i soldi nella liquidità') + '</label>' : '') + '<input id="mv-n" placeholder="Nota (facoltativa)"></div>';
     box.querySelector('input').focus();
     box.querySelector('#mv-ok').onclick = () => { const a = parseAmt(val('mv-in')); if (!set && !(a > 0)) return;
-      if (set) { const d = a - pilBalance(k); adjPil(k, d); addMove(k, d, val('mv-n').trim() || 'Correzione del saldo'); }
+      if (set) { const d = a - pilBalance(k); adjPil(k, d); addMove(k, d, val('mv-n').trim() || 'Correzione del saldo');
+        if (k === 'inv' && val('mv-p').trim() !== '') { const pv = parseAmt(val('mv-p')); if (pv >= 0) { S.invPaid = S.invPaid || {}; S.invPaid[today()] = pv; } } }
       else if (viaLiq && document.getElementById('mv-liq').checked) { if (sign > 0) transfer('liq', k, a); else transfer(k, 'liq', Math.min(a, pilBalance(k))); }
       else { const d = sign > 0 ? a : -Math.min(a, pilBalance(k)); adjPil(k, d); addMove(k, d, val('mv-n').trim() || (sign > 0 ? 'Aggiunta' : 'Prelievo')); }
       save(); toast('Saldo aggiornato'); again(); };
   });
 }
-function addMove(k, a, n, d, x){ if (!a) return; S.moves.push(Object.assign({d:d || today(), k, a:Math.round(a * 100) / 100, n:n || ''}, x ? {x} : {})); if (S.moves.length > 600) S.moves.shift(); }
+function addMove(k, a, n, d, x){ if (!a) return; S.moves.push(Object.assign({d:d || today(), k, a:Math.round(a * 100) / 100, n:n || ''}, x ? {x} : {})); if (S.moves.length > 3000) S.moves.shift(); }
 function pillarMoves(id){ const gk = m => S.goals.find(g => 'g:' + g.id === m.k); return S.moves.concat(txEffects()).filter(m => { if (m.hx) return false; const g = gk(m); if (id === 'goal') return m.k.startsWith('g:') && (!g || !linkedGoal(g)); if (id === 'emerg') return m.k === 'emerg' || !!(g && g.kind === 'emergenza'); return m.k === id; }); }
 /* storico dei saldi: i saldi di fine mese inseriti a mano diventano movimenti di allineamento.
    Ognuno sta all'inizio del mese dopo, quindi cambia solo lo storico precedente e mai il saldo di oggi.
@@ -1997,6 +2003,17 @@ function rebuildHist(k){
     for (let j = 1; j <= n; j++) S.moves.push({d:addMonths(a.ym, j) + '-01', k, a:Math.round(gap / n * 100) / 100, n:'Allineamento allo storico', hk:1});
   }
 }
+function invBox(){
+  const pm = invPM();
+  if (!pm) return '<div class="note small">Vuoi vedere quanto hai versato e quanto è plus/minus? Usa "Correggi il saldo" e indica anche il totale versato finora.</div>';
+  const P = S.invPaid || {}, ks = Object.keys(P).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse().slice(0, 12);
+  const row = (l, v, c) => '<div class="spread"><span class="small">' + l + '</span><b class="num"' + (c ? ' style="color:' + c + '"' : '') + '>' + v + '</b></div>';
+  return '<div class="card"><span class="label">Versato e plus/minus</span>' + row('Valore di oggi', eur(pm.val)) + row('Versato da te', eur(pm.paid)) +
+    row('Plus/minus', pmTxt(pm.pm) + (pm.pct !== null ? ' (' + (pm.pct >= 0 ? '+' : '−') + Math.abs(pm.pct).toFixed(1).replace('.', ',') + '%)' : ''), pm.pm >= 0 ? IN_COL : OUT_COL) +
+    (ks.length > 1 ? '<details class="histbox"><summary>' + ic('chart') + ' Andamento</summary><div class="list">' + ks.map(k => { const ym = k.slice(0, 7), v = ym < curYM() ? pilBalanceAt('inv', ym) : pilBalance('inv'), pd = +P[k] || 0, d = v - pd;
+      return '<div class="item" style="grid-template-columns:1fr auto"><span class="t"><b>' + (ym < curYM() ? 'Fine ' + ymLabel(ym, {month:'long', year:'numeric'}) : dshort(k)) + '</b><span class="sub">Valore ' + eur(v) + ' · versato ' + eur(pd) + '</span></span><span class="num" style="color:' + (d >= 0 ? IN_COL : OUT_COL) + '">' + pmTxt(d) + (pd > 0 ? '<br><small>' + (d >= 0 ? '+' : '−') + Math.abs(d / pd * 100).toFixed(1).replace('.', ',') + '%</small>' : '') + '</span></div>'; }).join('') + '</div></details>' : '') +
+    '<p class="small muted">Il plus/minus è la differenza tra il valore e quanto hai versato: l\'andamento dei mercati, non una tua spesa o un tuo risparmio.</p></div>';
+}
 function renderPillar(){
   const p = PILLARS.find(x => x.id === R.id); if (!p) return nav({screen:'pillars'});
   const moves = pillarMoves(p.id).slice().sort((a, b) => a.d.localeCompare(b.d));
@@ -2009,11 +2026,11 @@ function renderPillar(){
     '<div class="intro"><span class="label" style="color:' + p.c + '">Pilastro ' + (PILLARS.indexOf(p) + 1) + ' di 4</span><h2>' + p.n + '</h2><p class="muted small">' + p.d + '</p></div>' +
     (p.id === 'liq' || p.id === 'emerg' ? targetBox(p.id) : '') +
     (p.id === 'goal' ? '<div class="list">' + S.goals.filter(g => !linkedGoal(g)).map(g => { const pl = goalPlan(g), gs = goalStatus(g); return '<button class="item" ' + nav$({screen:'goal', id:g.id}) + '><span class="ic" style="background:' + gs.c + ';color:#000">' + ic(KINDS.find(k => k[0] === g.kind)[2]) + '</span><span class="t"><b>' + esc(g.name) + (S.mainGoal === g.id ? ' <span class="y">★</span>' : '') + '</b><span class="sub">' + eur(goalSaved(g)) + ' di ' + eur(goalTarget(g)) + ' · entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + '</span></span><span class="small num">' + Math.round(pl.pct) + '%</span></button>'; }).join('') + '</div><button class="btn sm" style="align-self:flex-start" ' + nav$({screen:'goal', id:'new'}) + '>' + ic('plus') + 'Nuovo obiettivo</button>' : '') +
-    (p.id === 'inv' ? '<button class="readcard" ' + nav$({screen:'sim'}) + '><span class="t"><b>' + ic('chart') + ' Simulatore del futuro</b><span>Prova capitale, risparmio mensile, anni e rendimento</span></span>' + ic('right') + '</button><p class="small muted">Nessun tetto: qui va il denaro che non ti serve per molti anni. Le informazioni nell\'app non sono una consulenza finanziaria.</p>' : '') +
+    (p.id === 'inv' ? '<button class="readcard" ' + nav$({screen:'sim'}) + '><span class="t"><b>' + ic('chart') + ' Simulatore del futuro</b><span>Prova capitale, risparmio mensile, anni e rendimento</span></span>' + ic('right') + '</button><p class="small muted">Nessun tetto: qui va il denaro che non ti serve per molti anni. Le informazioni nell\'app non sono una consulenza finanziaria.</p>' + invBox() : '') +
     (p.id !== 'goal' ? '<div class="row"><button class="btn sm" data-mv="' + p.id + '" data-sign="1">Aggiungi</button><button class="btn ghost sm" data-mv="' + p.id + '" data-sign="-1">Preleva</button><button class="textlink" data-set="' + p.id + '">Correggi il saldo</button></div><div id="mv-' + p.id + '"></div>' +
       '<details class="histbox"' + (R.hist ? ' open' : '') + '><summary>' + ic('calendar') + ' Ricostruisci lo storico</summary><p class="small muted">Hai i saldi del passato, per esempio dagli estratti conto o dal vecchio programma? Scrivi quanto c\'era in questo pilastro alla fine di un mese: il grafico qui sotto si aggiorna e il saldo di oggi non cambia. Puoi aggiungerne quanti vuoi, anche uno per anno.</p>' +
-        '<div class="grid2"><div class="field"><label for="h-m">Fine del mese</label><input id="h-m" type="month" max="' + addMonths(curYM(), -1) + '" value="' + (R.hm || addMonths(curYM(), -1)) + '"></div><div class="field"><label for="h-v">Saldo</label><div class="eur"><input id="h-v" inputmode="none" readonly data-pad placeholder="0"></div></div></div><button class="btn sm" id="h-ok" style="align-self:flex-start">Aggiungi al grafico</button>' +
-        (((S.hist || {})[p.id] || []).length ? '<div class="list" style="margin-top:10px">' + S.hist[p.id].slice().sort((a, b) => b.ym.localeCompare(a.ym)).map(h => '<div class="item" style="grid-template-columns:1fr auto auto"><span class="t"><b>Fine ' + ymLabel(h.ym, {month:'long', year:'numeric'}) + '</b></span><span class="num">' + eur(h.v) + '</span><button class="textlink" data-hdel="' + h.ym + '" aria-label="Togli">Togli</button></div>').join('') + '</div>' : '') + '</details>' : '') +
+        '<div class="grid2"><div class="field"><label for="h-m">Fine del mese</label><input id="h-m" type="month" max="' + addMonths(curYM(), -1) + '" value="' + (R.hm || addMonths(curYM(), -1)) + '"></div><div class="field"><label for="h-v">Saldo</label><div class="eur"><input id="h-v" inputmode="none" readonly data-pad placeholder="0"></div></div></div>' + (p.id === 'inv' ? '<div class="field"><label for="h-p">Totale versato a quella data (facoltativo)</label><div class="eur"><input id="h-p" inputmode="none" readonly data-pad placeholder="0"></div></div>' : '') + '<button class="btn sm" id="h-ok" style="align-self:flex-start">Aggiungi al grafico</button>' +
+        (((S.hist || {})[p.id] || []).length ? '<div class="list" style="margin-top:10px">' + S.hist[p.id].slice().sort((a, b) => b.ym.localeCompare(a.ym)).map(h => '<div class="item" style="grid-template-columns:1fr auto auto"><span class="t"><b>Fine ' + ymLabel(h.ym, {month:'long', year:'numeric'}) + '</b>' + (p.id === 'inv' && (S.invPaid || {})[h.ym + '-31'] !== undefined ? '<span class="sub">versato ' + eur(+S.invPaid[h.ym + '-31'] || 0) + '</span>' : '') + '</span><span class="num">' + eur(h.v) + '</span><button class="textlink" data-hdel="' + h.ym + '" aria-label="Togli">Togli</button></div>').join('') + '</div>' : '') + '</details>' : '') +
     '<div class="card"><div class="spread"><span class="label">Saldo attuale</span><b class="num" style="font-family:var(--display);font-size:1.6rem">' + eur(bal) + '</b></div>' +
       '<div class="hist" role="img" aria-label="Saldo a fine mese, ultimi 12 mesi">' + series.map(s => '<div title="' + ymLabel(s.ym) + ': ' + eur(s.v) + '"><span style="height:' + Math.max(2, s.v / max * 130) + 'px;background:' + p.c + '"></span><small>' + ymLabel(s.ym, {month:'narrow'}) + '</small></div>').join('') +
       (t ? '<i class="htgt" style="bottom:' + (t / max * 130 + 18) + 'px" title="Obiettivo ' + eur(t) + '"></i>' : '') + '</div>' +
@@ -2022,12 +2039,13 @@ function renderPillar(){
       return '<div class="item" style="grid-template-columns:auto 1fr auto"><span class="ic" style="background:' + p.c + '">' + ic(m.a >= 0 ? 'plus' : 'left') + '</span><span class="t"><b>' + esc(m.n || (m.a >= 0 ? 'Accantonamento' : 'Prelievo')) + '</b><span class="sub">' + dshort(m.d) + (g ? ' · ' + esc(g.name) : '') + '</span></span><span class="amt num" style="color:' + (m.a >= 0 ? IN_COL : OUT_COL) + '">' + (m.a >= 0 ? '+' : '−') + eur2(Math.abs(m.a)) + '</span></div>'; }).join('') + '</div>'
       : '<div class="note">Ancora nessun movimento registrato. Usa "Aggiungi" o "Preleva" qui sopra.</div>') + '</div></div>';
   bindPil(renderPillar);
-  view.querySelectorAll('[data-hdel]').forEach(b => b.onclick = () => { S.hist[p.id] = S.hist[p.id].filter(h => h.ym !== b.dataset.hdel); rebuildHist(p.id); save(); const y = window.scrollY; R = {screen:'pillar', id:p.id, hist:1, hm:R.hm}; renderPillar(); postRender(); window.scrollTo({top:y}); });
+  view.querySelectorAll('[data-hdel]').forEach(b => b.onclick = () => { S.hist[p.id] = S.hist[p.id].filter(h => h.ym !== b.dataset.hdel); if (p.id === 'inv' && S.invPaid) delete S.invPaid[b.dataset.hdel + '-31']; rebuildHist(p.id); save(); const y = window.scrollY; R = {screen:'pillar', id:p.id, hist:1, hm:R.hm}; renderPillar(); postRender(); window.scrollTo({top:y}); });
   const ho = document.getElementById('h-ok'); if (ho) ho.onclick = () => {
     const ym = val('h-m'), v = parseAmt(val('h-v'));
     if (!ym || ym >= curYM()) return toast('Scegli un mese passato. Per oggi usa "Correggi il saldo"');
     if (!(v >= 0) || val('h-v').trim() === '') return toast('Scrivi il saldo di fine mese');
     S.hist = S.hist || {}; S.hist[p.id] = (S.hist[p.id] || []).filter(h => h.ym !== ym).concat({ym, v}); rebuildHist(p.id);
+    if (p.id === 'inv' && val('h-p').trim() !== '') { const pv = parseAmt(val('h-p')); if (pv >= 0) { S.invPaid = S.invPaid || {}; S.invPaid[ym + '-31'] = pv; } }
     save(); toast('Storico aggiornato'); const y = window.scrollY; R = {screen:'pillar', id:p.id, hist:1, hm:ym}; renderPillar(); postRender(); window.scrollTo({top:y}); const hv = document.getElementById('h-v'); if (hv) hv.focus({preventScroll:true});
   };
 }
@@ -2081,7 +2099,9 @@ function renderGoal(){
     '<button class="esebtn" ' + nav$({screen:'whatif', id:g.id}) + '><span class="marker">E se…?</span><span>Quando arrivi con qualche euro in più, e cosa potresti permetterti</span>' + ic('right') + '</button>' +
   '</div>';
   const mn = view.querySelector('#g-main'); if (mn) mn.onclick = () => { S.mainGoal = g.id; save(); toast('Ora è il tuo obiettivo principale'); renderGoal(); };
-  if (g.kind === 'patrimonio') { const n = document.createElement('p'); n.className = 'small muted'; n.textContent = 'Questo obiettivo segue da solo la somma dei 4 pilastri: liquidità, fondo emergenza, salvadanaio e investimenti. Per farlo crescere registra entrate e uscite e aggiorna i saldi dei pilastri.'; const r0 = view.querySelector('#g-box'); if (r0) r0.before(n); }
+  if (g.kind === 'patrimonio') { const n = document.createElement('p'); n.className = 'small muted'; const pm = invPM(), tot = goalSaved(g), tg = goalTarget(g);
+    n.textContent = 'Questo obiettivo segue da solo la somma dei 4 pilastri: liquidità, fondo emergenza, salvadanaio e investimenti. Il passo e la data di arrivo contano solo quello che metti da parte tu, non l\'andamento dei mercati.' +
+      (pm ? ' Di questo patrimonio, ' + pmTxt(pm.pm) + ' sono plus/minus degli investimenti.' + (tot >= tg && pm.pm > 0 && tot - pm.pm < tg ? ' Ci sei grazie ai mercati: una loro discesa potrebbe riportarti sotto la soglia.' : '') : ' Per separare i tuoi versamenti dai mercati, indica il totale versato quando correggi il saldo degli investimenti.'); const r0 = view.querySelector('#g-box'); if (r0) r0.before(n); }
   if (view.querySelector('#g-add')) view.querySelector('#g-add').onclick = () => {
     const box = document.getElementById('g-box');
     box.innerHTML = '<div class="sec" style="gap:8px"><div class="row"><div class="eur" style="flex:1"><input id="ga-in" inputmode="none" readonly data-pad placeholder="' + p.need + '"></div><button class="btn sm" id="ga-ok">Accantona</button></div><label class="check small"><input type="checkbox" id="ga-liq" checked> Prendi i soldi dalla liquidità (' + eur(pilBalance('liq')) + ')</label></div>';
@@ -2259,27 +2279,38 @@ function renderStats(){
 /* ---------- goal progress color and pace ---------- */
 const STAGES = [[25,'#d95926','Si parte'],[50,'#e3a008','Verso metà strada'],[75,'#a8c23a','Oltre metà strada'],[100,'#22A45D','Quasi arrivato'],[Infinity,'#22A45D','Obiettivo raggiunto']];
 const stageOf = pct => pct >= 100 ? STAGES[4] : STAGES.find(s => pct < s[0]);
+/* investimenti: il "totale versato" si indica quando aggiorni il saldo (oggi o nello storico); dopo, si aggiungono i versamenti registrati.
+   Il resto della differenza col saldo è il plus/minus, cioè l'andamento dei mercati. */
+const invContrib = m => m.k === 'inv' && !m.hk && !m.hx && m.n !== 'Saldo iniziale' && !/^Correzione del saldo/.test(m.n || '');
+function invPaidAt(ym){ const P = S.invPaid || {}, ks = Object.keys(P).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k) && k <= ym + '-32').sort(); if (!ks.length) return null;
+  const k0 = ks[ks.length - 1]; return (+P[k0] || 0) + S.moves.concat(txEffects()).filter(m => invContrib(m) && m.d > k0 && m.d <= ym + '-32').reduce((t, m) => t + m.a, 0); }
+function invPM(){ const v = invPaidAt(curYM()); if (v === null) return null; const val = pilBalance('inv'); return {paid:v, val, pm:val - v, pct:v > 0 ? (val - v) / v * 100 : null}; }
+/* plus/minus di un mese: se il versato è noto a inizio e fine mese è la variazione non versata; altrimenti tutto ciò che non è un versamento registrato */
+function invMarket(ym){ const mv = pillarMoves('inv').filter(m => ymOf(m.d) === ym), d = mv.reduce((t, m) => t + m.a, 0), a = invPaidAt(addMonths(ym, -1)), b = invPaidAt(ym);
+  return a !== null && b !== null ? d - (b - a) : mv.filter(m => !invContrib(m)).reduce((t, m) => t + m.a, 0); }
+const pmTxt = v => (v >= 0 ? '+' : '−') + eur(Math.abs(Math.round(v)));
 function goalPace(g){
   const keys = ['g:' + g.id].concat(g.kind === 'emergenza' ? ['emerg'] : []), all = g.kind === 'patrimonio';
   const inPil = k => ['liq', 'emerg', 'inv'].includes(k) || (k.startsWith('g:') && !linkedGoal(S.goals.find(x => 'g:' + x.id === k)));
-  const mv = S.moves.concat(txEffects()).filter(m => (all ? inPil(m.k) : keys.includes(m.k)) && !m.hx && m.n !== 'Saldo iniziale' && m.n !== 'Correzione del saldo');
+  /* patrimonio: conta tutto quello che cambia nei pilastri, tranne il saldo iniziale e il plus/minus degli investimenti */
+  const mv = S.moves.concat(txEffects()).filter(m => !m.hx && m.n !== 'Saldo iniziale' && (all ? inPil(m.k) : keys.includes(m.k) && m.n !== 'Correzione del saldo'));
   const first = mv.length ? mv.map(m => ymOf(m.d)).sort()[0] : null;
-  let n = first ? Math.min(3, monthsBetween(first, curYM())) : 0;
-  let sum;
-  if (n >= 1) sum = mv.filter(m => ymOf(m.d) >= addMonths(curYM(), -n) && ymOf(m.d) < curYM()).reduce((t, m) => t + m.a, 0);
-  else { n = 1; sum = mv.filter(m => ymOf(m.d) === curYM()).reduce((t, m) => t + m.a, 0); }
-  return {pace:Math.max(0, sum / n), any:mv.length > 0, n};
+  const month = ym => mv.filter(m => ymOf(m.d) === ym).reduce((t, m) => t + m.a, 0) - (all ? invMarket(ym) : 0);
+  const n = first ? Math.min(24, monthsBetween(first, curYM())) : 0;
+  if (n < 1) return {pace:Math.max(0, month(curYM())), any:mv.length > 0, n:0, trim:false};
+  const vals = Array.from({length:n}, (_, i) => month(addMonths(curYM(), i - n)));
+  return {pace:Math.max(0, robustAvg(vals)), any:true, n, trim:n >= 6};
 }
 function paceHTML(g){
   const p = goalPlan(g); if (!p.left) return '';
-  const {pace, any, n} = goalPace(g), need = p.need, r = need ? pace / need : 0;
+  const {pace, any, n, trim} = goalPace(g), need = p.need, r = need ? pace / need : 0, per = n ? (n === 1 ? 'Nell\'ultimo mese' : 'Negli ultimi ' + n + ' mesi') : 'Questo mese', why = [g.kind === 'patrimonio' ? 'senza contare i mercati' : '', trim ? 'senza il mese più alto e il più basso' : ''].filter(Boolean).join(', ');
   const st = !any ? ['Ancora fermo', 'var(--critical)'] : r >= 1.1 ? ['In anticipo', 'var(--good)'] : r >= .9 ? ['Passo giusto', 'var(--good)'] : r >= .6 ? ['Un po\' lento', 'var(--warn)'] : ['Troppo lento', 'var(--serious)'];
   const pos = Math.min(100, r / 2 * 100);
   const eta = pace > 0 ? addMonths(curYM(), Math.ceil(p.left / pace)) : null;
   return '<div class="pace"><div class="spread"><span class="label">Il tuo passo</span><span class="status" style="background:' + st[1] + '">' + st[0] + '</span></div>' +
     '<div class="ptrack" role="img" aria-label="Il tuo passo: ' + eur(Math.round(pace)) + ' al mese, passo giusto ' + eur(need) + ' al mese"><span class="pzone"></span><span class="pneed"></span>' + (any ? '<span class="pme" style="left:' + pos + '%;background:' + st[1] + '"></span>' : '') + '</div>' +
     '<div class="plbl small"><span>0</span><span style="left:50%">passo giusto<br><b>' + eur(need) + '/mese</b></span><span style="left:100%">' + eur(need * 2) + '</span></div>' +
-    '<p class="small">' + (any ? 'Negli ultimi ' + (n === 1 ? 'mese' : n + ' mesi') + ' hai accantonato in media <b>' + eur(Math.round(pace)) + ' al mese</b>. ' + (eta ? 'A questo passo arrivi a <b>' + ymLabel(eta, {month:'long', year:'numeric'}) + '</b>' + (eta <= g.date ? ', entro la scadenza.' : ', dopo la scadenza di ' + ymLabel(g.date, {month:'long', year:'numeric'}) + '.') : '') : 'Accantona la prima quota: il passo giusto è <b>' + eur(need) + ' al mese</b> fino a ' + ymLabel(g.date, {month:'long', year:'numeric'}) + '.') + '</p></div>';
+    '<p class="small">' + (any ? per + ' hai ' + (g.kind === 'patrimonio' ? 'messo da parte' : 'accantonato') + ' in media <b>' + eur(Math.round(pace)) + ' al mese</b>' + (why ? ' (' + why + ')' : '') + '. ' + (eta ? 'A questo passo arrivi a <b>' + ymLabel(eta, {month:'long', year:'numeric'}) + '</b>' + (eta <= g.date ? ', entro la scadenza.' : ', dopo la scadenza di ' + ymLabel(g.date, {month:'long', year:'numeric'}) + '.') : '') : 'Accantona la prima quota: il passo giusto è <b>' + eur(need) + ' al mese</b> fino a ' + ymLabel(g.date, {month:'long', year:'numeric'}) + '.') + '</p></div>';
 }
 function goalStatus(g){
   const p = goalPlan(g); if (!p.left) return {c:'#22A45D', l:'Obiettivo raggiunto'};
@@ -2418,7 +2449,7 @@ function coachMsgs(){
   if (pilBalance('liq') < 0) out.push({i:'wallet', c:'#E5484D', t:'La liquidità è sotto zero (' + eur(pilBalance('liq')) + '): dal conto sono uscite più spese di quante entrate hai registrato.', b:'Saldo della liquidità'});
   if (g) { const p = goalPlan(g), {pace, any} = goalPace(g);
     if (p.left && any && pace > 0) { const eta = addMonths(curYM(), Math.ceil(p.left / pace)), d = monthsBetween(eta, g.date);
-      out.push({i:'target', c:d >= 0 ? '#22A45D' : '#d95926', t:'Se mantieni questo ritmo (' + eur(Math.round(pace)) + ' al mese), raggiungerai «' + g.name + '» ' + (d > 0 ? 'con ' + d + (d === 1 ? ' mese' : ' mesi') + ' di anticipo.' : d === 0 ? 'proprio alla scadenza.' : 'con ' + (-d) + (d === -1 ? ' mese' : ' mesi') + ' di ritardo: servirebbero ' + eur(p.need) + ' al mese.'), b:'Media degli accantonamenti degli ultimi mesi'}); }
+      out.push({i:'target', c:d >= 0 ? '#22A45D' : '#d95926', t:'Se mantieni questo ritmo (' + eur(Math.round(pace)) + ' al mese), raggiungerai «' + g.name + '» ' + (d > 0 ? 'con ' + d + (d === 1 ? ' mese' : ' mesi') + ' di anticipo.' : d === 0 ? 'proprio alla scadenza.' : 'con ' + (-d) + (d === -1 ? ' mese' : ' mesi') + ' di ritardo: servirebbero ' + eur(p.need) + ' al mese.'), b:'Media di tutti i mesi registrati (fino a 24): un mese eccezionale non la sposta'}); }
     else if (p.left) out.push({i:'target', c:'#e3a008', t:'Per «' + g.name + '» non hai ancora accantonato nulla: servono ' + eur(p.need) + ' al mese fino a ' + ymLabel(g.date, {month:'long', year:'numeric'}) + '.', b:'Cifra mancante divisa per i mesi alla scadenza'}); }
   S.goals.filter(x => !linkedGoal(x) && x !== g).forEach(x => { const p = goalPlan(x); if (p.left && monthsBetween(curYM(), x.date) <= 3) out.push({i:'calendar', c:'#e3a008', t:'Hai previsto «' + x.name + '» entro ' + ymLabel(x.date, {month:'long'}) + ', ma mancano ' + eur(p.left) + ': servono ' + eur(p.need) + ' al mese.', b:'Obiettivi con scadenza entro 3 mesi'}); });
   const avg = {}; S.cats.out.forEach(c => { avg[c.id] = [1, 2, 3].reduce((t, k) => t + (stats(addMonths(curYM(), -k)).byCat[c.id] || 0), 0) / 3; });

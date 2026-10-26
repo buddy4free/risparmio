@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-TCpZQv+GpaXI4uqAPuRNKBn0lmLXYoN0HqZmq95Z9Yo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-44AO3yekPEbI8Mxz/UVGU2p8mFe2rXErzK0jKkdEfQ0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -875,7 +875,7 @@ const WELL = [
   {id:'steps', n:'Passi del giorno', d:'Obiettivo 8.000 passi', i:'feet', time:'19:00', rec:'DAILY', sec:'well'},
   {id:'pause', n:'Pausa dal lavoro', d:'Due pause di 5 minuti lontano dalla scrivania', i:'coffee', time:'11:00', rec:'DAILY', sec:'well'},
   {id:'breath', n:'Respirazione guidata', d:'2 minuti con i suoni', i:'wave', time:'13:30', rec:'DAILY', sec:'well'},
-  {id:'track', n:'Registra le spese', d:'Due minuti, ogni sera', i:'list', time:'21:00', rec:'DAILY', sec:'money'},
+  {id:'track', n:'Hai segnato tutto?', d:'Un controllo veloce a fine giornata, per le spese sfuggite', i:'list', time:'21:00', rec:'DAILY', sec:'money'},
   {id:'gym', n:'Tappa della palestra', d:'Le azioni e la lettura del giorno', i:'dumbbell', time:'08:30', rec:'DAILY', sec:'money'},
   {id:'review', n:'Revisione mensile dei conti', d:'Il primo giorno del mese, 15 minuti', i:'calendar', time:'19:00', rec:'MONTHLY', sec:'money'}
 ];
@@ -893,10 +893,10 @@ const catTile = (t, c) => '<span class="ic cat" style="background:' + catColor(t
 
 /* ---------- content: 21 tappe della palestra del risparmio ---------- */
 const GYM = [
-  {t:'Tutto parte dal tracciamento', acts:['Registra tutte le entrate di questo mese: stipendio, extra, regali, vendite.','Inserisci come ricorrenti le spese fisse: affitto o mutuo, bollette, abbonamenti.','Scegli un orario fisso, ogni sera, per registrare le spese del giorno.'],
+  {t:'Tutto parte dal tracciamento', acts:['Registra tutte le entrate di questo mese: stipendio, extra, regali, vendite.','Inserisci come ricorrenti le spese fisse: affitto o mutuo, bollette, abbonamenti.','Registra ogni spesa subito, appena paghi: apri l\'app e la segni. Bastano 5 secondi.'],
     i:'Non puoi migliorare quello che non misuri. Chi annota entrate e uscite per qualche settimana scopre quasi sempre spese che non immaginava. Il tracciamento non serve a sentirsi in colpa: serve a vedere.',
     deep:['La maggior parte delle persone sa con precisione quanto guadagna, ma stima le proprie spese al ribasso. Le uscite grandi si ricordano, quelle piccole e frequenti no: il caffè, la spesa "veloce", l\'acquisto online della sera. Sono proprio queste a fare la differenza a fine mese.','Il primo mese di tracciamento è una fotografia, non un esame. Non cambiare ancora le tue abitudini: registra tutto con onestà. Dal secondo mese potrai confrontare, capire e decidere dove intervenire.'],
-    tips:[['Inizia','Registra la sera, in un momento fisso. Due minuti bastano, ed è più facile ricordare tutto se lo fai ogni giorno.'],['Inizia','Usa le spese ricorrenti: le inserisci una volta e tornano ogni mese da sole.'],['Sostituisci','Se paghi in contanti, tieni gli scontrini in un unico posto e registrali la sera.'],['Inizia','Non cercare la perfezione: un tracciamento al 90% vale molto più di nessun tracciamento.']],
+    tips:[['Inizia','Registra subito: paghi, apri l\'app e segni. In 5 secondi hai fatto, e non devi ricordare niente a fine giornata. Rimandare a "stasera" funziona per qualche giorno, poi si salta: farlo subito diventa un\'abitudine.'],['Inizia','Usa le spese ricorrenti: le inserisci una volta e tornano ogni mese da sole.'],['Sostituisci','Se paghi in contanti, segna la spesa appena esci dal negozio: è il momento in cui te la ricordi meglio.'],['Inizia','Non cercare la perfezione: un tracciamento al 90% vale molto più di nessun tracciamento.']],
     pill:'Una spesa da 3 € al giorno vale circa 1.095 € in un anno. Le piccole cifre ripetute sono le più costose.'},
   {t:'Le 5 strade del risparmio', acts:['Registra le spese di ieri e di oggi, anche il caffè.','Scegli una spesa del mese e chiediti quale delle 5 strade potresti usare.','Scrivi nella nota della tappa la tua spesa più "automatica".'],
     i:'Risparmiare non vuol dire solo tagliare. Per ogni spesa ci sono cinque domande da farsi, e "eliminare" è solo la prima.',
@@ -1497,7 +1497,7 @@ function todayList(){
   const t = today(), W = S.well[t] || {}, items = [];
   const gd = gymDay();
   if (gd.idx < 21) items.push({i:'dumbbell', n:'Palestra · tappa ' + (gd.idx + 1) + ' di 21', d:gd.doneToday ? 'Fatta oggi' : GYM[gd.idx].t, done:gd.doneToday, go:{screen:'gym'}});
-  items.push({i:'list', n:'Registra le spese di oggi', d:S.tx.some(x => x.d === t) ? 'Fatto' : 'Due minuti, alle ' + S.times.track, done:S.tx.some(x => x.d === t), go:{screen:'add'}});
+  items.push({i:'list', n:'Registra le spese di oggi', d:S.tx.some(x => x.d === t) ? 'Fatto' : 'Appena paghi: 5 secondi', done:S.tx.some(x => x.d === t), go:{screen:'add'}});
   items.push({i:'feet', n:'Passi', d:fmtN(W.steps || 0) + ' di 8.000', done:(W.steps || 0) >= 8000, go:{screen:'well'}});
   items.push({i:'wave', n:'Respirazione guidata', d:W.breath ? 'Fatta' : 'Alle ' + S.times.breath, done:!!W.breath, go:{screen:'breath'}});
   upcomingDues().slice(0, 2).forEach(d => items.push({i:'calendar', n:'Scadenza: ' + esc(d.n), d:dueState(d).l + ' · ' + eur2(d.a), done:false, go:{screen:'dues', open:d.id}}));
@@ -2337,7 +2337,7 @@ function coachMsgs(){
   if (s.rate !== null && prev.rate !== null && Math.abs(s.rate - prev.rate) >= 5) out.push({i:'chart', c:s.rate > prev.rate ? '#22A45D' : '#d95926', t:'Il tasso di risparmio è ' + Math.round(s.rate) + '%, ' + (s.rate > prev.rate ? 'in crescita' : 'in calo') + ' di ' + Math.round(Math.abs(s.rate - prev.rate)) + ' punti rispetto al mese scorso.', b:'Entrate e uscite registrate'});
   upcomingDues().slice(0, 1).forEach(d => out.unshift({i:'calendar', c:'#e3a008', t:(dueDays(d) < 0 ? esc(d.n) + ' è scaduto' : 'Tra ' + dueDays(d) + ' giorni scade ' + esc(d.n)) + ' (' + eur2(d.a) + ' ' + FREQ[d.freq][0] + '). Rinnovi, rinegozi, riduci o disdici?', b:'Il tuo calendario delle scadenze', go:{screen:'dues', open:d.id}}));
   const last = S.tx.map(x => x.d).filter(d => d <= today()).sort().pop();
-  if (last && daysBetween(last, today()) >= 3) out.push({i:'list', c:'#3987e5', t:'Non registri movimenti da ' + daysBetween(last, today()) + ' giorni: due minuti stasera tengono i dati affidabili.', b:'Data dell\'ultimo movimento'});
+  if (last && daysBetween(last, today()) >= 3) out.push({i:'list', c:'#3987e5', t:'Non registri movimenti da ' + daysBetween(last, today()) + ' giorni: hai speso qualcosa? Segnalo adesso, poi prova a farlo appena paghi.', b:'Data dell\'ultimo movimento'});
   return out.slice(0, 4);
 }
 function coachHTML(){

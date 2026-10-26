@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-RmB8xWZCh4b1AJiyGt7F509ZXgBRRarf+Zcr6Way4oA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-kdZyKlUF4ElsGvuRiqS/DXd+2mXTADhp3uEm3HhrMlE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -594,7 +594,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 @keyframes dpop{from{opacity:0;transform:translateY(14px) scale(.9)}to{opacity:1;transform:none}}
 @keyframes dfade{from{opacity:0}}
 
-.carousel{align-items:flex-start;transition:height .25s ease;display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.carousel{align-items:flex-start;transition:height .25s ease;display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .carousel::-webkit-scrollbar{display:none}
 .carousel .slide{flex:0 0 100%;scroll-snap-align:start;min-width:0;display:flex;flex-direction:column}
 #gcar .slide{flex-basis:92%}
@@ -648,6 +648,8 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 .books .slide{flex-basis:70%;display:flex}
 .books .book{flex:1;min-height:210px}
 .book{border:2px solid var(--yellow);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:6px;height:100%}
+.bweek{display:flex;flex-direction:column;gap:12px;border-color:var(--yellow)}.bcover{width:58px;height:78px;border-radius:8px 12px 12px 8px;background:var(--yellow);color:#000;display:grid;place-items:center;flex:none;box-shadow:inset 6px 0 0 rgba(0,0,0,.18)}.bcover .i{width:28px;height:28px}.btitle{font-size:1.12rem;line-height:1.25}
+.bidea{border-left:3px solid var(--yellow);padding-left:12px;display:flex;flex-direction:column;gap:4px}.btag{align-self:flex-start;font-size:.7rem;font-weight:700;border:1px solid var(--line);border-radius:99px;padding:2px 8px;color:var(--muted)}
 .bspine{width:40px;height:40px;border-radius:10px;background:var(--yellow);color:#000;display:grid;place-items:center}
 
 .gart{width:100%;max-width:360px;height:auto;align-self:center;border-radius:18px;background:#0e0e0e;border:2px solid var(--yellow)}
@@ -2694,6 +2696,9 @@ const lessonDone = id => (S.learn || {})[id] && S.learn[id].quiz !== undefined;
 const lessonPerfect = id => { const st = (S.learn || {})[id], l = LESSONS.find(x => x.id === id); return !!st && (!!st.p || st.quiz === 2 || (!!l && st.quiz >= l.q.length)); };
 function lessonOpen(id){ const L = LORDER(), k = L.indexOf(id); if (k <= 0 || lessonDone(id)) return true; const prev = S.learn[L[k - 1]]; return !!prev && prev.quiz !== undefined && (prev.f || prev.d) < today(); }
 function lessonNext(){ const L = LORDER(), k = L.findIndex(id => !lessonOpen(id)); return k > 0 && lessonDone(L[k - 1]) ? L[k] : null; }
+function bookCard(){ const k = bookOfWeek(), b = BOOKS[k], nx = BOOKS[(k + 1) % BOOKS.length];
+  return '<div class="card bweek"><span class="label">Il libro della settimana</span><div class="row" style="gap:14px;align-items:flex-start;flex-wrap:nowrap"><span class="bcover">' + ic('book') + '</span><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b class="btitle">' + esc(b[0]) + '</b><span class="small y">' + esc(b[1]) + '</span><span class="small muted">' + [b[3], b[4]].filter(Boolean).join(' · ') + '</span></div></div>' +
+    '<p class="small" style="margin:0">' + esc(b[2]) + '</p><div class="bidea"><span class="label">Un\'idea da portare via</span><p style="margin:0">' + esc(b[5]) + '</p></div><span class="small muted">La prossima settimana: ' + esc(nx[0]) + '</span></div>'; }
 function renderLearn(){
   S.learn = S.learn || {};
   const done = LESSONS.filter(l => (S.learn[l.id] || {}).quiz !== undefined).length;
@@ -2705,7 +2710,7 @@ function renderLearn(){
     '<div class="intro"><span class="marker y" style="font-size:1.05rem">Impara</span><h2>Una domanda al giorno</h2><p class="muted">Un minuto al giorno per allenare la testa ai soldi, poi una lezione nuova al giorno, con 5 domande. ' + done + ' di ' + LESSONS.length + ' completate.</p></div>' + qCard() +
     '<div class="note">Contenuti educativi e generali. Non sono consigli su cosa comprare o vendere: per scelte personali rivolgiti a un consulente finanziario indipendente.</div>' +
     CATS.map(c => '<div class="sec"><span class="label">' + c[1] + '</span><div class="list">' + LESSONS.filter(l => l.cat === c[0]).map(row).join('') + '</div></div>').join('') +
-    '<div class="sec"><span class="label">Libri consigliati</span><div class="carousel books">' + BOOKS.map(b => '<div class="slide"><div class="book"><span class="bspine">' + ic('book') + '</span><b>' + esc(b[0]) + '</b><span class="small y">' + esc(b[1]) + '</span><p class="small muted">' + esc(b[2]) + '</p></div></div>').join('') + '</div><p class="small muted">Scorri ↔ · Una selezione indicativa, senza link commerciali.</p></div></div>';
+    bookCard() + '<div class="sec"><span class="label">Gli altri libri consigliati</span><div class="carousel books">' + BOOKS.map((b, k) => k === bookOfWeek() ? '' : '<div class="slide"><div class="book"><span class="bspine">' + ic('book') + '</span><b>' + esc(b[0]) + '</b><span class="small y">' + esc(b[1]) + '</span><span class="btag">' + esc(b[4]) + '</span><p class="small muted">' + esc(b[2]) + '</p></div></div>').join('') + '</div><p class="small muted">Scorri ↔ · ' + BOOKS.length + ' libri, uno nuovo in evidenza ogni lunedì. Una selezione indicativa, senza link commerciali.</p></div></div>';
   bindQ(renderLearn);
 }
 function renderLesson(){
@@ -2863,17 +2868,65 @@ LESSONS.push(
     q:[{q:'Le carte revolving hanno di solito tassi…', o:['Molto bassi','Alti, spesso tra 15% e 20%'], a:1},{q:'"Tasso zero" significa sempre nessun costo?', o:['Sì','No, controlla il TAEG e le spese'], a:1}], link:['Calcola i tuoi interessi', 'debts']}
 );
 LESSONS.forEach(l => { (EXTRA_Q[l.id] || []).forEach((q, k) => { const r = (k + l.id.length) % q.o.length, o = q.o.slice(r).concat(q.o.slice(0, r)); l.q.push({q:q.q, o, a:(q.a - r + q.o.length) % q.o.length}); }); l.q = l.q.slice(0, 5); });
+/* libri consigliati: titolo, autore, di cosa parla, anno, tema, un'idea da portare via. Uno diverso ogni settimana */
 const BOOKS = [
-  ['La psicologia dei soldi', 'Morgan Housel', 'Perché le decisioni sui soldi dipendono più dal comportamento che dai numeri.'],
-  ['L\'uomo più ricco di Babilonia', 'George S. Clason', 'Le regole del risparmio raccontate come parabole: semplice e senza tempo.'],
-  ['Sei già ricco ma non lo sai', 'Riccardo Spada', 'Un divulgatore italiano spiega come guardare con occhi nuovi i soldi che hai già e farli lavorare meglio.'],
-  ['Investire senza Dubbi', 'Riccardo Spada', 'Le basi dell\'investimento spiegate in modo semplice, per chi parte da zero e vuole capire prima di decidere.'],
-  ['Pensieri lenti e veloci', 'Daniel Kahneman', 'Come ragioniamo e perché sbagliamo, anche quando spendiamo.'],
-  ['Nudge. La spinta gentile', 'Richard H. Thaler, Cass R. Sunstein', 'Piccoli accorgimenti che cambiano le nostre scelte, risparmio compreso.'],
-  ['L\'investitore intelligente', 'Benjamin Graham', 'Il testo classico sull\'investimento prudente e di lungo periodo.'],
-  ['The Little Book of Common Sense Investing', 'John C. Bogle', 'Il fondatore di Vanguard spiega i fondi indicizzati e il peso dei costi.'],
-  ['Il magico potere del riordino', 'Marie Kondo', 'Minimalismo in casa: meno cose, più chiarezza, meno acquisti inutili.']
+  ['La psicologia dei soldi', 'Morgan Housel', 'Perché le decisioni sui soldi dipendono più dal comportamento che dai numeri, raccontato con brevi storie vere.', 2020, 'Soldi', 'Essere ragionevoli batte essere perfettamente razionali: una strategia che riesci a seguire vale più di una ottima che abbandoni.'],
+  ['L\'uomo più ricco di Babilonia', 'George S. Clason', 'Le regole del risparmio raccontate come parabole ambientate nell\'antica Babilonia: semplice e senza tempo.', 1926, 'Soldi', 'Metti da parte almeno un decimo di quello che guadagni, prima di spendere il resto.'],
+  ['Sei già ricco ma non lo sai', 'Riccardo Spada', 'Un divulgatore italiano spiega come guardare con occhi nuovi i soldi che hai già e farli lavorare meglio.', null, 'Soldi', 'Prima di cercare di guadagnare di più, impara a vedere e usare bene quello che hai già.'],
+  ['Investire senza Dubbi', 'Riccardo Spada', 'Le basi dell\'investimento spiegate in modo semplice, per chi parte da zero e vuole capire prima di decidere.', null, 'Investire', 'Capire prima di decidere: un investimento che non sai spiegare non fa per te.'],
+  ['Padre ricco padre povero', 'Robert T. Kiyosaki', 'Il confronto tra due modi di pensare ai soldi, quello del padre "povero" e quello del padre "ricco", che ha fatto discutere milioni di lettori.', 1997, 'Soldi', 'Distingui ciò che ti porta soldi in tasca da ciò che te li toglie, anche se lo chiamano "investimento".'],
+  ['Il milionario della porta accanto', 'Thomas J. Stanley, William D. Danko', 'Uno studio sui milionari americani: molti vivono in modo sorprendentemente sobrio, lontano dallo stereotipo del lusso.', 1996, 'Soldi', 'Chi sembra ricco spesso spende tutto; chi è ricco davvero spesso non lo sembra.'],
+  ['Your Money or Your Life', 'Vicki Robin, Joe Dominguez', 'Un percorso in nove passi per cambiare il rapporto con il denaro, partendo da quanta "energia vitale" costa ogni spesa.', 1992, 'Soldi', 'Ogni acquisto costa ore della tua vita: chiediti se le vale.'],
+  ['I Will Teach You to Be Rich', 'Ramit Sethi', 'Un programma pratico per automatizzare risparmio e investimenti e spendere senza sensi di colpa per ciò che ami.', 2009, 'Soldi', 'Taglia senza pietà ciò che non ti importa, per spendere volentieri su ciò che conta per te.'],
+  ['The Total Money Makeover', 'Dave Ramsey', 'Un metodo a tappe per uscire dai debiti e costruire un fondo di emergenza, famoso per la "palla di neve" dei debiti.', 2003, 'Debiti', 'Chiudere prima il debito più piccolo dà lo slancio per continuare.'],
+  ['The Simple Path to Wealth', 'JL Collins', 'Nato da una serie di lettere alla figlia, spiega in modo diretto come evitare i debiti e investire con semplicità nel lungo periodo.', 2016, 'Investire', 'Spendi meno di quanto guadagni, investi la differenza ed evita i debiti: la semplicità è un vantaggio.'],
+  ['The Little Book of Common Sense Investing', 'John C. Bogle', 'Il fondatore di Vanguard spiega i fondi indicizzati e perché i costi pesano così tanto nel tempo.', 2007, 'Investire', 'Non cercare l\'ago nel pagliaio: compra tutto il pagliaio, a basso costo.'],
+  ['A spasso per Wall Street', 'Burton G. Malkiel', 'Un classico che spiega perché è difficilissimo battere il mercato nel tempo e cosa significa per chi investe.', 1973, 'Investire', 'Prevedere i mercati è quasi impossibile: meglio diversificare e tenere bassi i costi.'],
+  ['L\'investitore intelligente', 'Benjamin Graham', 'Il testo classico sull\'investimento prudente e di lungo periodo, scritto dal maestro di Warren Buffett.', 1949, 'Investire', 'Il mercato a volte è euforico, a volte depresso: non farti trascinare dal suo umore.'],
+  ['Millionaire Teacher', 'Andrew Hallam', 'Un insegnante racconta come ha costruito il suo patrimonio con uno stipendio normale, in nove lezioni pratiche.', 2011, 'Investire', 'Uno stipendio normale, spese sotto controllo e tempo possono bastare.'],
+  ['Same as Ever', 'Morgan Housel', 'Le cose che non cambiano mai nel comportamento umano, e perché contano più delle previsioni sul futuro.', 2023, 'Soldi', 'Più che indovinare cosa cambierà, conviene capire cosa resterà uguale.'],
+  ['Die with Zero', 'Bill Perkins', 'Una provocazione: risparmiare è importante, ma anche usare i soldi per esperienze nel momento giusto della vita.', 2020, 'Soldi', 'Alcune esperienze hanno un\'età giusta: rimandarle troppo significa perderle.'],
+  ['Il cigno nero', 'Nassim Nicholas Taleb', 'Gli eventi rari e imprevedibili che cambiano tutto, e perché tendiamo a sottovalutarli.', 2007, 'Mente', 'Preparati all\'imprevisto invece di fidarti delle previsioni: è la logica del fondo di emergenza.'],
+  ['Pensieri lenti e veloci', 'Daniel Kahneman', 'Come ragioniamo e perché sbagliamo, anche quando spendiamo: il pensiero veloce e quello lento.', 2011, 'Mente', 'Per le decisioni importanti rallenta: il pensiero veloce è comodo ma si inganna facilmente.'],
+  ['Nudge. La spinta gentile', 'Richard H. Thaler, Cass R. Sunstein', 'Piccoli accorgimenti nel modo in cui sono presentate le scelte cambiano i nostri comportamenti, risparmio compreso.', 2008, 'Mente', 'Rendi automatica la scelta giusta: un bonifico programmato batte la forza di volontà.'],
+  ['Prevedibilmente irrazionale', 'Dan Ariely', 'Esperimenti sorprendenti su come le nostre scelte, anche economiche, sono irrazionali in modo prevedibile.', 2008, 'Mente', 'Il "gratis" e i confronti ci ingannano: chiediti se lo vorresti anche senza offerta.'],
+  ['Le armi della persuasione', 'Robert B. Cialdini', 'I principi psicologici che ci spingono a dire sì: scarsità, reciprocità, riprova sociale e altri.', 1984, 'Mente', '"Ultimi pezzi" e "lo comprano tutti" sono leve: riconoscerle aiuta a resistere.'],
+  ['Il paradosso della scelta', 'Barry Schwartz', 'Perché troppe opzioni ci rendono meno soddisfatti e più indecisi.', 2004, 'Minimalismo', 'Accontentarsi di "abbastanza buono" spesso rende più felici che cercare il meglio assoluto.'],
+  ['L\'economista mascherato', 'Tim Harford', 'L\'economia spiegata con la vita di tutti i giorni: dal prezzo del caffè al supermercato.', 2005, 'Soldi', 'I prezzi sono pensati per farti pagare quanto sei disposto a pagare: confrontare conviene.'],
+  ['Freakonomics', 'Steven D. Levitt, Stephen J. Dubner', 'Domande curiose risposte con i dati, per scoprire che gli incentivi spiegano molti comportamenti.', 2005, 'Mente', 'Per capire un comportamento, guarda gli incentivi.'],
+  ['Atomic Habits. Piccole abitudini per grandi cambiamenti', 'James Clear', 'Come piccoli miglioramenti ripetuti ogni giorno diventano grandi risultati, con un metodo pratico per costruire abitudini.', 2018, 'Abitudini', 'Rendi l\'abitudine ovvia, attraente, facile e gratificante. Migliorare dell\'1% al giorno si somma.'],
+  ['La dittatura delle abitudini', 'Charles Duhigg', 'Il ciclo segnale, routine e gratificazione che governa le abitudini, e come cambiarlo.', 2012, 'Abitudini', 'Non eliminare un\'abitudine: sostituisci la routine e tieni lo stesso segnale e la stessa gratificazione.'],
+  ['Tiny Habits', 'BJ Fogg', 'Un ricercatore di Stanford spiega come iniziare da abitudini minuscole, legate a qualcosa che fai già.', 2019, 'Abitudini', 'Comincia così piccolo da non poter fallire: "dopo il caffè, registro le spese".'],
+  ['Le 7 regole per avere successo', 'Stephen R. Covey', 'Sette abitudini per l\'efficacia personale, dall\'essere proattivi al mettere prima le cose importanti.', 1989, 'Abitudini', 'Distingui ciò che è importante da ciò che è solo urgente.'],
+  ['The Miracle Morning', 'Hal Elrod', 'Una routine del mattino per iniziare la giornata con calma e intenzione, prima delle distrazioni.', 2012, 'Abitudini', 'Come inizi la giornata spesso decide come va il resto.'],
+  ['Grinta', 'Angela Duckworth', 'Perché passione e perseveranza contano spesso più del talento per raggiungere obiettivi di lungo periodo.', 2016, 'Abitudini', 'La costanza nel tempo batte il talento senza impegno.'],
+  ['Mindset', 'Carol S. Dweck', 'La differenza tra pensare che le capacità siano fisse e pensare che si possano sviluppare.', 2006, 'Mente', 'Gli errori sono informazioni: si impara, anche con i soldi.'],
+  ['Il test del marshmallow', 'Walter Mischel', 'Lo psicologo del famoso esperimento sui bambini e il marshmallow spiega l\'autocontrollo e come allenarlo.', 2014, 'Abitudini', 'L\'autocontrollo si allena con strategie, non solo con la forza di volontà: togli la tentazione dalla vista.'],
+  ['The Willpower Instinct', 'Kelly McGonigal', 'Cosa dice la scienza sulla forza di volontà, e perché stanchezza e stress la indeboliscono.', 2011, 'Abitudini', 'La forza di volontà si esaurisce: decidi le cose importanti quando sei riposato.'],
+  ['Il magico potere del riordino', 'Marie Kondo', 'Minimalismo in casa: tenere solo ciò che ti dà gioia porta più chiarezza e meno acquisti inutili.', 2011, 'Minimalismo', 'Quando sai cosa hai, compri meno doppioni.'],
+  ['The More of Less', 'Joshua Becker', 'Come possedere meno cose libera tempo, soldi ed energia per ciò che conta.', 2016, 'Minimalismo', 'Ogni oggetto in più chiede tempo, spazio e attenzione.'],
+  ['Goodbye, Things', 'Fumio Sasaki', 'Un autore giapponese racconta come liberarsi della maggior parte delle sue cose gli abbia cambiato la vita.', 2015, 'Minimalismo', 'Smettere di confrontarsi con gli altri riduce la voglia di comprare.'],
+  ['Essenzialismo', 'Greg McKeown', 'La disciplina di fare meno, ma meglio: dire no a quasi tutto per dire sì alle poche cose essenziali.', 2014, 'Minimalismo', 'Se non è un sì convinto, è un no.'],
+  ['Minimalismo digitale', 'Cal Newport', 'Come usare la tecnologia con intenzione, senza farsi divorare tempo e attenzione dallo smartphone.', 2019, 'Concentrazione', 'Tieni solo gli strumenti digitali che servono davvero ai tuoi valori.'],
+  ['Walden ovvero Vita nei boschi', 'Henry David Thoreau', 'Il racconto dei due anni vissuti in una capanna vicino a un lago, per scoprire di quanto poco si ha bisogno.', 1854, 'Minimalismo', 'Il costo di una cosa è la quantità di vita che devi dare in cambio per averla.'],
+  ['L\'arte della semplicità', 'Dominique Loreau', 'Un invito a semplificare casa, abitudini e pensieri, ispirato alla cultura giapponese.', 2005, 'Minimalismo', 'Meno cose, più spazio per vivere.'],
+  ['Deep Work', 'Cal Newport', 'Il valore del lavoro concentrato, senza distrazioni, in un mondo pieno di notifiche.', 2016, 'Concentrazione', 'Blocchi di tempo senza distrazioni producono più di intere giornate frammentate.'],
+  ['So Good They Can\'t Ignore You', 'Cal Newport', 'Perché la passione per il lavoro spesso nasce dopo essere diventati bravi, non prima.', 2012, 'Concentrazione', 'Le competenze rare e preziose sono il miglior investimento su te stesso.'],
+  ['Detto, fatto!', 'David Allen', 'Il metodo "Getting Things Done" per svuotare la testa dalle cose da fare e organizzarle in un sistema affidabile.', 2001, 'Concentrazione', 'Se richiede meno di due minuti, fallo subito.'],
+  ['Quattromila settimane', 'Oliver Burkeman', 'Una vita media dura circa quattromila settimane: un libro sul tempo che abbiamo e su come usarlo, senza l\'ossessione della produttività.', 2021, 'Concentrazione', 'Non farai mai tutto: scegli consapevolmente cosa lasciare indietro.'],
+  ['Flow', 'Mihaly Csikszentmihalyi', 'Lo stato di piena concentrazione in cui perdi la nozione del tempo, e perché ci rende felici.', 1990, 'Concentrazione', 'Le attività impegnative ma alla tua portata danno più soddisfazione dello svago passivo.'],
+  ['Indistractable', 'Nir Eyal', 'Come controllare l\'attenzione partendo da ciò che ci spinge a distrarci, non solo dalle app.', 2019, 'Concentrazione', 'La distrazione spesso è una fuga da un disagio: riconoscilo prima di aprire il telefono.'],
+  ['Stolen Focus', 'Johann Hari', 'Un\'inchiesta su perché facciamo sempre più fatica a concentrarci e cosa possiamo fare.', 2022, 'Concentrazione', 'La concentrazione non è solo una questione personale: anche l\'ambiente va protetto.'],
+  ['The ONE Thing', 'Gary Keller, Jay Papasan', 'Concentrarsi sull\'unica cosa che rende tutto il resto più facile o inutile.', 2013, 'Concentrazione', 'Chiediti: qual è l\'unica cosa che, se la faccio, rende tutto il resto più facile?'],
+  ['Pensieri', 'Marco Aurelio', 'Le riflessioni personali di un imperatore romano su come vivere con calma e senso del dovere.', null, 'Benessere', 'Concentrati su ciò che dipende da te, lascia andare il resto.'],
+  ['Lettere a Lucilio', 'Seneca', 'Lettere di filosofia pratica su tempo, ricchezza, paure e felicità, sorprendentemente attuali.', null, 'Benessere', 'Non è povero chi ha poco, ma chi desidera sempre di più.'],
+  ['Uno psicologo nei lager', 'Viktor E. Frankl', 'La testimonianza di uno psichiatra sopravvissuto ai campi di concentramento e la sua riflessione sul senso della vita.', 1946, 'Benessere', 'Anche quando non scegli le circostanze, puoi scegliere come rispondere.'],
+  ['Ikigai', 'Héctor García, Francesc Miralles', 'Il concetto giapponese di "ragione di vita" e le abitudini delle persone più longeve di Okinawa.', 2016, 'Benessere', 'Avere uno scopo, muoversi e coltivare le relazioni aiuta a vivere meglio e più a lungo.'],
+  ['Avere o essere?', 'Erich Fromm', 'Due modi di vivere a confronto: quello basato sul possedere e quello basato sull\'essere e sul condividere.', 1976, 'Benessere', 'Possedere di più non significa vivere meglio.'],
+  ['Il potere di adesso', 'Eckhart Tolle', 'Un libro molto letto sulla consapevolezza e sul vivere il presente invece di rincorrere pensieri e preoccupazioni.', 1997, 'Benessere', 'Molte ansie, anche sui soldi, vivono nel futuro: torna a cosa puoi fare oggi.']
 ];
+/* il libro della settimana: cambia ogni lunedì e scorre tutto l'elenco */
+const bookOfWeek = () => Math.floor((new Date(today() + 'T12:00:00') - new Date('2026-01-05T12:00:00')) / 6048e5) % BOOKS.length;
 
 /* ---------- E se...? ---------- */
 function scene(k){

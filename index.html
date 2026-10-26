@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-heXLmBujESDnux9zt+hlblOgjzns8Qz1lv4UIthjAJo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-CtNgIId1CfQ5AcCi2haRQ15s1esVDqVOhEvoZl0Gq0w='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -165,6 +165,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .clchev{font-size:1.3rem;color:var(--muted);width:22px;text-align:center}.clchev .i{width:18px;height:18px}.cl.open{background:var(--soft)}
 .clsubs{display:flex;flex-wrap:wrap;gap:8px;padding:2px 14px 14px 62px}.clsubs button{border:1px solid var(--line);background:#000;border-radius:99px;padding:9px 14px;font-weight:600;font-size:.88rem;color:inherit}.clsubs button[aria-pressed="true"]{background:var(--yellow);color:#000;border-color:var(--yellow)}.clsubs .muted{color:var(--muted)}
 .clnew{padding:0 14px 14px 62px}
+.list .item.off{opacity:.55}
 .qday{display:flex;flex-direction:column;gap:12px;border-color:var(--yellow)}.qday .qq{font-size:1.08rem;line-height:1.35}
 .cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
 .cats button{border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.74rem;font-weight:600;line-height:1.15;text-align:center;min-height:78px}
@@ -2288,7 +2289,8 @@ function renderGym(){
   }
   view.innerHTML = '<div class="sec" style="gap:22px">' + gymTabs('gym') + '<div class="intro"><span class="marker y" style="font-size:1.05rem">La palestra del risparmio</span><h2>21 tappe per una nuova abitudine</h2><p class="muted">Una tappa al giorno: una lettura di 3 minuti e da 2 a 3 azioni concrete. Servono circa tre settimane perché un gesto diventi abitudine.</p></div>' +
     '<div class="sec" style="gap:8px"><span class="small muted">Scorri ↔ · tocca una tappa fatta per rileggerla</span><div class="hscroll stops" id="stops">' + Array.from({length:21}, (_, i) => { const cls = i < g.idx ? 'done' : i === g.idx ? 'now' : '';
-      return '<button class="stop ' + cls + '"' + (i <= g.idx && i < 21 ? ' ' + nav$({screen:'read', i}) : ' disabled') + ' aria-label="Tappa ' + (i + 1) + '"><span class="bub">' + (i < g.idx ? '✓' : i + 1) + '</span><span class="st">' + esc(GYM[i].t) + '</span></button>'; }).join('') + '</div>' +
+      const open = i < g.idx || (i === g.idx && !g.doneToday);
+      return '<button class="stop ' + cls + '"' + (open && i < 21 ? ' ' + nav$({screen:'read', i}) : ' disabled') + ' aria-label="Tappa ' + (i + 1) + (open ? '' : ', si apre più avanti') + '"><span class="bub">' + (i < g.idx ? '✓' : i === g.idx && g.doneToday ? '🔒' : i + 1) + '</span><span class="st">' + esc(GYM[i].t) + '</span></button>'; }).join('') + '</div>' +
       '<div class="spread small muted"><span>' + g.idx + ' di 21 tappe</span><span>Risparmi trovati: <b style="color:var(--fg)">' + eur(found) + ' all\'anno</b></span></div></div>' +
     stepCard + '</div>';
   const cur = view.querySelector('.stop.now'); if (cur) { const sc = document.getElementById('stops'); sc.scrollLeft = cur.offsetLeft - sc.clientWidth / 2 + cur.clientWidth / 2; }
@@ -2298,6 +2300,7 @@ function renderGym(){
 }
 function renderRead(){
   const G = GYM[R.i]; if (!G) return nav({screen:'gym'});
+  { const g = gymDay(); if (!R.back && (R.i > g.idx || (R.i === g.idx && g.doneToday))) return nav({screen:'gym'}); }
   const read = S.read.includes(R.i);
   view.innerHTML = '<div class="sec" style="gap:20px">' + (R.back ? backBtn('Suggerimenti', {screen:'gtips', id:R.back}) : backBtn('Palestra', {screen:'gym'})) + '<div class="intro"><span class="label">Tappa ' + (R.i + 1) + ' · lettura di 3 minuti</span><h2>' + G.t + '</h2></div>' +
     '<div class="tip"><p class="lead">' + G.i + '</p>' + G.deep.map(p => '<p>' + p + '</p>').join('') +
@@ -2520,7 +2523,7 @@ const MISSIONS = [
 const MLEVELS = [[0, 'Principiante'], [50, 'In allenamento'], [120, 'Allenato'], [220, 'Esperto'], [350, 'Maestro del risparmio']];
 const MAX_ACTIVE = 2;
 function mState(){ S.mis = S.mis || {active:{}, done:[]}; return S.mis; }
-function mXP(){ return mState().done.reduce((t, d) => t + d.xp, 0) + Object.keys(S.learn || {}).filter(k => S.learn[k].quiz === 2).length * 10 + ((S.qd || {}).ok || 0) * 2; }
+function mXP(){ return mState().done.reduce((t, d) => t + d.xp, 0) + Object.keys(S.learn || {}).filter(k => lessonPerfect(k)).length * 10 + ((S.qd || {}).ok || 0) * 2; }
 function mLevel(){ const x = mXP(); let i = 0; MLEVELS.forEach((l, k) => { if (x >= l[0]) i = k; }); const next = MLEVELS[i + 1]; return {x, name:MLEVELS[i][1], i, next, pct:next ? (x - MLEVELS[i][0]) / (next[0] - MLEVELS[i][0]) * 100 : 100}; }
 function mProgress(M, st){
   if (M.type === 'days') return st.log.filter(e => e.ok).length;
@@ -2666,13 +2669,40 @@ function qCard(){
 }
 function bindQ(re){ view.querySelectorAll('[data-qd]').forEach(b => b.onclick = () => { const st = qState(); if (st.last === today()) return; const i = st.n % QUIZ.length, a = +b.dataset.qd;
   st.streak = st.last === dayOffset(today(), -1) ? (st.streak || 0) + 1 : 1; st.last = today(); st.n++; if (a === QUIZ[i].a) st.ok = (st.ok || 0) + 1; st.ans = {i, a}; save(); const y = window.scrollY; re(); window.scrollTo({top:y}); }); }
+/* le lezioni arrivano a 5 domande; le risposte giuste non stanno sempre nella stessa posizione */
+const EXTRA_Q = {
+  infl:[{q:'Per quali soldi l\'inflazione è un problema minore?', o:['Quelli di tutti i giorni e il fondo di emergenza','Quelli che restano fermi per molti anni','Nessuno'], a:0},{q:'Quanto è stata l\'inflazione media in Italia nel 2022?', o:['L\'8,1%','Circa il 2%','Il 15%'], a:0},{q:'La cifra scritta sul conto si chiama…', o:['Valore nominale','Valore reale','Valore netto'], a:0}],
+  comp:[{q:'Con l\'interesse composto, cosa produce interessi?', o:['Anche gli interessi già maturati','Solo la cifra versata','Solo i versamenti dell\'ultimo anno'], a:0},{q:'100 € al mese per 30 anni sono 36.000 € versati. Con una crescita media del 5% annuo diventerebbero circa…', o:['81.500 €','40.000 €','200.000 €'], a:0},{q:'Perché chiudere un debito costoso è un ottimo "rendimento"?', o:['Perché gli interessi sui debiti crescono con la stessa logica','Perché lo chiede la banca','Perché fa salire lo stipendio'], a:0}],
+  rischio:[{q:'Nel lungo periodo, storicamente, le azioni…', o:['Hanno reso più di conti e obbligazioni, ma con anni molto negativi','Non sono mai scese','Hanno reso meno dei conti correnti'], a:0},{q:'Qual è la domanda giusta prima di investire?', o:['Quanto posso sopportare di vederlo scendere, e per quanto posso aspettare?','Quanto rende?','Cosa ha comprato il vicino?'], a:0},{q:'Tenere tutti i soldi fermi per decenni…', o:['Significa rinunciare alla crescita e subire l\'inflazione','Non ha nessun rischio','Li fa raddoppiare'], a:0}],
+  divers:[{q:'La diversificazione elimina le oscillazioni dei mercati nel loro insieme?', o:['No, riduce il rischio del singolo titolo','Sì, del tutto','Solo d\'estate'], a:0},{q:'Diversificare "nel tempo" significa…', o:['Entrare un po\' alla volta, per esempio con un piano mensile','Cambiare investimento ogni settimana','Aspettare il momento perfetto'], a:0},{q:'Quale è una forma di diversificazione anche nella vita?', o:['Avere più fonti di entrata e un fondo di emergenza','Avere tre carte di credito','Fare la spesa in negozi diversi'], a:0}],
+  etf:[{q:'Perché in genere gli ETF costano meno dei fondi a gestione attiva?', o:['Replicano un indice invece di cercare di batterlo','Sono garantiti dallo Stato','Non pagano tasse'], a:0},{q:'Un ETF "ad accumulazione"…', o:['Reinveste i proventi','Li distribuisce ogni mese','Garantisce il capitale'], a:0},{q:'Un ETF sui titoli di Stato a breve, rispetto a uno sulle azioni mondiali, di solito…', o:['Oscilla molto meno','Oscilla molto di più','Si comporta allo stesso modo'], a:0}],
+  costi:[{q:'10.000 € per 30 anni: con il 5% netto diventano circa 43.200 €. Con il 4% circa…', o:['32.400 €','42.000 €','20.000 €'], a:0},{q:'Dove si nascondono i costi di un prodotto finanziario?', o:['Commissioni, gestione annua, consulenza, imposta di bollo','Solo nella commissione di ingresso','Da nessuna parte'], a:0},{q:'Una differenza di costo dello 0,5% all\'anno su 20-30 anni…', o:['Può valere migliaia di euro','È irrilevante','Si annulla da sola'], a:0}],
+  orizz:[{q:'I soldi che ti servono entro un anno dove li tieni?', o:['Sul conto, come liquidità','In azioni','Nel fondo pensione'], a:0},{q:'L\'orizzonte su cui si ragiona di investimenti a lungo termine è di solito…', o:['Oltre 5-10 anni','Qualche mese','Una settimana'], a:0},{q:'Qual è l\'errore più comune?', o:['Usare soldi che servono a breve per investimenti a lungo termine','Tenere un fondo di emergenza','Registrare le spese'], a:0}],
+  previd:[{q:'A cosa serve la previdenza complementare?', o:['A integrare la pensione pubblica','A sostituire la pensione pubblica','A pagare le vacanze'], a:0},{q:'Il TFR lasciato in azienda si rivaluta ogni anno…', o:['Dell\'1,5% più il 75% dell\'inflazione','Del 10% fisso','Non si rivaluta'], a:0},{q:'Prima di aderire a un fondo pensione cosa leggi?', o:['La Nota informativa','Il volantino pubblicitario','Le recensioni online'], a:0}],
+  budget:[{q:'Nella regola 50/30/20, il 50% va a…', o:['I bisogni: casa, bollette, spesa, trasporti','I desideri','Gli investimenti'], a:0},{q:'Il metodo dei "contenitori" consiste nel…', o:['Decidere a inizio mese una cifra per le spese variabili e controllare quanto resta','Mettere i contanti in barattoli','Aprire un conto per ogni spesa'], a:0},{q:'Ogni quanto conviene rivedere il budget?', o:['Una volta al mese','Ogni giorno','Una volta all\'anno'], a:0}],
+  invisibili:[{q:'Un abbonamento da 9,99 € al mese quanto costa in un anno?', o:['Quasi 120 €','Circa 50 €','Circa 300 €'], a:0},{q:'Con le spese invisibili, l\'obiettivo è…', o:['Scegliere: tenere quelle che danno valore, togliere quelle fatte per abitudine','Eliminarle tutte','Ignorarle'], a:0},{q:'Quale di queste è una tipica spesa invisibile?', o:['Una commissione bancaria mensile','L\'affitto','La rata del mutuo'], a:0}],
+  emotivi:[{q:'Quale domanda aiuta prima di comprare?', o:['Lo comprerei anche domani, a mente fredda?','C\'è la spedizione gratis?','Quanti pezzi restano?'], a:0},{q:'Cosa riduce gli acquisti d\'impulso online?', o:['Togliere le carte salvate','Attivare l\'acquisto con un clic','Iscriversi a più newsletter'], a:0},{q:'Offerte a tempo e "ultimi pezzi" servono soprattutto a…', o:['Metterti fretta e farti comprare d\'impulso','Aiutarti a risparmiare','Informarti sui prezzi medi'], a:0}],
+  smart:[{q:'Il "passo giusto" di un obiettivo nell\'app è…', o:['La quota da mettere da parte ogni mese','Il numero di passi al giorno','La data di scadenza'], a:0},{q:'Dare un nome e un\'immagine all\'obiettivo aiuta perché…', o:['Rende più facile resistere alle tentazioni','Fa aumentare gli interessi','Non aiuta affatto'], a:0},{q:'Per mantenere la motivazione conviene…', o:['Festeggiare le tappe: 25%, 50%, 75%','Guardare l\'obiettivo solo alla fine','Cambiare obiettivo ogni mese'], a:0}],
+  debiti:[{q:'Il TAN è…', o:['Il tasso di interesse annuo','Il costo totale con le spese','La durata del prestito'], a:0},{q:'Il metodo "palla di neve" consiste nel chiudere prima…', o:['Il debito più piccolo','Il debito con il tasso più alto','Il mutuo'], a:0},{q:'Con un TAN sopra il 10%, restituire prima…', o:['È un risparmio certo e immediato','Non conviene mai','È vietato'], a:0}],
+  taeg:[{q:'Per il credito ai consumatori, entro quanto puoi ripensarci dopo la firma?', o:['14 giorni','24 ore','6 mesi'], a:0},{q:'Rimborso anticipato di un prestito al consumo: l\'indennizzo per legge non supera…', o:['L\'1% della somma rimborsata (0,5% se manca meno di un anno)','Il 10%','Il 50% degli interessi'], a:0}],
+  revolving:[{q:'2.000 € su una revolving al 18%, pagando 60 € al mese: quanto ci vuole e quanto costa?', o:['Circa 4 anni e quasi 800 € di interessi','6 mesi e 20 €','Un anno, senza interessi'], a:0},{q:'Cosa ha senso comprare a rate?', o:['Solo ciò che compreresti comunque in contanti, mai le spese di tutti i giorni','La spesa del supermercato','Tutto, se la rata è bassa'], a:0},{q:'Perché una revolving è comoda ma rischiosa?', o:['Con rate piccole il debito scende piano e gli interessi si accumulano','Non si può usare online','Ha un limite di spesa'], a:0}]
+};
+/* applicate dopo l'elenco completo delle lezioni, più sotto */
+/* una lezione nuova al giorno, nell'ordine in cui sono elencate */
+const LORDER = () => ['risp', 'fin', 'debt'].flatMap(c => LESSONS.filter(l => l.cat === c).map(l => l.id));
+const lessonDone = id => (S.learn || {})[id] && S.learn[id].quiz !== undefined;
+const lessonPerfect = id => { const st = (S.learn || {})[id], l = LESSONS.find(x => x.id === id); return !!st && (!!st.p || st.quiz === 2 || (!!l && st.quiz >= l.q.length)); };
+function lessonOpen(id){ const L = LORDER(), k = L.indexOf(id); if (k <= 0 || lessonDone(id)) return true; const prev = S.learn[L[k - 1]]; return !!prev && prev.quiz !== undefined && (prev.f || prev.d) < today(); }
+function lessonNext(){ const L = LORDER(), k = L.findIndex(id => !lessonOpen(id)); return k > 0 && lessonDone(L[k - 1]) ? L[k] : null; }
 function renderLearn(){
   S.learn = S.learn || {};
   const done = LESSONS.filter(l => (S.learn[l.id] || {}).quiz !== undefined).length;
   const CATS = [['risp', 'Educazione al risparmio'], ['fin', 'Educazione finanziaria'], ['debt', 'Debiti e finanziamenti']];
-  const row = (l, i) => { const st = S.learn[l.id] || {}; return '<button class="item" ' + nav$({screen:'lesson', id:l.id}) + '><span class="ic' + (st.quiz === 2 ? ' y' : '') + '">' + (st.quiz === 2 ? ic('check') : (i + 1)) + '</span><span class="t"><b>' + l.t + '</b><span class="sub">' + (st.quiz !== undefined ? 'Quiz: ' + st.quiz + ' su 2' : '5 minuti · 2 domande') + '</span></span>' + ic('right') + '</button>'; };
+  const row = (l, i) => { const st = S.learn[l.id] || {}, u = lessonOpen(l.id), next = !u && lessonNext() === l.id, ok = lessonPerfect(l.id);
+    if (!u) return '<div class="item off" aria-disabled="true"><span class="ic">🔒</span><span class="t"><b>' + l.t + '</b><span class="sub">' + (next ? 'Si sblocca domani' : 'Si sblocca più avanti, una lezione al giorno') + '</span></span></div>';
+    return '<button class="item" ' + nav$({screen:'lesson', id:l.id}) + '><span class="ic' + (ok ? ' y' : '') + '">' + (ok ? ic('check') : (i + 1)) + '</span><span class="t"><b>' + l.t + '</b><span class="sub">' + (st.quiz !== undefined ? 'Quiz: ' + st.quiz + ' su ' + l.q.length : '5 minuti · ' + l.q.length + ' domande · nuova') + '</span></span>' + ic('right') + '</button>'; };
   view.innerHTML = '<div class="sec" style="gap:20px">' + gymTabs('learn') +
-    '<div class="intro"><span class="marker y" style="font-size:1.05rem">Impara</span><h2>Una domanda al giorno</h2><p class="muted">Un minuto al giorno per allenare la testa ai soldi, poi ' + LESSONS.length + ' lezioni brevi da leggere quando vuoi. ' + done + ' completate.</p></div>' + qCard() +
+    '<div class="intro"><span class="marker y" style="font-size:1.05rem">Impara</span><h2>Una domanda al giorno</h2><p class="muted">Un minuto al giorno per allenare la testa ai soldi, poi una lezione nuova al giorno, con 5 domande. ' + done + ' di ' + LESSONS.length + ' completate.</p></div>' + qCard() +
     '<div class="note">Contenuti educativi e generali. Non sono consigli su cosa comprare o vendere: per scelte personali rivolgiti a un consulente finanziario indipendente.</div>' +
     CATS.map(c => '<div class="sec"><span class="label">' + c[1] + '</span><div class="list">' + LESSONS.filter(l => l.cat === c[0]).map(row).join('') + '</div></div>').join('') +
     '<div class="sec"><span class="label">Libri consigliati</span><div class="carousel books">' + BOOKS.map(b => '<div class="slide"><div class="book"><span class="bspine">' + ic('book') + '</span><b>' + esc(b[0]) + '</b><span class="small y">' + esc(b[1]) + '</span><p class="small muted">' + esc(b[2]) + '</p></div></div>').join('') + '</div><p class="small muted">Scorri ↔ · Una selezione indicativa, senza link commerciali.</p></div></div>';
@@ -2680,16 +2710,17 @@ function renderLearn(){
 }
 function renderLesson(){
   const l = LESSONS.find(x => x.id === R.id); if (!l) return nav({screen:'learn'});
+  if (R.from !== 'debts' && !lessonOpen(l.id)) return nav({screen:'learn'});
   S.learn = S.learn || {}; const ans = R.ans || [];
   const allA = ans.length === l.q.length && ans.every(a => a !== undefined && a !== null);
   view.innerHTML = '<div class="sec" style="gap:20px">' + (R.from === 'debts' ? backBtn('Debiti', {screen:'debts'}) : backBtn('Impara', {screen:'learn'})) + '<div class="intro"><span class="label">Lezione · 5 minuti</span><h2>' + l.t + '</h2></div>' +
     '<div class="tip">' + l.p.map((p, i) => '<p' + (i ? '' : ' class="lead"') + '>' + p + '</p>').join('') + '</div>' +
     (l.link ? '<button class="readcard" ' + nav$({screen:l.link[1]}) + '><span class="t"><b>' + ic('chart') + ' ' + l.link[0] + '</b><span>Mettilo in pratica con i tuoi numeri</span></span>' + ic('right') + '</button>' : '') +
-    '<div class="card"><span class="label">Verifica: 2 domande</span>' + l.q.map((q, qi) => '<div class="sec" style="gap:8px"><b>' + (qi + 1) + '. ' + q.q + '</b><div class="quiz-opt">' + q.o.map((o, oi) => { const picked = ans[qi] === oi, cls = ans[qi] !== undefined ? (oi === q.a ? 'right' : picked ? 'wrong' : '') : ''; return '<button data-q="' + qi + '" data-o="' + oi + '" class="' + cls + '"' + (ans[qi] !== undefined ? ' disabled' : '') + '>' + o + '</button>'; }).join('') + '</div></div>').join('') +
-      (allA ? '<p><b>' + ans.filter((a, i) => a === l.q[i].a).length + ' su 2.</b> ' + (ans.every((a, i) => a === l.q[i].a) ? 'Perfetto: +10 punti nelle Sfide.' : 'Rileggi il passaggio e riprova quando vuoi.') + '</p><div class="row"><button class="btn ghost sm" ' + nav$({screen:'lesson', id:l.id}) + '>Riprova</button><button class="btn sm" ' + nav$({screen:'learn'}) + '>Torna alle lezioni</button></div>' : '') + '</div>' +
+    '<div class="card"><span class="label">Verifica: ' + l.q.length + ' domande</span>' + l.q.map((q, qi) => '<div class="sec" style="gap:8px"><b>' + (qi + 1) + '. ' + q.q + '</b><div class="quiz-opt">' + q.o.map((o, oi) => { const picked = ans[qi] === oi, cls = ans[qi] !== undefined ? (oi === q.a ? 'right' : picked ? 'wrong' : '') : ''; return '<button data-q="' + qi + '" data-o="' + oi + '" class="' + cls + '"' + (ans[qi] !== undefined ? ' disabled' : '') + '>' + o + '</button>'; }).join('') + '</div></div>').join('') +
+      (allA ? '<p><b>' + ans.filter((a, i) => a === l.q[i].a).length + ' su ' + l.q.length + '.</b> ' + (ans.every((a, i) => a === l.q[i].a) ? 'Perfetto: +10 punti nelle Sfide.' : 'Rileggi il passaggio e riprova quando vuoi.') + '</p><div class="row"><button class="btn ghost sm" ' + nav$({screen:'lesson', id:l.id}) + '>Riprova</button><button class="btn sm" ' + nav$({screen:'learn'}) + '>Torna alle lezioni</button></div>' : '') + '</div>' +
     '<p class="small muted">Contenuto educativo e generale, non è una consulenza finanziaria.</p></div>';
   view.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { const a = ans.slice(); a[+b.dataset.q] = +b.dataset.o; const y = window.scrollY;
-    if (a.filter(x => x !== undefined).length === l.q.length) { const sc = a.filter((x, i) => x === l.q[i].a).length; const prev = (S.learn[l.id] || {}).quiz; S.learn[l.id] = {quiz:Math.max(sc, prev || 0), d:today()}; save(); }
+    if (a.filter(x => x !== undefined).length === l.q.length) { const sc = a.filter((x, i) => x === l.q[i].a).length; const o = S.learn[l.id] || {}; S.learn[l.id] = Object.assign({}, o, {quiz:Math.max(sc, o.quiz || 0), d:today(), f:o.f || o.d || today()}, sc === l.q.length ? {p:1} : {}); save(); }
     R = {screen:'lesson', id:l.id, ans:a}; renderLesson(); window.scrollTo({top:y}); });
 }
 
@@ -2830,6 +2861,7 @@ LESSONS.push(
   {id:'revolving', cat:'debt', t:'Carte revolving e rate: attenzione', p:['Una carta revolving permette di rimborsare a piccole rate mensili quello che spendi. Comodo, ma i tassi sono spesso tra il 15% e il 20% annuo.','Esempio: 2.000 € su una revolving al 18% pagando 60 € al mese richiedono circa 4 anni per chiudere il debito, con quasi 800 € di interessi.','Gli acquisti "a rate a tasso zero" possono essere convenienti, ma leggi bene: a volte ci sono spese di istruttoria o servizi aggiuntivi che fanno salire il TAEG.','Regola semplice: compra a rate solo ciò che compreresti comunque in contanti, e mai per spese di tutti i giorni.'],
     q:[{q:'Le carte revolving hanno di solito tassi…', o:['Molto bassi','Alti, spesso tra 15% e 20%'], a:1},{q:'"Tasso zero" significa sempre nessun costo?', o:['Sì','No, controlla il TAEG e le spese'], a:1}], link:['Calcola i tuoi interessi', 'debts']}
 );
+LESSONS.forEach(l => { (EXTRA_Q[l.id] || []).forEach((q, k) => { const r = (k + l.id.length) % q.o.length, o = q.o.slice(r).concat(q.o.slice(0, r)); l.q.push({q:q.q, o, a:(q.a - r + q.o.length) % q.o.length}); }); l.q = l.q.slice(0, 5); });
 const BOOKS = [
   ['La psicologia dei soldi', 'Morgan Housel', 'Perché le decisioni sui soldi dipendono più dal comportamento che dai numeri.'],
   ['L\'uomo più ricco di Babilonia', 'George S. Clason', 'Le regole del risparmio raccontate come parabole: semplice e senza tempo.'],

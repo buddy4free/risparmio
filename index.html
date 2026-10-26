@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-yoW0NK/Fo/y5UF5PpeMBh+evJM3P3y32i7hcy9J9uc0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-zXQkc3CUMTzElUNAB1nDkVdIiqTbWNXhlaoOScnQvMc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -3927,7 +3927,7 @@ function notifCard(){
   const on = S.notif && S.notif.on && Notification.permission === 'granted', den = Notification.permission === 'denied' || (!!(S.notif && S.notif.on) && Notification.permission !== 'granted');
   return '<div class="card" style="gap:10px"><div class="spread"><b>Notifiche dell\'app</b><span class="chip" style="background:' + (on ? 'var(--green,#22A45D)' : 'var(--soft2)') + ';color:#fff">' + (on ? 'Attive' : 'Spente') + '</span></div>' +
     '<p class="small muted" style="margin:0">Al massimo una al giorno: la domanda del giorno, la tappa della palestra o, la sera, un controllo delle spese. È il telefono a decidere il momento preciso, di giorno.</p>' +
-    (on && S.notif.periodic === false ? '<p class="small" style="margin:0;color:var(--yellow)">Questo telefono non permette avvisi automatici all\'app: ricevi solo la notifica di prova. Per gli avvisi usa il calendario qui sotto.</p>' : '') +
+    (on && S.notif.periodic === false ? '<p class="small" style="margin:0;color:var(--yellow)">Per ora il browser non concede gli avvisi automatici: succede con le app appena installate e di solito si sblocca da solo dopo qualche giorno di uso. L\'app riprova a ogni apertura. Intanto, per non perdere i promemoria, usa il calendario qui sotto.</p>' : '') +
     (den ? '<p class="small" style="margin:0;color:var(--yellow)">Le notifiche sono bloccate sul telefono: tocca il pulsante qui sotto e ti dico dove sbloccarle.</p>' : '') +
     '<p class="small muted" style="margin:0" id="nt-diag">Dettagli tecnici: permesso ' + Notification.permission + ' · copia offline ' + (navigator.serviceWorker.controller ? 'sì' : 'no') + ' · avvisi automatici ' + (S.notif && S.notif.periodic ? 'sì' : 'no') + ' · ' + (/SamsungBrowser/.test(navigator.userAgent) ? 'Samsung Internet' : 'Chrome') + '</p>' +
     '<div class="row">' + (on ? '<button class="btn sm ghost" id="nt-off">Spegni</button><button class="btn sm" id="nt-try">Notifica di prova</button>' : '<button class="btn sm" id="nt-on">' + (den ? 'Sblocca le notifiche' : 'Attiva le notifiche') + '</button>') + '</div></div>';
@@ -3955,6 +3955,11 @@ function bindNotif(){
   const off = document.getElementById('nt-off'); if (off) off.onclick = async () => { S.notif = {on:false}; save(); try { const reg = await navigator.serviceWorker.ready; if (reg.periodicSync) await reg.periodicSync.unregister('b4f-daily'); } catch(e) {} renderNotif(); toast('Notifiche spente'); };
   const tr = document.getElementById('nt-try'); if (tr) tr.onclick = () => notifTry('Così arriverà il promemoria di Buddy4Free.');
 }
+/* gli avvisi automatici possono essere concessi più avanti: a ogni apertura l'app riprova in silenzio */
+async function notifRetry(){ if (!S.notif || !S.notif.on || S.notif.periodic || !notifCan() || Notification.permission !== 'granted') return;
+  try { const reg = await navigator.serviceWorker.ready; if (!reg.periodicSync) return; const st = await navigator.permissions.query({name:'periodic-background-sync'}); if (st.state !== 'granted') return;
+    await reg.periodicSync.register('b4f-daily', {minInterval:12 * 3600e3}); S.notif.periodic = true; save(); if (R.screen === 'notif') renderNotif(); } catch(e) {} }
+setTimeout(notifRetry, 2500);
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { const g = e.data && e.data.go; if (GO_OK.includes(g)) nav({screen:g}); });
 function renderSettings(){
   view.innerHTML = '<div class="sec" style="gap:22px">' + backBtn('Home', {screen:'home'}) + '<div class="intro"><h2>Impostazioni</h2></div>' +

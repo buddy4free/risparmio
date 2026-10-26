@@ -87,6 +87,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: buddy4free-risparmio-v${{ inputs.version_code }}${{ env.SIGNED == 'yes' && '' || '-PROVA-non-firmato' }}
+          name: buddy4free-risparmio-v${{ inputs.version_code }}${{ env.SIGNED == 'yes' && '-firmato' || '-PROVA-non-firmato' }}
           path: android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 7

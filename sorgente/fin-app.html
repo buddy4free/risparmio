@@ -16,7 +16,9 @@
 /* l'app è già scura: i browser con tema scuro forzato (es. Samsung Internet) la lasciano com'è */
 @media (prefers-color-scheme: dark){:root{color-scheme:dark}}
 @media (prefers-color-scheme: light){:root{color-scheme:dark}}
-*{box-sizing:border-box}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{overscroll-behavior-y:none}
+button,a,.item,.chip,.stop,label{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.5;
   padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
@@ -3170,7 +3172,7 @@ function importBackup(file){
   const restore = d => { if (!d || !d.cats || !Array.isArray(d.tx)) return toast('Questo file non è un backup valido');
       const box = document.getElementById('ask'); box.innerHTML = '<div class="card" style="border-color:var(--critical)"><p>Il backup del ' + (d.exported && !isNaN(new Date(d.exported)) ? new Date(d.exported).toLocaleDateString('it-IT') : '?') + ' contiene ' + d.tx.length + ' movimenti. Ripristinandolo sostituisci tutti i dati attuali. Continuare?</p><div class="row"><button class="btn danger" id="rb-yes">Sì, ripristina</button><button class="btn ghost" id="rb-no">Annulla</button></div></div>';
       box.querySelector('#rb-no').onclick = () => box.innerHTML = '';
-      box.querySelector('#rb-yes').onclick = () => { delete d.app; delete d.exported; const keepLock = S.lock; S = Object.assign(freshState(), clean(d)); S.lock = keepLock || {on:false, after:60}; migrate(); save(); toast('Backup ripristinato'); nav({screen:'home'}); }; };
+      box.querySelector('#rb-yes').onclick = () => { delete d.app; delete d.exported; const keepLock = S.lock, keepDev = {notif:S.notif, samsungSeen:S.samsungSeen}; S = Object.assign(freshState(), clean(d)); S.lock = keepLock || {on:false, after:60}; Object.keys(keepDev).forEach(k => { if (keepDev[k] === undefined) delete S[k]; else S[k] = keepDev[k]; }); migrate(); remSync(); save(); toast('Backup ripristinato'); nav({screen:'home'}); }; };
   fr.onload = () => { let d; try { d = JSON.parse(fr.result); } catch(e) { return toast('Questo file non è un backup valido'); }
     if (!d || !d.enc) return restore(d);
     catPop('<b style="font-size:1.1rem">Backup protetto</b><p class="small muted" style="margin:0">Scrivi la password scelta quando hai salvato il backup.</p><input id="rb-pw" type="password" autocomplete="current-password" aria-label="Password del backup"><div class="row"><button class="btn" id="rb-ok">Apri</button><button class="btn ghost" data-x>Annulla</button></div>', (o, close) => {
@@ -3652,13 +3654,12 @@ function ocrResult(o, close, text){
   const p = ocrParse(text), g = ocrGuess(p, text), cat = g.c && catOf('out', g.c);
   o.querySelector('#ocr-b').innerHTML = (p.total === null ? '<p class="small" style="margin:0;color:var(--yellow)">Non trovo il totale: scrivilo tu.</p>' : '') +
     '<div class="grid2"><div class="field"><label for="ocr-a">Importo</label><input id="ocr-a" inputmode="decimal" value="' + (p.total === null ? '' : String(p.total.toFixed(2)).replace('.', ',')) + '"></div><div class="field"><label for="ocr-d">Data</label><input id="ocr-d" type="date" value="' + (p.d || today()) + '"></div></div>' +
-    '<div class="field"><label for="ocr-n">Negozio (va nella nota)</label><input id="ocr-n" value="' + esc(p.shop) + '"></div>' +
     (cat ? '<div class="ocrcat"><span class="small muted">' + (g.sure ? 'Come l\'ultima volta in questo negozio' : 'Ti propongo questa categoria') + '</span><div class="row" style="gap:10px;flex-wrap:nowrap">' + catTile('out', cat) + '<b>' + esc(cat.n + (g.s ? ' › ' + g.s : '')) + '</b></div></div>' +
       '<div class="row"><button class="btn" id="ocr-ok">' + ic('check') + 'Conferma</button><button class="btn ghost" id="ocr-other">Un\'altra categoria</button></div>'
       : '<p class="small" style="margin:0">Non so in che categoria metterla: scegli tu, la prossima volta in questo negozio me lo ricordo.</p><button class="btn" id="ocr-other">Scegli la categoria</button>') +
     '<details class="small muted"><summary>Testo letto</summary><pre class="ocrtxt">' + esc(text.trim().slice(0, 1500)) + '</pre></details>';
-  const go = keep => { const a = o.querySelector('#ocr-a').value.trim(), d = o.querySelector('#ocr-d').value || today(), n = o.querySelector('#ocr-n').value.trim().slice(0, 60);
-    OCRF = {t:'out', c:keep ? g.c : null, s:keep ? g.s : '', a, d:d > today() ? today() : d, n, ocrKey:ocrKey(n) || g.key}; close(); F = null; nav({screen:'add', type:'out', ocr:Date.now()}); };
+  const go = keep => { const a = o.querySelector('#ocr-a').value.trim(), d = o.querySelector('#ocr-d').value || today();
+    OCRF = {t:'out', c:keep ? g.c : null, s:keep ? g.s : '', a, d:d > today() ? today() : d, n:'', ocrKey:g.key}; close(); F = null; nav({screen:'add', type:'out', ocr:Date.now()}); };
   const ok = o.querySelector('#ocr-ok'); if (ok) ok.onclick = () => go(true);
   o.querySelector('#ocr-other').onclick = () => go(false);
 }

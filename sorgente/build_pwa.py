@@ -15,6 +15,8 @@ s=s[:i]+'<link rel="stylesheet" href="fonts/fonts.css">\n'+s[j:]
 open(D+'fonts/fonts.css','w').write(open(P+'fontface.css').read())
 # PDF incluso
 rep("loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')","loadScript('vendor/jspdf.umd.min.js')")
+# lettore degli scontrini incluso (vendor/ocr), attivo solo nell'app installata
+rep("const OCR_PATH = '';","const OCR_PATH = 'vendor/ocr/';")
 # link dell'app = indirizzo del sito
 rep("APP_URL = 'https://claude.ai/artifact/SKGYXcdzEhsYz7Btngm8hq'","APP_URL = location.origin + location.pathname.replace(/index\\.html$/, '')")
 rep('value="https://claude.ai/artifact/SKGYXcdzEhsYz7Btngm8hq"','value="\' + APP_URL + \'"')

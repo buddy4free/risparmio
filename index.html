@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-2tsb317qyKsIwdS02gh1baF/roPyAY7leTYJp4EJBrA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-kHfotfYhu+lKDYL3X0zjRWQ5j64E7T1Wu6YOb9fX9Ao='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -166,6 +166,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .clsubs{display:flex;flex-wrap:wrap;gap:8px;padding:2px 14px 14px 62px}.clsubs button{border:1px solid var(--line);background:#000;border-radius:99px;padding:9px 14px;font-weight:600;font-size:.88rem;color:inherit}.clsubs button[aria-pressed="true"]{background:var(--yellow);color:#000;border-color:var(--yellow)}.clsubs .muted{color:var(--muted)}
 .clnew{padding:0 14px 14px 62px}
 .list .item.off{opacity:.55}
+.ocrcat{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:14px;padding:12px}.ocrtxt{white-space:pre-wrap;font-size:.72rem;max-height:160px;overflow:auto;margin:6px 0 0}
 .qday{display:flex;flex-direction:column;gap:12px;border-color:var(--yellow)}.qday .qq{font-size:1.08rem;line-height:1.35}
 .cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
 .cats button{border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.74rem;font-weight:600;line-height:1.15;text-align:center;min-height:78px}
@@ -1253,10 +1254,10 @@ function dialToggle(){
   const fab = document.getElementById('fab'), o = document.createElement('div'); o.id = 'dial';
   const it = (k, l, c, icon) => '<button data-dial="' + k + '" style="--dc:' + c + '"><span class="dl">' + l + '</span><span class="di">' + icon + '</span></button>';
   const rec = R.screen === 'rec'; /* da Ricorrenti il + crea direttamente una voce che si ripete */
-  o.innerHTML = '<div class="dialbg"></div><div class="dialitems">' + (rec ? it('in', 'Entrata ricorrente', '#22A45D', '<b>+</b>') + it('out', 'Uscita ricorrente', '#E5484D', '<b>−</b>') : it('cats', 'Gestisci categorie', '#5f5f5a', ic('tag')) + it('xfer', 'Trasferimento', '#3987e5', ic('repeat')) + it('in', 'Entrata', '#22A45D', '<b>+</b>') + it('out', 'Uscita', '#E5484D', '<b>−</b>')) + '</div>';
+  o.innerHTML = '<div class="dialbg"></div><div class="dialitems">' + (rec ? it('in', 'Entrata ricorrente', '#22A45D', '<b>+</b>') + it('out', 'Uscita ricorrente', '#E5484D', '<b>−</b>') : it('cats', 'Gestisci categorie', '#5f5f5a', ic('tag')) + (OCR_PATH ? it('ocr', 'Scontrino in foto · beta', '#9085e9', ic('receipt')) : '') + it('xfer', 'Trasferimento', '#3987e5', ic('repeat')) + it('in', 'Entrata', '#22A45D', '<b>+</b>') + it('out', 'Uscita', '#E5484D', '<b>−</b>')) + '</div>';
   document.body.appendChild(o); fab.classList.add('open'); histPush();
   o.querySelector('.dialbg').onclick = dialClose;
-  o.querySelectorAll('[data-dial]').forEach(b => b.onclick = () => { const k = b.dataset.dial; dialClose(); F = null; nav(k === 'cats' ? {screen:'cats', t:'out'} : rec ? {screen:'add', type:k, rec:1, back:'rec'} : {screen:'add', type:k}); });
+  o.querySelectorAll('[data-dial]').forEach(b => b.onclick = () => { const k = b.dataset.dial; dialClose(); if (k === 'ocr') return ocrPick(); F = null; nav(k === 'cats' ? {screen:'cats', t:'out'} : rec ? {screen:'add', type:k, rec:1, back:'rec'} : {screen:'add', type:k}); });
 }
 document.getElementById('fab').onclick = dialToggle;
 document.getElementById('gear').innerHTML = ic('gear');
@@ -1747,6 +1748,7 @@ function renderAdd(){
   if (!R.type && !R.edit && !R.editX && !R.xfer) return renderChooser();
   if (!F || F.key !== JSON.stringify(R)) {
     F = {key:JSON.stringify(R), t:R.xfer || R.editX ? 'xfer' : (R.type || 'out'), c:null, s:'', a:'', d:today(), n:'', rec:!!R.rec, every:1, unit:'m', end:'never', count:12, until:'', newCat:false, newSub:false, icon:'dots', p:'liq', step:'cat'};
+    if (R.ocr && OCRF) { Object.assign(F, OCRF, {step:OCRF.c ? 'amt' : 'cat'}); OCRF = null; }
     if (R.edit) {
       if (R.edit.startsWith('r:')) { const [, rid, dk] = R.edit.split(':'); const r = S.rec.find(x => x.id === rid);
         if (r) Object.assign(F, {t:r.t, c:r.c, s:r.s, a:String(r.a).replace('.', ','), d:dk.length === 10 ? dk : dk + '-' + pad(r.day), n:r.n, rec:true, recId:rid, recKey:dk, p:r.p || 'liq', every:r.every || 1, unit:r.unit || 'm', end:r.count ? 'count' : r.until ? 'until' : 'never', count:r.count || 12, until:r.until || ''}); }
@@ -1826,6 +1828,7 @@ function renderAdd(){
     else if (R.edit) Object.assign(S.tx.find(x => x.id === R.edit), {t:F.t, c:F.c, s:F.s, a, d:F.d, n:F.n, p:F.p});
     else if (F.rec) S.rec.push(Object.assign({id:uid(), t:F.t, c:F.c, s:F.s, a, n:F.n, from:ymOf(F.d), to:null, skip:[], p:F.p}, recFields));
     else S.tx.push(Object.assign({id:uid(), t:F.t, c:F.c, s:F.s, a, d:F.d, n:F.n, p:F.p}, F.d < pilFrom() ? {f:1} : {}));
+    if (F.ocrKey && F.t === 'out') (S.ocrMap = S.ocrMap || {})[F.ocrKey] = {c:F.c, s:F.s || ''};
     save(); toast((R.edit ? 'Aggiornato' : (F.t === 'in' ? 'Entrata ' : 'Uscita ') + (!F.rec && F.d > today() ? 'programmata per il ' + dshort(F.d) : 'salvata')) + ' · ' + (F.t === 'in' ? '+' : '−') + eur2(a) + (F.t === 'in' ? ' in ' : ' da ') + destLabel(F.p));
     viewYM = F.rec && ymOf(F.d) > curYM() ? curYM() : ymOf(F.d); F = null; nav({screen:R.back || 'tx'});
   };
@@ -3384,7 +3387,7 @@ const PRIVACY_V = '1.0', PRIVACY_DATE = '25 ottobre 2026';
 const PRIVACY = () => [
   ['1. Chi è il titolare', `<p>Il titolare del trattamento è Lorenzo Ferrigno, autore del canale YouTube Buddy4Free e del progetto gratuito Buddy4Free Risparmio (l'"App"). Puoi scrivere per qualsiasi domanda sulla privacy a ${contactHTML()}.</p><p>Questa informativa spiega, ai sensi del Regolamento europeo 2016/679 (GDPR) e del Codice in materia di protezione dei dati personali, quali dati usa l'App, dove finiscono e quali diritti hai.</p>`],
   ['2. Il principio: i tuoi dati restano tuoi', `<div class="tbox"><p><b>Non raccogliamo i tuoi dati finanziari.</b> Movimenti, saldi, pilastri, obiettivi, finanziamenti, sfide, risposte ai questionari e dati di benessere (per esempio i passi) restano sul tuo dispositivo e nello spazio privato del tuo account. Noi non li vediamo, non li riceviamo e non possiamo leggerli.</p></div><p>Non usiamo strumenti di analisi o di tracciamento, non mostriamo pubblicità, non creiamo profili e non vendiamo né cediamo dati a nessuno.</p>`],
-  ['3. Dove sono salvati i dati', `<p><b>Sul tuo dispositivo.</b> L'App salva i dati nella memoria del browser o dell'App installata (archiviazione locale). È un'archiviazione tecnica, necessaria al funzionamento: non serve a tracciarti e non richiede consenso.</p><p><b>Nella versione web su claude.ai.</b> Se usi l'App come pagina sulla piattaforma claude.ai, una copia dei dati è salvata anche nello spazio di archiviazione privato del tuo account sulla piattaforma, gestita da Anthropic. Quello spazio è riservato a te: nemmeno l'autore dell'App può accedervi. Per l'uso del tuo account vale l'informativa di Anthropic.</p><p><b>Nell'App installata dal Play Store.</b> I dati restano solo sul telefono, salvo i backup che decidi tu.</p><p><b>Backup.</b> Il file di backup che puoi salvare dalle Impostazioni finisce dove scegli tu (telefono, computer, cloud personale). Contiene tutti i tuoi dati: conservalo con cura e non condividerlo con persone di cui non ti fidi. Puoi proteggerlo con una password: in quel caso viene cifrato sul tuo telefono (AES a 256 bit) e senza la password nessuno può leggerlo, nemmeno noi. Se dimentichi la password il backup non è recuperabile.</p><p><b>Blocco con PIN o impronta.</b> Se lo attivi, il PIN viene conservato solo come impronta crittografica, mai in chiaro. L'impronta digitale o il volto restano nel telefono: l'App riceve solo la conferma che il riconoscimento è riuscito.</p>`],
+  ['3. Dove sono salvati i dati', `<p><b>Sul tuo dispositivo.</b> L'App salva i dati nella memoria del browser o dell'App installata (archiviazione locale). È un'archiviazione tecnica, necessaria al funzionamento: non serve a tracciarti e non richiede consenso.</p><p><b>Nella versione web su claude.ai.</b> Se usi l'App come pagina sulla piattaforma claude.ai, una copia dei dati è salvata anche nello spazio di archiviazione privato del tuo account sulla piattaforma, gestita da Anthropic. Quello spazio è riservato a te: nemmeno l'autore dell'App può accedervi. Per l'uso del tuo account vale l'informativa di Anthropic.</p><p><b>Nell'App installata dal Play Store.</b> I dati restano solo sul telefono, salvo i backup che decidi tu.</p><p><b>Backup.</b> Il file di backup che puoi salvare dalle Impostazioni finisce dove scegli tu (telefono, computer, cloud personale). Contiene tutti i tuoi dati: conservalo con cura e non condividerlo con persone di cui non ti fidi. Puoi proteggerlo con una password: in quel caso viene cifrato sul tuo telefono (AES a 256 bit) e senza la password nessuno può leggerlo, nemmeno noi. Se dimentichi la password il backup non è recuperabile.</p><p><b>Blocco con PIN o impronta.</b> Se lo attivi, il PIN viene conservato solo come impronta crittografica, mai in chiaro. L'impronta digitale o il volto restano nel telefono: l'App riceve solo la conferma che il riconoscimento è riuscito.</p><p><b>Foto degli scontrini.</b> Se usi la lettura dello scontrino, la foto viene elaborata solo sul tuo dispositivo per leggere importo, data e negozio: non viene salvata né inviata a nessuno. Restano solo i dati che confermi nel movimento.</p>`],
   ['4. Dati che trattiamo davvero', `<p><b>Se ci scrivi.</b> Se mandi un'email, trattiamo il tuo indirizzo e quello che ci racconti solo per risponderti (base giuridica: la tua richiesta, art. 6.1.b GDPR, e il nostro legittimo interesse a gestire la corrispondenza, art. 6.1.f). Conserviamo i messaggi per il tempo necessario a chiudere la richiesta e comunque non oltre 24 mesi. Non scriverci dati finanziari o di salute che non servono.</p><p><b>Accettazione dei Termini.</b> La data in cui accetti i Termini resta salvata insieme ai tuoi dati, sul tuo dispositivo.</p>`],
   ['5. Servizi di terzi', `<p>Alcune funzioni usano servizi esterni, che possono ricevere il tuo indirizzo IP e informazioni tecniche sul dispositivo, secondo le loro informative:</p><ul class="tiplist"><li><b>Google Fonts</b> (Google) e <b>cdnjs</b> (Cloudflare): solo nella versione web su claude.ai, per i caratteri tipografici e per creare i PDF. Nell'App installata sono già inclusi e non vengono scaricati da altri server.</li><li><b>Anthropic</b>: la piattaforma claude.ai che ospita la versione web.</li><li><b>Google Play</b>: se scarichi l'App dallo store, secondo le regole di Google.</li><li><b>YouTube, Google Calendar, condivisione del telefono</b>: solo quando tocchi i relativi link o pulsanti.</li></ul><p>Alcuni di questi fornitori hanno sede fuori dall'Unione europea, per esempio negli Stati Uniti. In quel caso i trasferimenti avvengono secondo le garanzie previste dal GDPR adottate dai fornitori stessi, come il Data Privacy Framework UE-USA o le clausole contrattuali standard.</p>`],
   ['6. Notifiche e promemoria', `<p>I promemoria li crei tu, aggiungendoli al tuo calendario o, nell'App installata, come notifiche locali del telefono. Non passano dai nostri sistemi.</p>`],
@@ -3609,6 +3612,69 @@ function dropCat(t, c, to){
   if (t === 'out') (S.dues || []).forEach(d => { if (d.c === c.id) d.c = to ? to.id : 'altro'; });
   S.cats[t] = S.cats[t].filter(x => x.id !== c.id);
   if (isDefCat(t, c.id)) { S.catDel = S.catDel || []; if (!S.catDel.includes(t + ':' + c.id)) S.catDel.push(t + ':' + c.id); }
+}
+/* ---------- scontrino in foto (beta): il testo si legge sul telefono, la foto non esce mai ---------- */
+const OCR_PATH = 'vendor/ocr/';
+const OCR_KW = [['alimentari', 'Supermercato', /esselunga|\bcoop\b|ipercoop|conad|carrefour|\blidl\b|eurospin|despar|interspar|\baldi\b|\bpenny\b|bennet|famila|\bcrai\b|\bsigma\b|\btigre\b|\bpam\b|panorama|\bunes\b|tuodi|supermercat|\bmarket\b|alimentar/], ['alimentari', 'Discount', /discount|\bmd\b/],
+  ['trasporti', 'Carburante', /\beni\b|\bq8\b|tamoil|\besso\b|\bshell\b|\bip\b|\bapi\b|carburant|benzina|gasolio|diesel|distributore|self service/], ['trasporti', 'Parcheggi e pedaggi', /autostrad|pedaggio|parcheggio|telepass/], ['trasporti', 'Mezzi pubblici', /trenitalia|\bitalo\b|\batm\b|\batac\b|biglietto/],
+  ['salute', 'Farmacia', /farmacia|parafarmacia/], ['salute', 'Ottico', /\bottic/], ['ristoranti', 'Ristorante', /ristorante|pizzeria|trattoria|osteria|sushi|mcdonald|burger|kebab|bistrot/], ['ristoranti', 'Bar e caffè', /\bbar\b|caff[eè]|pasticceria|gelateria/],
+  ['abbigliamento', 'Scarpe', /calzature|scarpe|foot ?locker/], ['abbigliamento', 'Vestiti', /\bzara\b|h ?& ?m|\bovs\b|calzedonia|intimissimi|primark|benetton|abbigliamento/], ['shopping', 'Elettronica', /mediaworld|unieuro|euronics|\btrony\b/], ['shopping', 'Casa e arredo', /\bikea\b|leroy|\bbrico|\bobi\b|maisons du monde|flying tiger/],
+  ['cura', 'Cosmetici', /tigot|acqua ?& ?sapone|douglas|sephora|\bkiko\b|profumeria/], ['cura', 'Parrucchiere', /parrucch|barbier|acconciat/], ['animali', 'Cibo', /arcaplanet|isola dei tesori|maxi ?zoo|pet ?shop/], ['tabacchi', 'Sigarette', /tabacch/], ['sport', 'Attrezzatura', /decathlon|\bsport\b/], ['istruzione', 'Libri', /libreria|feltrinelli|mondadori|giunti/]];
+const ocrKey = shop => shop.toLowerCase().normalize('NFD').replace(/[^a-z0-9 ]/g, '').trim().split(/\s+/).slice(0, 2).join(' ');
+function ocrParse(text){
+  const lines = text.split('\n').map(x => x.trim()).filter(Boolean);
+  const num = s => (s.match(/\d{1,3}(?:[.\s]\d{3})*[,.]\s?\d{2}(?!\d)|\d+[,.]\s?\d{2}(?!\d)/g) || []).map(v => parseFloat(v.replace(/\s/g, '').replace(/[.,](\d{2})$/, '|$1').replace(/[.,]/g, '').replace('|', '.'))).filter(v => v > 0 && v < 100000);
+  let total = null;
+  for (const re of [/totale\s*(complessivo|da\s*pagare|euro|eur|€)/i, /importo\s*pagato|pagamento\s*(elettronico|contante|carta|bancomat)/i, /^\W*totale\b/i, /totale/i]) {
+    for (let i = 0; i < lines.length && total === null; i++) if (re.test(lines[i]) && !/sub\s*-?\s*tot|iva|imponibile|sconto|resto|di cui/i.test(lines[i])) { let v = num(lines[i]); if (!v.length && lines[i + 1]) v = num(lines[i + 1]); if (v.length) total = v[v.length - 1]; }
+    if (total !== null) break;
+  }
+  if (total === null) { const all = lines.flatMap(num).filter(v => v < 5000); if (all.length) total = Math.max(...all); }
+  let d = null;
+  for (const l of lines) { const m = l.match(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2}|\d{4})\b/); if (!m) continue; const y = +m[3] < 100 ? 2000 + +m[3] : +m[3], iso = y + '-' + pad(+m[2]) + '-' + pad(+m[1]);
+    if (+m[2] >= 1 && +m[2] <= 12 && +m[1] >= 1 && +m[1] <= 31 && iso <= today() && iso > dayOffset(today(), -400)) { d = iso; break; } }
+  const shop = (lines.slice(0, 8).find(l => /[a-zà-ú]{3}/i.test(l) && !/documento|commerciale|scontrino|fiscale|p\.?\s?iva|partita|\bvia\b|viale|piazza|corso|\btel|www|c\.?f\.?|cod\.|benvenut|grazie/i.test(l)) || '').replace(/[^\p{L}\p{N}&'.\s-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+  return {total, d, shop};
+}
+function ocrGuess(p, text){
+  const key = ocrKey(p.shop), m = key && (S.ocrMap || {})[key];
+  if (m && S.cats.out.some(c => c.id === m.c)) return {c:m.c, s:m.s || '', sure:true, key};
+  const hay = (p.shop + ' ' + text.split('\n').slice(0, 8).join(' ')).toLowerCase();
+  for (const [c, sub, re] of OCR_KW) { const cat = S.cats.out.find(x => x.id === c); if (cat && re.test(hay)) return {c, s:(cat.subs || []).includes(sub) ? sub : '', sure:false, key}; }
+  return {c:null, s:'', sure:false, key};
+}
+let OCRW = null, OCRF = null;
+const ocrLib = () => window.Tesseract ? Promise.resolve() : new Promise((ok, ko) => { const t = document.createElement('script'); t.src = OCR_PATH + 'tesseract.min.js'; t.onload = ok; t.onerror = ko; document.head.appendChild(t); });
+async function ocrImage(file){
+  const bmp = await createImageBitmap(file), sc = Math.min(1, 2000 / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc); const x = c.getContext('2d'); x.filter = 'grayscale(1) contrast(1.5)'; x.drawImage(bmp, 0, 0, c.width, c.height); return c;
+}
+function ocrPick(){ const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.setAttribute('capture', 'environment'); i.onchange = () => { if (i.files[0]) ocrStart(i.files[0]); }; i.click(); }
+function ocrStart(file){
+  catPop('<b style="font-size:1.1rem">Scontrino <span class="small y">beta</span></b><div id="ocr-b"><p class="small muted" style="margin:0" id="ocr-s">Preparo il lettore…</p><div class="qbar"><i id="ocr-p" style="width:3%;background:var(--yellow)"></i></div><p class="small muted" style="margin:0">La foto resta sul telefono: il testo si legge qui, senza internet. La prima volta scarico il lettore (circa 5 MB).</p></div>', async (o, close) => {
+    const st = t => { const e = o.querySelector('#ocr-s'); if (e) e.textContent = t; }, bar = v => { const e = o.querySelector('#ocr-p'); if (e) e.style.width = Math.max(3, Math.round(v * 100)) + '%'; };
+    try {
+      await ocrLib(); const abs = new URL(OCR_PATH, location.href).href;
+      if (!OCRW) OCRW = await Tesseract.createWorker('ita', 1, {workerPath:abs + 'worker.min.js', corePath:abs, langPath:abs, workerBlobURL:false, logger:m => { if (m.status === 'recognizing text') { st('Leggo lo scontrino…'); bar(.3 + m.progress * .7); } else { st('Preparo il lettore…'); bar((m.progress || 0) * .3); } }});
+      st('Leggo lo scontrino…'); const text = (await OCRW.recognize(await ocrImage(file))).data.text;
+      if (!document.body.contains(o)) return;
+      ocrResult(o, close, text);
+    } catch(e) { const b = o.querySelector('#ocr-b'); if (b) b.innerHTML = '<p class="small">Non sono riuscito a leggere lo scontrino. Riprova con più luce, oppure inserisci la spesa a mano.</p><button class="btn sm" data-x>Chiudi</button>'; }
+  }, true);
+}
+function ocrResult(o, close, text){
+  const p = ocrParse(text), g = ocrGuess(p, text), cat = g.c && catOf('out', g.c);
+  o.querySelector('#ocr-b').innerHTML = (p.total === null ? '<p class="small" style="margin:0;color:var(--yellow)">Non trovo il totale: scrivilo tu.</p>' : '') +
+    '<div class="grid2"><div class="field"><label for="ocr-a">Importo</label><input id="ocr-a" inputmode="decimal" value="' + (p.total === null ? '' : String(p.total.toFixed(2)).replace('.', ',')) + '"></div><div class="field"><label for="ocr-d">Data</label><input id="ocr-d" type="date" value="' + (p.d || today()) + '"></div></div>' +
+    '<div class="field"><label for="ocr-n">Negozio (va nella nota)</label><input id="ocr-n" value="' + esc(p.shop) + '"></div>' +
+    (cat ? '<div class="ocrcat"><span class="small muted">' + (g.sure ? 'Come l\'ultima volta in questo negozio' : 'Ti propongo questa categoria') + '</span><div class="row" style="gap:10px;flex-wrap:nowrap">' + catTile('out', cat) + '<b>' + esc(cat.n + (g.s ? ' › ' + g.s : '')) + '</b></div></div>' +
+      '<div class="row"><button class="btn" id="ocr-ok">' + ic('check') + 'Conferma</button><button class="btn ghost" id="ocr-other">Un\'altra categoria</button></div>'
+      : '<p class="small" style="margin:0">Non so in che categoria metterla: scegli tu, la prossima volta in questo negozio me lo ricordo.</p><button class="btn" id="ocr-other">Scegli la categoria</button>') +
+    '<details class="small muted"><summary>Testo letto</summary><pre class="ocrtxt">' + esc(text.trim().slice(0, 1500)) + '</pre></details>';
+  const go = keep => { const a = o.querySelector('#ocr-a').value.trim(), d = o.querySelector('#ocr-d').value || today(), n = o.querySelector('#ocr-n').value.trim().slice(0, 60);
+    OCRF = {t:'out', c:keep ? g.c : null, s:keep ? g.s : '', a, d:d > today() ? today() : d, n, ocrKey:ocrKey(n) || g.key}; close(); F = null; nav({screen:'add', type:'out', ocr:Date.now()}); };
+  const ok = o.querySelector('#ocr-ok'); if (ok) ok.onclick = () => go(true);
+  o.querySelector('#ocr-other').onclick = () => go(false);
 }
 function catPop(html, bind, noFocus){
   const o = document.createElement('div'); o.className = 'psheet pcenter'; o.id = 'catpop';

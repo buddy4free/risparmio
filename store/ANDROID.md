@@ -6,7 +6,7 @@ Le modifiche al sito arrivano subito a tutti; un nuovo pacchetto serve solo se c
 
 ## Nuova versione del pacchetto
 1. GitHub → **Actions → App Android → Run workflow**.
-2. `version_code`: un numero **più alto** dell'ultimo caricato (ultimo: **2**). `version_name`: es. `1.0.2`.
+2. `version_code`: un numero **più alto** dell'ultimo caricato (ultimo: **3**). `version_name`: es. `1.0.2`.
 3. Dopo ~3 minuti, nella pagina del lavoro: **Artifacts → buddy4free-risparmio-vN-firmato** → dentro c'è `app-release.aab`.
 4. Play Console → traccia → **Crea nuova release** → carica l'`.aab` → invia in revisione.
 

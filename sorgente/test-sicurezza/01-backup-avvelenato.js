@@ -1,6 +1,6 @@
 // Backup malevolo: codice in ogni campo (A = testi e codici, B = anche numeri, date e colori), ripristino e giro di tutte le schermate
 const {OUT, ok, fine, apri, demo, PAYLOAD, fs} = require('./comune');
-const SCREENS = ['home','tx','stats','an','cats','pillars','pillar','goal','dues','debts','settings','gym','missions','mission','learn','lesson','read','whatif','sim','review','gtips','well','wbi','legend','champ','notif','import','add','privacy','terms','breath'];
+const SCREENS = ['home','tx','stats','an','cats','pillars','pillar','goal','dues','debts','settings','gym','missions','mission','learn','lesson','read','whatif','sim','review','gtips','well','wbi','legend','champ','notif','import','add','privacy','terms','breath','rec'];
 const SEL = '#view button:not(.danger), #view [data-nav], #view .chip, #view [data-id], #view summary';
 (async () => { for (const V of ['A', 'B']) {
   const {b, p, errs, hits} = await apri(); await demo(p);

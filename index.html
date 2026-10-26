@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oRrWWckUivq6B6g90sCZQx41i4nMJOcM94+Xe2qAyVE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ga4EPd8R/EFiNRM+RNjKH2xPSKg7ReXgjqcWncqjju0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -147,6 +147,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .dayhead{font-size:.78rem;font-weight:700;color:var(--muted);padding:14px 2px 4px;text-transform:capitalize}
 .filters{display:flex;gap:6px;flex-wrap:wrap}
 .filters button{border:1px solid var(--line);background:var(--soft);border-radius:99px;padding:7px 13px;font-weight:600;font-size:.85rem}
+.recsum{display:flex;flex-direction:column;gap:10px}.recsum .grid2 div{display:flex;flex-direction:column;gap:2px}.recsum b{font-size:1.25rem}
+.recoff{opacity:.6}.recend summary{cursor:pointer;margin-bottom:8px}
 .filters button[aria-pressed="true"]{background:var(--yellow);color:#000;border-color:var(--yellow)}
 
 /* add form */
@@ -171,6 +173,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .colpick .cg{width:auto;border-radius:99px;padding:0 12px;background:var(--soft);border:1px solid var(--line);font-weight:600;font-size:.85rem;display:inline-flex;align-items:center;gap:6px}
 .colpick .cg .i{width:16px;height:16px}
 .cman2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.txlinks{display:grid;grid-template-columns:1fr 1fr;gap:10px}.txlinks button{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:11px 12px;color:inherit}.txlinks .i{width:22px;height:22px;color:var(--yellow);flex:none}.txlinks .t{display:flex;flex-direction:column;min-width:0}.txlinks b{font-size:.95rem}.txlinks .t span{font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .choose .cmanage{border-style:dashed;grid-template-columns:auto 1fr;padding:12px;gap:10px}
 .choose .cmanage .ic{width:36px;height:36px;border-radius:11px}
 .choose .cmanage .t b{font-size:1.02rem;line-height:1.15}
@@ -1214,7 +1217,7 @@ const GOAL_SCR = ['goal', 'whatif', 'gtips', 'read'];
 const SCROLL = {}, skey = r => r.screen + ':' + (r.id || '');
 function nav(r, back){ SCROLL[skey(R)] = window.scrollY; stopBreath(); const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   if (r.screen === 'home') { NAVSTACK.length = 0; histHome(); } else if (!back && R && !same(R, r)) histPush();
-  if (r.screen !== 'home' && !back && R && !same(R, r) && !(R.screen === 'add' && r.screen === 'add') && !['welcome', 'setup'].includes(R.screen)) { NAVSTACK.push(R); if (NAVSTACK.length > 60) NAVSTACK.shift(); } else if (back && NAVSTACK.length && same(NAVSTACK[NAVSTACK.length - 1], r)) NAVSTACK.pop();
+  if (r.screen !== 'home' && !back && R && !same(R, r) && !(R.screen === 'add' && r.screen === 'add') && !['welcome', 'setup'].includes(R.screen)) { /* tornare a una schermata già aperta (Annulla, Salva) vale come andare indietro */ const k = NAVSTACK.findLastIndex(x => same(x, r)); if (k >= 0) NAVSTACK.length = k; else { NAVSTACK.push(R); if (NAVSTACK.length > 60) NAVSTACK.shift(); } } else if (back && NAVSTACK.length && same(NAVSTACK[NAVSTACK.length - 1], r)) NAVSTACK.pop();
   if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; PREV = R; R = r; try { localStorage.setItem('b4f-last', JSON.stringify({r, t:Date.now()})); } catch(e) {} render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
 view.addEventListener('click', e => { if (e.target.closest('[data-savebig]')) { const s = document.getElementById('f-save'); if (s) s.click(); return; } const b = e.target.closest('[data-nav]'); if (b) nav(JSON.parse(b.dataset.nav), b.classList.contains('back')); });
 document.getElementById('logo').onclick = () => nav(S.setup ? {screen:'home'} : {screen:'welcome'});
@@ -1272,7 +1275,7 @@ function render(){
   document.getElementById('topbar').hidden = R.screen === 'welcome' || R.screen === 'add';
   document.getElementById('gear').hidden = true; document.getElementById('help').hidden = true;
   ({welcome:renderWelcome, setup:renderSetup, home:renderHome, tx:renderTx, charts:renderStats, stats:renderStats, add:renderAdd, pillars:renderPillars, pillar:renderPillar, goal:renderGoal,
-    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, import:renderImport, cats:renderCats, an:renderAn, notif:renderNotif, legend:renderLegend, sim:renderSim, dues:renderDues, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
+    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, import:renderImport, cats:renderCats, an:renderAn, notif:renderNotif, legend:renderLegend, sim:renderSim, dues:renderDues, rec:renderRec, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
   postRender(); bindCarousels();
 }
 function demoBar(){ return S.demo ? '<div class="demo"><span>Stai guardando dati di esempio.</span><button id="demo-end">Inizia con i tuoi dati</button></div>' : ''; }
@@ -1618,7 +1621,8 @@ function renderTx(){
           : '<div class="grid2"><div class="field"><label for="mv-c">Categoria</label><select id="mv-c">' + S.cats[selT].map(c => '<option value="' + c.id + '"' + (c.id === TXMV.c ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</select></div>' +
             '<div class="field"><label for="mv-s">Sottocategoria</label><select id="mv-s"><option value="">Nessuna</option>' + (mvCat.subs || []).map(x => '<option value="' + esc(x) + '"' + (x === TXMV.s ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '<option value="__new">+ Nuova…</option></select></div></div>' +
             '<div class="row"><button class="btn sm" id="mv-go">Sposta</button><button class="btn sm danger" id="mv-del">Elimina</button></div>') + '</div>' : '<div class="card impbulk"><span class="small">Tocca i movimenti da spostare o da eliminare.</span></div>');
-  view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + '<button class="readcard" ' + nav$({screen:'dues'}) + '><span class="t"><b>' + ic('calendar') + ' Scadenze e rinnovi</b><span>' + ((S.dues || []).length ? (S.dues || []).length + ' in calendario' + (upcomingDues().length ? ' · <span style="color:var(--yellow);font-weight:700">' + upcomingDues().length + ' da decidere</span>' : '') : 'Assicurazioni, abbonamenti, bollo: ti avviso un mese prima') + '</span></span>' + ic('right') + '</button>' +
+  view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + '<div class="txlinks"><button ' + nav$({screen:'rec'}) + '>' + ic('repeat') + '<span class="t"><b>Ricorrenti</b><span>' + (S.rec.some(r => recNext(r)) ? S.rec.filter(r => recNext(r)).length + ' attive' : 'Stipendio, affitto…') + '</span></span></button>' +
+    '<button ' + nav$({screen:'dues'}) + '>' + ic('calendar') + '<span class="t"><b>Scadenze</b><span>' + ((S.dues || []).length ? (upcomingDues().length ? '<i style="color:var(--yellow);font-style:normal;font-weight:700">' + upcomingDues().length + ' da decidere</i>' : (S.dues || []).length + ' in calendario') : 'Bollo, assicurazioni…') + '</span></span></button></div>' +
     (TXC && TXBACK ? backBtn((TABS.find(t => t[0] === TXBACK.screen) || [0, TXBACK.screen === 'charts' ? 'Grafici' : TXBACK.screen === 'an' ? 'Analisi' : 'Indietro'])[1], TXBACK) : '') +
     period + catSel +
     (TXC ? '<div class="spread"><span class="chip" style="background:' + catColor(TXC.t, cat) + ';color:#fff">' + ic(cat.i) + esc(cat.n) + (TXC.s ? ' › ' + esc(TXC.s) : '') + '</span><button class="textlink" id="tx-clr">Togli il filtro</button></div>'
@@ -1627,7 +1631,7 @@ function renderTx(){
     (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => '<div class="dayhead">' + dl(d) + '</div><div class="list">' + groups[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
       const c = catOf(x.t, x.c);
       if (TXSEL) { const ok = !x.rec && !x.plan && S.tx.some(y => y.id === x.id); return '<label class="item selrow' + (ok ? '' : ' off') + '">' + (ok ? '<input type="checkbox" data-tsel="' + x.id + '"' + (TXSEL.has(x.id) ? ' checked' : '') + '>' : '<span class="small muted" title="Ricorrente: si modifica dalla serie">↻</span>') + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (isRf(x) ? ' · rimborso' : '') + '</span></span>' + txAmt(x) + '</label>'; }
-      return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan ? ' · previsto' : x.rec ? ' · ogni mese' : '') + (isRf(x) ? ' · <b style="color:' + IN_COL + '">rimborso</b>' : '') + '</span></span>' + txAmt(x) + '</button>'; }).join('') + '</div>').join('') + '</div>' +
+      return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan ? ' · previsto' : x.rec ? ' · ' + recFreq(S.rec.find(r => r.id === x.rec) || {}, true) : '') + (isRf(x) ? ' · <b style="color:' + IN_COL + '">rimborso</b>' : '') + '</span></span>' + txAmt(x) + '</button>'; }).join('') + '</div>').join('') + '</div>' +
       selCard() + (L.length > shown.length ? '<button class="btn ghost" id="tx-more">Mostra altri ' + Math.min(300, L.length - shown.length) + ' (' + (L.length - shown.length) + ' in tutto)</button>' : '')
       : '<div class="note">Nessun movimento' + (TXC || TXQ ? ' con questo filtro' : '') + (TXP === 'm' ? ' a ' + ymLabel(viewYM, {month:'long'}) : TXP === 'y' ? ' nel ' + TXY : TXP === 'p' ? ' nel periodo' : '') + '.' + (TXP === 'm' ? ' Prova "Anno" o "Tutto" per vedere un periodo più lungo.' : '') + '</div>') +
     (downloads && S.tx.length + S.rec.length ? '<button class="textlink" id="csv">Esporta tutti i movimenti in CSV</button>' : '') +
@@ -1663,7 +1667,7 @@ async function exportCSV(){
 
 /* ---------- add / edit ---------- */
 let F = null;
-function formBar(title){ const T = TYPE[F.t]; return '<div class="formbar typed" style="--tc:' + T[1] + '"><button class="back" ' + nav$({screen:'tx'}) + '>' + ic('left') + 'Annulla</button><b><i class="dot" style="background:' + T[1] + '"></i>' + title + '</b><button class="btn sm" id="f-save">Salva</button></div>'; }
+function formBar(title){ const T = TYPE[F.t]; return '<div class="formbar typed" style="--tc:' + T[1] + '"><button class="back" ' + nav$({screen:R.back || 'tx'}) + '>' + ic('left') + 'Annulla</button><b><i class="dot" style="background:' + T[1] + '"></i>' + title + '</b><button class="btn sm" id="f-save">Salva</button></div>'; }
 function typeToggle(lock){ return '<div class="seg3">' + [['out','Uscita'],['in','Entrata'],['xfer','Trasferimento']].map(t => '<button data-t="' + t[0] + '" aria-pressed="' + (F.t === t[0]) + '"' + (lock && F.t !== t[0] ? ' disabled' : '') + '>' + t[1] + '</button>').join('') + '</div>'; }
 function bindType(keep){ view.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { if (keep) keep(); else { F.a = val('f-a'); F.d = val('f-d') || today(); F.n = val('f-n'); } if (F.t !== b.dataset.t) { F.t = b.dataset.t; F.c = null; F.s = ''; F.p = 'liq'; } renderAdd(); }); }
 function renderXfer(){
@@ -1784,12 +1788,12 @@ function renderAdd(){
     else if (F.rec) S.rec.push(Object.assign({id:uid(), t:F.t, c:F.c, s:F.s, a, n:F.n, from:ymOf(F.d), to:null, skip:[], p:F.p}, recFields));
     else S.tx.push(Object.assign({id:uid(), t:F.t, c:F.c, s:F.s, a, d:F.d, n:F.n, p:F.p}, F.d < pilFrom() ? {f:1} : {}));
     save(); toast((R.edit ? 'Aggiornato' : (F.t === 'in' ? 'Entrata salvata' : 'Uscita salvata')) + ' · ' + (F.t === 'in' ? '+' : '−') + eur2(a) + (F.t === 'in' ? ' in ' : ' da ') + destLabel(F.p));
-    viewYM = ymOf(F.d) > curYM() ? curYM() : ymOf(F.d); F = null; nav({screen:'tx'});
+    viewYM = ymOf(F.d) > curYM() ? curYM() : ymOf(F.d); F = null; nav({screen:R.back || 'tx'});
   };
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     if (F.recId) { const r = S.rec.find(x => x.id === F.recId), dd = F.recKey.length === 10 ? F.recKey : F.d; if (b.dataset.del === 'one') (r.skip = r.skip || []).push(dd); else { r.until = dayOffset(dd, -1); r.to = null; if (r.until < (r.start || r.from + '-01')) S.rec = S.rec.filter(x => x.id !== r.id); } }
     else S.tx = S.tx.filter(x => x.id !== R.edit);
-    save(); toast('Eliminato'); F = null; nav({screen:'tx'});
+    save(); toast(F.recId ? (b.dataset.del === 'one' ? 'Saltata solo questa volta' : 'Ricorrente interrotta') : 'Eliminato'); F = null; nav({screen:R.back || 'tx'});
   });
 }
 
@@ -2361,6 +2365,30 @@ function dueState(d){ const n = dueDays(d); if (n < 0) return {c:'#E5484D', l:'S
 const upcomingDues = () => (S.dues || []).filter(d => dueDays(d) <= 30).sort((a, b) => a.date.localeCompare(b.date));
 function dueCal(d){ const r = dayOffset(d.date, -30) < today() ? dayOffset(today(), 1) : dayOffset(d.date, -30), x = r.replace(/-/g, '');
   return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Buddy4Free: scade ' + d.n) + '&details=' + encodeURIComponent('Il ' + dshort(d.date) + ' scade ' + d.n + ' (' + eur2(d.a) + '). Rinnovi, rinegozi, riduci o disdici? Apri Buddy4Free Risparmio.') + '&dates=' + x + '/' + dayOffset(r, 1).replace(/-/g, ''); }
+/* ---------- ricorrenti: tutte le entrate e uscite che si ripetono, in un posto solo ---------- */
+function recNext(r){ const t = today(); for (let k = 0, ym = r.from > curYM() ? r.from : curYM(); k < 60; k++, ym = addMonths(ym, 1)) { const d = recDates(r, ym).find(x => x >= t); if (d) return d; } return null; }
+function recLast(r){ const t = today(); for (let k = 0, ym = curYM(); k < 600 && ym >= r.from; k++, ym = addMonths(ym, -1)) { const d = recDates(r, ym).filter(x => x <= t).pop(); if (d) return d; } return null; }
+function recFreq(r, short){ const n = r.every || 1, w = r.unit === 'w';
+  let f = w ? (n === 1 ? 'Ogni settimana' : 'Ogni ' + n + ' settimane') : n === 12 ? 'Ogni anno' : n === 1 ? 'Ogni mese' : n === 3 ? 'Ogni trimestre' : n === 6 ? 'Ogni 6 mesi' : 'Ogni ' + n + ' mesi';
+  if (short) return f.toLowerCase();
+  if (!w && n < 12) f += ', il ' + (r.day || 1); if (r.count) f += ' · ' + r.count + ' volte'; else if (r.until) f += ' · fino al ' + new Date(r.until + 'T12:00:00').toLocaleDateString('it-IT'); return f; }
+const recMonthly = r => Math.abs(r.a) * (r.unit === 'w' ? 52 / 12 : 1) / (r.every || 1);
+let RECF = 'all';
+function renderRec(){
+  const all = S.rec.filter(r => RECF === 'all' || r.t === RECF).map(r => ({r, next:recNext(r)}));
+  const on = all.filter(x => x.next).sort((a, b) => a.next.localeCompare(b.next)), off = all.filter(x => !x.next).map(x => ({r:x.r, last:recLast(x.r)})).filter(x => x.last).sort((a, b) => b.last.localeCompare(a.last));
+  const act = S.rec.filter(r => recNext(r)), mi = act.filter(r => r.t === 'in').reduce((t, r) => t + recMonthly(r), 0), mo = act.filter(r => r.t === 'out').reduce((t, r) => t + recMonthly(r), 0);
+  const row = (r, d, ended) => { const c = catOf(r.t, r.c); return '<button class="item' + (ended ? ' recoff' : '') + '" ' + nav$({screen:'add', edit:'r:' + r.id + ':' + d, back:'rec'}) + '>' + catTile(r.t, c) +
+    '<span class="t"><b>' + esc(r.n || r.s || c.n) + '</b><span class="sub">' + esc(c.n + (r.s && r.s !== r.n ? ' · ' + r.s : '')) + '</span><span class="sub">' + recFreq(r) + '</span><span class="sub">' + (ended ? 'Terminata · ultima il ' : 'Prossima: ') + dshort(d) + (ended ? ' ' + d.slice(0, 4) : '') + '</span></span>' + txAmt(r) + '</button>'; };
+  view.innerHTML = '<div class="sec" style="gap:18px">' + backBtn('Movimenti', {screen:'tx'}) + '<div class="intro"><h2>Ricorrenti</h2><p class="muted">Le entrate e le uscite che si ripetono da sole. Tocca una voce per cambiarla, saltarla una volta o interromperla.</p></div>' +
+    (act.length ? '<div class="card recsum"><span class="label">Ogni mese, in media</span><div class="grid2"><div><span class="small muted">Entrate fisse</span><b class="num" style="color:' + IN_COL + '">+' + eur2(mi) + '</b></div><div><span class="small muted">Uscite fisse</span><b class="num" style="color:' + OUT_COL + '">−' + eur2(mo) + '</b></div></div>' +
+      '<span class="small muted">Restano ' + (mi - mo < 0 ? '−' : '') + eur2(Math.abs(mi - mo)) + ' al mese prima delle spese variabili.</span></div>' : '') +
+    (S.rec.length ? '<div class="filters">' + [['all', 'Tutte'], ['out', 'Uscite'], ['in', 'Entrate']].map(f => '<button data-rf="' + f[0] + '" aria-pressed="' + (RECF === f[0]) + '">' + f[1] + '</button>').join('') + '</div>' : '') +
+    (on.length ? '<div><span class="label">Attive · ' + on.length + '</span><div class="list">' + on.map(x => row(x.r, x.next)).join('') + '</div></div>' : '<div class="note">' + (S.rec.length && RECF !== 'all' ? 'Nessuna ' + (RECF === 'in' ? 'entrata' : 'uscita') + ' ricorrente attiva.' : 'Non hai ancora movimenti ricorrenti.') + '</div>') +
+    (off.length ? '<details class="recend"><summary class="label">Terminate · ' + off.length + '</summary><div class="list">' + off.map(x => row(x.r, x.last, true)).join('') + '</div></details>' : '') +
+    '<div class="card"><p class="small" style="margin:0">Per aggiungerne una: tocca <b>+</b>, scegli entrata o uscita e spunta <b>Si ripete</b>.</p></div></div>';
+  view.querySelectorAll('[data-rf]').forEach(b => b.onclick = () => { RECF = b.dataset.rf; renderRec(); });
+}
 function renderDues(){
   S.dues = S.dues || []; S.dueCuts = S.dueCuts || [];
   const L = S.dues.slice().sort((a, b) => a.date.localeCompare(b.date)), yr = L.reduce((t, d) => t + (d.freq === 'o' ? 0 : dueYear(d)), 0), cut = S.dueCuts.reduce((t, x) => t + x.a, 0);
@@ -3052,7 +3080,7 @@ async function lockCard(){
 
 /* ---------- shell: menù laterale, occhio, scorrimento, spiegazioni ---------- */
 const MENU = [
-  ['Il mio denaro', [['home', 'Home', 'house'], ['tx', 'Movimenti', 'list'], ['dues', 'Scadenze e rinnovi', 'calendar'], ['stats', 'Statistiche', 'chart'], ['review', 'Revisione mensile', 'check']]],
+  ['Il mio denaro', [['home', 'Home', 'house'], ['tx', 'Movimenti', 'list'], ['rec', 'Ricorrenti', 'repeat'], ['dues', 'Scadenze e rinnovi', 'calendar'], ['stats', 'Statistiche', 'chart'], ['review', 'Revisione mensile', 'check']]],
   ['Patrimonio', [['pillars', 'I 4 pilastri', 'pillars'], ['goals', 'Obiettivi', 'target'], ['sim', 'Simulatore del futuro', 'chart'], ['debts', 'Finanziamenti e debiti', 'bank']]],
   ['Crescere', [['gym', 'Palestra: percorso', 'dumbbell'], ['missions', 'Sfide e missioni', 'star'], ['learn', 'Impara', 'book'], ['wbi', 'Indice di benessere', 'heart'], ['well', 'Benessere', 'leaf']]],
   ['App', [['guide', 'Video guida', 'play'], ['idea', 'Dammi un suggerimento', 'star'], ['support', 'Sostieni Buddy4Free', 'heart'], ['settings', 'Impostazioni', 'gear'], ['legend', 'Legenda', 'book'], ['terms', 'Termini e condizioni', 'shield'], ['privacy', 'Privacy', 'shield']]]

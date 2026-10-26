@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-QplkUEoeKwl+FcI3vrmEVbjfFyBf5SzJ/3OejlQMkFo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-oeLnBPlpL1tQMyxJcvGSfHhUjYjX0ys6valKL9vcxiw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1520,16 +1520,18 @@ function todayList(){
 }
 /* Samsung Internet con il suo tema scuro abbassa la luminosità di tutta la pagina: l'app non può impedirlo, quindi lo spiega una volta */
 const samsungDim = () => /SamsungBrowser/.test(navigator.userAgent) && !S.samsungSeen;
-function samsungNotice(){ if (!samsungDim()) return '';
-  return '<div class="card" id="sam-n" style="gap:10px;border-color:var(--yellow)"><b>Vedi i colori spenti?</b><p class="small" style="margin:0">Il tuo telefono apre l\'app con <b>Samsung Internet</b>, che con il tema scuro attivo abbassa la luminosità di tutte le pagine. L\'app è già scura e non ne ha bisogno.</p>' +
-    '<p class="small" style="margin:0">Per vedere i colori originali scegli una di queste:</p><ol class="small" style="margin:0;padding-left:20px"><li>Apri <b>Samsung Internet</b> → menu <b>☰</b> → <b>Impostazioni</b> → disattiva la <b>modalità scura</b> (o il tema scuro per i siti web).</li><li>Oppure, nelle impostazioni del telefono: <b>App → Scegli app predefinite → App browser → Chrome</b>, poi chiudi e riapri l\'app.</li></ol>' +
-    '<button class="btn sm ghost" id="sam-ok" style="align-self:flex-start">Ho capito</button></div>'; }
+function samsungPop(){ if (!samsungDim() || document.getElementById('catpop') || document.getElementById('lock')) return;
+  catPop('<b style="font-size:1.15rem">I colori ti sembrano spenti?</b><p class="small" style="margin:0">Sul tuo telefono l\'app si apre con <b>Samsung Internet</b>, che con il tema scuro attivo <b>scurisce tutte le pagine</b>, anche questa che è già scura. Il giallo, per esempio, diventa marroncino.</p>' +
+    '<p class="small" style="margin:0"><b>Si sistema in 10 secondi</b>, scegli una delle due:</p><ol class="small" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px"><li>Impostazioni del telefono → <b>App</b> → <b>Scegli app predefinite</b> → <b>App browser</b> → <b>Chrome</b>. Poi chiudi e riapri l\'app.</li><li>Oppure apri <b>Samsung Internet</b> → menu <b>☰</b> → <b>Impostazioni</b> → disattiva la <b>modalità scura</b>.</li></ol>' +
+    '<button class="btn" id="sam-ok" style="align-self:stretch">Ho capito</button><button class="textlink small" id="sam-later" style="align-self:center">Ricordamelo la prossima volta</button>', (o, close) => {
+    o.querySelector('#sam-ok').onclick = () => { S.samsungSeen = 1; save(); close(); };
+    o.querySelector('#sam-later').onclick = close; }, true); }
 function renderHome(){
   if (!S.setup) return nav({screen:'welcome'});
   const s = stats(viewYM), mv = nextMove(), ins = insights(viewYM);
   const sp = viewYM === curYM() ? splitPlan() : [];
   const nCat = Object.keys(s.byCat).length;
-  view.innerHTML = '<div class="sec" style="gap:24px">' + demoBar() + monthNav() + rateHero(s) + samsungNotice() + oldRecNotice() + backupNotice() +
+  view.innerHTML = '<div class="sec" style="gap:24px">' + demoBar() + monthNav() + rateHero(s) + oldRecNotice() + backupNotice() +
     '<div class="card"><div class="spread"><span class="label">Dove vanno i tuoi soldi</span>' + (nCat > 4 ? '<span class="small muted">scorri ↓</span>' : '') + '</div><div class="catscroll">' + catBars(s, 99) + '</div><button class="textlink small" data-allout style="align-self:flex-start">Vedi tutte le uscite del mese</button></div>' +
     goalsCarousel() + wbCard() + coachHTML() +
     '<div class="card"><span class="label">La tua prossima mossa</span><h3>' + mv.t + '</h3><p class="muted">' + mv.d + '</p>' +
@@ -1537,7 +1539,7 @@ function renderHome(){
       '<button class="btn sm" style="align-self:flex-start" ' + nav$(mv.go) + '>Apri</button></div>' +
     '<div class="sec"><span class="label">Oggi</span>' + todayList() + '</div>' +
   '</div>';
-  bindMonth(); bindDemo(); const so = view.querySelector('#sam-ok'); if (so) so.onclick = () => { S.samsungSeen = 1; save(); view.querySelector('#sam-n').remove(); }; bindOldRec(); bindBackupNotice();
+  bindMonth(); bindDemo(); bindOldRec(); bindBackupNotice();
   view.querySelectorAll('.catscroll .hbar, [data-allout]').forEach(b => { b.removeAttribute('data-nav'); b.onclick = () => { txFilter = 'out'; nav({screen:'tx'}); }; });
   supportPopup();
   const spg = document.getElementById('sp-go'); if (spg) spg.onclick = () => { sp.forEach(x => transfer('liq', x.k, x.v)); save(); toast('Fatto: soldi spostati nei pilastri'); renderHome(); };
@@ -3220,7 +3222,7 @@ function showLock(){
     '<button class="textlink small" id="lk-forgot">Hai dimenticato il PIN?</button></div>';
   document.body.appendChild(o); o.inert = false;
   const dots = () => o.querySelectorAll('.lkdots i').forEach((d, i) => d.classList.toggle('on', i < pin.length)), msg = t => o.querySelector('.lkmsg').textContent = t || '';
-  const open = () => { o.remove(); document.body.classList.remove('locked'); [...document.body.children].forEach(el => el.inert = false); LOCK.fails = 0; LOCK.until = 0; lockFails(); lockSeen(); };
+  const open = () => { setTimeout(samsungPop, 300); o.remove(); document.body.classList.remove('locked'); [...document.body.children].forEach(el => el.inert = false); LOCK.fails = 0; LOCK.until = 0; lockFails(); lockSeen(); };
   const check = async () => { if (Date.now() < LOCK.until) { pin = ''; dots(); return msg('Troppi tentativi: riprova tra ' + Math.ceil((LOCK.until - Date.now()) / 1000) + ' secondi'); }
     if (await pinHash(pin, S.lock.salt) === S.lock.hash) return open();
     LOCK.fails++; pin = ''; dots(); o.querySelector('.lkdots').classList.remove('shake'); void o.offsetWidth; o.querySelector('.lkdots').classList.add('shake');
@@ -4112,6 +4114,7 @@ function renderBreath(){
 
 render();
 if (lockDue()) showLock(); else lockSeen();
+setTimeout(samsungPop, 300);
 /* app installabile: funziona anche offline */
 if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

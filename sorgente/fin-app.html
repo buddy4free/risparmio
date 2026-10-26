@@ -860,6 +860,7 @@ const WELL = [
   {id:'pause', n:'Pausa dal lavoro', d:'Due pause di 5 minuti lontano dalla scrivania', i:'coffee', time:'11:00', rec:'DAILY', sec:'well'},
   {id:'breath', n:'Respirazione guidata', d:'2 minuti con i suoni', i:'wave', time:'13:30', rec:'DAILY', sec:'well'},
   {id:'track', n:'Hai segnato tutto?', d:'Un controllo veloce a fine giornata, per le spese sfuggite', i:'list', time:'21:00', rec:'DAILY', sec:'money'},
+  {id:'quiz', n:'Domanda del giorno', d:'Un minuto in Impara', i:'book', time:'12:30', rec:'DAILY', sec:'money'},
   {id:'gym', n:'Tappa della palestra', d:'Le azioni e la lettura del giorno', i:'dumbbell', time:'08:30', rec:'DAILY', sec:'money'},
   {id:'review', n:'Revisione mensile dei conti', d:'Il primo giorno del mese, 15 minuti', i:'calendar', time:'19:00', rec:'MONTHLY', sec:'money'}
 ];
@@ -1046,11 +1047,17 @@ let R = S.setup ? {screen:'home'} : {screen:'welcome'};
 try { if (!localStorage.getItem('b4f-first')) localStorage.setItem('b4f-first', new Date().toISOString()); localStorage.setItem('b4f-opens', String(+(localStorage.getItem('b4f-opens') || 0) + 1)); } catch(e) {}
 /* riaprendo l'app torni dove eri (entro 2 ore) */
 try { const L = JSON.parse(localStorage.getItem('b4f-last') || 'null'); if (S.setup && L && Date.now() - L.t < 72e5 && L.r && !['welcome', 'setup', 'add', 'import', 'breath'].includes(L.r.screen)) R = L.r; } catch(e) {}
+const GO_OK = ['learn', 'gym', 'tx', 'home'];
+try { const g = new URLSearchParams(location.search).get('go'); if (S.setup && GO_OK.includes(g)) { R = {screen:g}; history.replaceState(history.state, '', location.pathname); } } catch(e) {}
 let viewYM = curYM();
 
 let remote = null, writing = false, pending = false, saveTimer = null, downloads = null;
+let remT = null;
+function remSync(){ clearTimeout(remT); remT = setTimeout(async () => { if (!('caches' in window) || !S.notif) return; try { const gd = gymDay();
+  const st = {on:!!S.notif.on, quiz:(S.qd || {}).last || null, gym:gd.doneToday ? today() : null, gymN:gd.idx < 21 ? gd.idx + 1 : 0, track:S.tx.map(x => x.d).filter(d => d <= today()).sort().pop() || null};
+  await (await caches.open('b4f-rem')).put('rem.json', new Response(JSON.stringify(st), {headers:{'content-type':'application/json'}})); } catch(e) {} }, 1200); }
 function save(){
-  S.savedAt = Date.now();
+  S.savedAt = Date.now(); remSync();
   try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch(e) {}
   if (!remote) return;
   clearTimeout(saveTimer); saveTimer = setTimeout(flush, 800);
@@ -3722,10 +3729,32 @@ async function diagStorage(){
   const pb = document.getElementById('s-pers'); if (pb) pb.onclick = async () => { let ok = false; try { ok = await navigator.storage.persist(); } catch(e) {} toast(ok ? 'Dati protetti' : 'Il browser non lo consente: usa l\'app installata e fai backup'); diagStorage(); };
 }
 function renderNotif(){
-  view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn('Impostazioni', {screen:'settings'}) + '<div class="intro"><span class="label">Impostazioni</span><h2>Notifiche e promemoria</h2><p class="muted">Per ricevere le notifiche sul telefono, aggiungi ogni promemoria al tuo calendario: ti avviserà all\'orario scelto.</p></div>' +
+  view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn('Impostazioni', {screen:'settings'}) + '<div class="intro"><span class="label">Impostazioni</span><h2>Notifiche e promemoria</h2></div>' + notifCard() +
+    '<p class="small muted" style="margin:0">Per un avviso all\'orario esatto, aggiungi i promemoria che vuoi al tuo calendario: ti avviserà all\'ora scelta.</p>' +
     '<div class="sec"><span class="label">Soldi</span>' + remRows('money') + '</div><div class="sec"><span class="label">Benessere</span>' + remRows('well') + '</div></div>';
-  bindRem(renderNotif);
+  bindRem(renderNotif); bindNotif();
 }
+/* notifiche dell'app installata: senza server, una al giorno quando il telefono risveglia l'app */
+const notifCan = () => 'serviceWorker' in navigator && 'Notification' in window && !!navigator.serviceWorker.controller;
+function notifCard(){
+  if (!notifCan()) return '<div class="card"><b>Notifiche dell\'app</b><p class="small muted" style="margin:0">Disponibili nell\'app installata dal Play Store o dal sito. Qui usa il calendario.</p></div>';
+  const on = S.notif && S.notif.on && Notification.permission === 'granted', den = Notification.permission === 'denied';
+  return '<div class="card" style="gap:10px"><div class="spread"><b>Notifiche dell\'app</b><span class="chip" style="background:' + (on ? 'var(--green,#22A45D)' : 'var(--soft2)') + ';color:#fff">' + (on ? 'Attive' : 'Spente') + '</span></div>' +
+    '<p class="small muted" style="margin:0">Al massimo una al giorno: la domanda del giorno, la tappa della palestra o, la sera, un controllo delle spese. È il telefono a decidere il momento preciso, di giorno.</p>' +
+    (on && S.notif.periodic === false ? '<p class="small" style="margin:0;color:var(--yellow)">Questo telefono non permette avvisi automatici all\'app: ricevi solo la notifica di prova. Per gli avvisi usa il calendario qui sotto.</p>' : '') +
+    (den ? '<p class="small" style="margin:0;color:var(--yellow)">Le notifiche sono bloccate: attivale dalle impostazioni del telefono (App → Buddy4Free → Notifiche), poi torna qui.</p>' : '') +
+    '<div class="row">' + (on ? '<button class="btn sm ghost" id="nt-off">Spegni</button><button class="btn sm" id="nt-try">Notifica di prova</button>' : '<button class="btn sm" id="nt-on"' + (den ? ' disabled' : '') + '>Attiva le notifiche</button>') + '</div></div>';
+}
+async function notifTry(body){ try { const reg = await navigator.serviceWorker.ready; await reg.showNotification('Buddy4Free Risparmio', {body, icon:'icons/icon-192.png', badge:'icons/icon-192.png', tag:'b4f-test', data:{go:'home'}}); } catch(e) { toast('Il telefono non ha mostrato la notifica'); } }
+function bindNotif(){
+  const on = document.getElementById('nt-on'); if (on) on.onclick = async () => { let p = 'default'; try { p = await Notification.requestPermission(); } catch(e) {}
+    if (p !== 'granted') { toast('Senza permesso non posso mandarti notifiche'); return renderNotif(); }
+    let periodic = false; try { const reg = await navigator.serviceWorker.ready; if (reg.periodicSync) { const st = await navigator.permissions.query({name:'periodic-background-sync'}); if (st.state === 'granted') { await reg.periodicSync.register('b4f-daily', {minInterval:12 * 3600e3}); periodic = true; } } } catch(e) {}
+    S.notif = {on:true, periodic}; save(); renderNotif(); notifTry('Notifiche attive: al massimo una al giorno.'); };
+  const off = document.getElementById('nt-off'); if (off) off.onclick = async () => { S.notif = {on:false}; save(); try { const reg = await navigator.serviceWorker.ready; if (reg.periodicSync) await reg.periodicSync.unregister('b4f-daily'); } catch(e) {} renderNotif(); toast('Notifiche spente'); };
+  const tr = document.getElementById('nt-try'); if (tr) tr.onclick = () => notifTry('Così arriverà il promemoria di Buddy4Free.');
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { const g = e.data && e.data.go; if (GO_OK.includes(g)) nav({screen:g}); });
 function renderSettings(){
   view.innerHTML = '<div class="sec" style="gap:22px">' + backBtn('Home', {screen:'home'}) + '<div class="intro"><h2>Impostazioni</h2></div>' +
     '<div class="sec"><span class="label">Promemoria</span><div class="list"><button class="item" ' + nav$({screen:'notif'}) + '><span class="ic">' + ic('calendar') + '</span><span class="t"><b>Notifiche e promemoria</b><span class="sub">' + WELL.length + ' promemoria: soldi e benessere, con orari e calendario</span></span>' + ic('right') + '</button></div></div>' +

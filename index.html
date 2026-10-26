@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VKtnmun+b9+VYKEc2z0Ay+eso0S8ZENWXRm02X9sGH4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-lN2/xCxQwY45d+kWvb8C0iW/rSp65bHpRckLkJQaz+E='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -158,6 +158,13 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .amount{display:flex;align-items:center;gap:8px;border-bottom:2px solid var(--yellow);padding-bottom:6px}
 .amount span{font-family:var(--display);font-size:2rem;font-weight:800;color:var(--muted)}
 .amount input{border:0;background:none;font-family:var(--display);font-size:2.6rem;font-weight:900;padding:0;border-radius:0}
+.catview{display:flex;border:1px solid var(--line);border-radius:99px;padding:2px;flex:none}.catview button{border:0;background:none;color:var(--muted);font-size:.75rem;font-weight:700;padding:5px 10px;border-radius:99px}.catview button[aria-pressed="true"]{background:var(--yellow);color:#000}
+.catlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.cl+.cl{border-top:1px solid var(--line)}.clrow{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;background:none;border:0;color:inherit;text-align:left}
+.clrow .t{flex:1;display:flex;flex-direction:column;min-width:0}.clrow .t b{font-size:1rem}.clrow .sub{font-size:.78rem;color:var(--muted)}.clrow[aria-current="true"] .t b{color:var(--yellow)}
+.clchev{font-size:1.3rem;color:var(--muted);width:22px;text-align:center}.clchev .i{width:18px;height:18px}.cl.open{background:var(--soft)}
+.clsubs{display:flex;flex-wrap:wrap;gap:8px;padding:2px 14px 14px 62px}.clsubs button{border:1px solid var(--line);background:#000;border-radius:99px;padding:9px 14px;font-weight:600;font-size:.88rem;color:inherit}.clsubs button[aria-pressed="true"]{background:var(--yellow);color:#000;border-color:var(--yellow)}.clsubs .muted{color:var(--muted)}
+.clnew{padding:0 14px 14px 62px}
 .cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
 .cats button{border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:.74rem;font-weight:600;line-height:1.15;text-align:center;min-height:78px}
 .cats button[aria-pressed="true"]{background:var(--yellow);color:#000;border-color:var(--yellow)}
@@ -1248,7 +1255,7 @@ function phoneBack(){
   if (R.screen === 'add' && F && !R.edit && !R.editX && F.t !== 'xfer' && F.step && F.step !== 'cat') {
     const CT = F.rf ? 'out' : F.t, hasSub = F.c && (catOf(CT, F.c).subs || []).length, fa = document.getElementById('f-a');
     if (fa) { F.a = fa.value; F.d = val('f-d') || F.d; F.n = val('f-n'); }
-    F.step = F.step === 'amt' ? 'dest' : F.step === 'dest' && hasSub ? 'sub' : 'cat'; render(); window.scrollTo({top:0}); return true; }
+    F.step = F.step === 'amt' ? 'dest' : F.step === 'dest' && hasSub && (S.catView || 'list') !== 'list' ? 'sub' : 'cat'; if (F.step === 'cat') F.open = F.c; render(); window.scrollTo({top:0}); return true; }
   if (R.screen === 'an' && AN.c) { if (AN.s !== null) AN.s = null; else AN.c = null; render(); return true; }
   if (R.screen === 'tx' && TXSEL) { TXSEL = null; render(); return true; }
   if (R.screen === 'cats' && !R.id && CATX.mode) { CATX.mode = ''; render(); return true; }
@@ -1733,14 +1740,21 @@ function renderAdd(){
   }
   if (F.t === 'xfer') return renderXfer();
   const CT = F.rf ? 'out' : F.t, cats = S.cats[CT], cur = F.c && catOf(CT, F.c), T = F.rf ? ['Rimborso', '#22A45D'] : TYPE[F.t], four = CT === 'out' || !!(cur && (cur.subs || []).length);
+  const LISTV = (S.catView || 'list') === 'list';
   const crumbs = (F.c ? '<button class="crumb" data-step="cat">' + catTile(CT, cur) + esc(cur.n) + '</button>' : '') +
-    (F.c && four && F.step !== 'cat' && F.step !== 'sub' ? '<button class="crumb" data-step="sub">' + (F.s ? esc(F.s) : 'nessuna sottocategoria') + '</button>' : '') +
+    (F.c && four && F.step !== 'cat' && F.step !== 'sub' ? '<button class="crumb" data-step="' + (LISTV ? 'cat' : 'sub') + '">' + (F.s ? esc(F.s) : 'nessuna sottocategoria') + '</button>' : '') +
     (['amt'].includes(F.step) ? '<button class="crumb" data-step="dest"><i class="dot" style="background:' + destColor(F.p) + '"></i>' + esc(destLabel(F.p)) + '</button>' : '');
-  const stepNo = {cat:1, sub:2, dest:four ? 3 : 2, amt:four ? 4 : 3}[F.step], steps = four ? 4 : 3;
+  const f4 = four && !LISTV, stepNo = {cat:1, sub:2, dest:f4 ? 3 : 2, amt:f4 ? 4 : 3}[F.step], steps = f4 ? 4 : 3;
   let body = '';
   if (F.step === 'cat') {
     body = (F.t === 'in' && !R.edit ? '<label class="check rfbox"><input type="checkbox" id="f-rf"' + (F.rf ? ' checked' : '') + '><span><b>È un rimborso di una spesa</b><br><span class="small muted">Un reso, una nota spese, una quota che un amico ti restituisce. Scegli la spesa che ti hanno rimborsato: il rimborso la riduce e non conta come entrata.</span></span></label>' : '') +
-      '<h3>' + (F.rf ? 'Che spesa ti hanno rimborsato?' : 'Scegli la categoria') + '</h3><div class="cats">' + cats.map(c => '<button data-c="' + c.id + '" aria-pressed="' + (F.c === c.id) + '">' + catTile(CT, c) + esc(c.n) + '</button>').join('') + '<button data-c="__new" aria-pressed="' + F.newCat + '">' + ic('plus') + 'Nuova</button></div>' + (F.newCat ? '' : '<button class="textlink" ' + nav$({screen:'cats', t:CT}) + ' style="align-self:flex-start">Gestisci categorie</button>') +
+      '<div class="spread"><h3 style="margin:0">' + (F.rf ? 'Che spesa ti hanno rimborsato?' : 'Scegli la categoria') + '</h3><div class="catview">' + [['list', 'Elenco'], ['grid', 'Griglia']].map(v => '<button data-cv="' + v[0] + '" aria-pressed="' + ((S.catView || 'list') === v[0]) + '">' + v[1] + '</button>').join('') + '</div></div>' +
+      (LISTV ? '<div class="catlist">' + cats.map(c => { const subs = c.subs || [], op = F.open === c.id;
+        return '<div class="cl' + (op ? ' open' : '') + '"><button class="clrow" data-cl="' + c.id + '" aria-expanded="' + op + '"' + (F.c === c.id ? ' aria-current="true"' : '') + '>' + catTile(CT, c) + '<span class="t"><b>' + esc(c.n) + '</b>' + (subs.length ? '<span class="sub">' + subs.length + (subs.length === 1 ? ' sottocategoria' : ' sottocategorie') + '</span>' : '') + '</span><span class="clchev">' + (subs.length ? (op ? '−' : '+') : ic('right')) + '</span></button>' +
+          (op ? '<div class="clsubs">' + subs.map(x => '<button data-cs="' + esc(x) + '" aria-pressed="' + (F.c === c.id && F.s === x) + '">' + esc(x) + '</button>').join('') + '<button data-cs="" class="muted">Nessuna</button><button data-cs="__new">+ Nuova</button></div>' +
+            (F.newSub ? '<div class="row clnew"><input id="ns-n" placeholder="Nome sottocategoria" style="flex:1;width:auto"><button class="btn sm" id="ns-ok">Aggiungi</button></div>' : '') : '') + '</div>'; }).join('') +
+        '<div class="cl"><button class="clrow" data-c="__new">' + '<span class="ic cat" style="background:var(--line)">' + ic('plus') + '</span><span class="t"><b>Nuova categoria</b></span></button></div></div>'
+      : '<div class="cats">' + cats.map(c => '<button data-c="' + c.id + '" aria-pressed="' + (F.c === c.id) + '">' + catTile(CT, c) + esc(c.n) + '</button>').join('') + '<button data-c="__new" aria-pressed="' + F.newCat + '">' + ic('plus') + 'Nuova</button></div>') + (F.newCat ? '' : '<button class="textlink" ' + nav$({screen:'cats', t:CT}) + ' style="align-self:flex-start">Gestisci categorie</button>') +
       (F.newCat ? '<div class="card"><b>Nuova categoria</b><input id="nc-n" placeholder="Nome"><div class="iconpick">' + PICK_ICONS.map(n => '<button data-ic="' + n + '" aria-pressed="' + (F.icon === n) + '" aria-label="' + n + '">' + ic(n) + '</button>').join('') + '</div>' + (CT === 'out' ? '<label class="check"><input type="checkbox" id="nc-d"> Spesa non essenziale</label>' : '') + '<button class="btn sm" id="nc-ok" style="align-self:flex-start">Crea categoria</button></div>' : '');
   } else if (F.step === 'sub') {
     body = '<h3>Sottocategoria di ' + esc(cur.n) + '</h3><div class="bigchips">' + (cur.subs || []).map(x => '<button data-s="' + esc(x) + '" aria-pressed="' + (F.s === x) + '">' + esc(x) + '</button>').join('') + '<button data-s="" aria-pressed="' + (!F.s) + '" class="muted">Nessuna</button><button data-s="__new">+ Nuova</button></div>' +
@@ -1764,11 +1778,17 @@ function renderAdd(){
   const keep = () => { if (F.step !== 'amt') return; F.a = val('f-a'); F.d = val('f-d') || today(); F.n = val('f-n'); F.rec = document.getElementById('f-rec').checked;
     if (F.rec && document.getElementById('r-ev')) { F.every = Math.max(1, +val('r-ev') || 1); F.unit = val('r-un'); if (document.getElementById('r-ct')) F.count = Math.max(1, +val('r-ct') || 1); if (document.getElementById('r-ut')) F.until = val('r-ut'); } };
   const go = st => { keep(); const O = {cat:0, sub:1, dest:2, amt:3}; if (O[st] > O[F.step]) histPush(); F.step = st; renderAdd(); window.scrollTo({top:0}); };
-  view.querySelectorAll('[data-step]').forEach(b => b.onclick = () => go(b.dataset.step));
+  view.querySelectorAll('[data-step]').forEach(b => b.onclick = () => { if (b.dataset.step === 'cat') { F.open = F.c; F.newSub = false; } go(b.dataset.step); });
   const rfc = document.getElementById('f-rf'); if (rfc) rfc.onchange = () => { F.rf = rfc.checked; F.c = null; F.s = ''; F.p = 'liq'; F.rec = false; renderAdd(); };
   view.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { if (b.dataset.c === '__new') { F.newCat = !F.newCat; return renderAdd(); } F.c = b.dataset.c; F.newCat = false; if ((catOf(CT, F.c).subs || []).length) { F.s = ''; go('sub'); } else go(R.edit ? 'amt' : 'dest'); });
+  view.querySelectorAll('[data-cv]').forEach(b => b.onclick = () => { S.catView = b.dataset.cv; save(); renderAdd(); });
+  const stay = () => { const y = window.scrollY; renderAdd(); window.scrollTo({top:y}); };
+  view.querySelectorAll('[data-cl]').forEach(b => b.onclick = () => { const id = b.dataset.cl; F.newCat = false; F.newSub = false;
+    if (!(catOf(CT, id).subs || []).length) { F.c = id; F.s = ''; F.open = null; return go(R.edit ? 'amt' : 'dest'); }
+    F.open = F.open === id ? null : id; stay(); const o = view.querySelector('.cl.open'); if (o) { const r = o.getBoundingClientRect(); if (r.bottom > innerHeight - 90) window.scrollBy({top:r.bottom - innerHeight + 110, behavior:'smooth'}); } });
+  view.querySelectorAll('[data-cs]').forEach(b => b.onclick = () => { if (b.dataset.cs === '__new') { F.c = F.open; F.newSub = !F.newSub; stay(); const i = document.getElementById('ns-n'); if (i) i.focus(); return; } F.c = F.open; F.s = b.dataset.cs; F.newSub = false; go(R.edit ? 'amt' : 'dest'); });
   view.querySelectorAll('[data-ic]').forEach(b => b.onclick = () => { const n = val('nc-n'); F.icon = b.dataset.ic; renderAdd(); document.getElementById('nc-n').value = n; });
-  const nc = view.querySelector('#nc-ok'); if (nc) nc.onclick = () => { const n = val('nc-n').trim(); if (!n) return toast('Scrivi il nome della categoria'); const c = {id:'c' + uid(), n, i:F.icon, subs:[], g:CT === 'in' ? 'extra' : 'altro'}; if (CT === 'out' && document.getElementById('nc-d').checked) c.disc = true; S.cats[CT].push(c); F.c = c.id; F.newCat = false; save(); go(CT === 'out' ? 'sub' : 'dest'); };
+  const nc = view.querySelector('#nc-ok'); if (nc) nc.onclick = () => { const n = val('nc-n').trim(); if (!n) return toast('Scrivi il nome della categoria'); const c = {id:'c' + uid(), n, i:F.icon, subs:[], g:CT === 'in' ? 'extra' : 'altro'}; if (CT === 'out' && document.getElementById('nc-d').checked) c.disc = true; S.cats[CT].push(c); F.c = c.id; F.newCat = false; save(); go(CT === 'out' && (S.catView || 'list') !== 'list' ? 'sub' : 'dest'); };
   view.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { if (b.dataset.s === '__new') { F.newSub = !F.newSub; return renderAdd(); } F.s = b.dataset.s; go(R.edit ? 'amt' : 'dest'); });
   const ns = view.querySelector('#ns-ok'); if (ns) ns.onclick = () => { const n = val('ns-n').trim(); if (!n) return; cur.subs = cur.subs || []; cur.subs.push(n); F.s = n; F.newSub = false; save(); go(R.edit ? 'amt' : 'dest'); };
   view.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { F.p = b.dataset.p; go('amt'); });

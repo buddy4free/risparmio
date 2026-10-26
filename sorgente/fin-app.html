@@ -634,6 +634,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 .books .slide{flex-basis:70%;display:flex}
 .books .book{flex:1;min-height:210px}
 .book{border:2px solid var(--yellow);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:6px;height:100%}
+.books .slide:has(.bmini){flex-basis:42%}.book.bmini{min-height:0;padding:12px;gap:6px;border-width:1px}.bmini b{font-size:.92rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.bmini .small{font-size:.78rem}.bmini .btag{margin-top:auto}
 .bweek{display:flex;flex-direction:column;gap:12px;border-color:var(--yellow)}.bcover{width:58px;height:78px;border-radius:8px 12px 12px 8px;background:var(--yellow);color:#000;display:grid;place-items:center;flex:none;box-shadow:inset 6px 0 0 rgba(0,0,0,.18)}.bcover .i{width:28px;height:28px}.btitle{font-size:1.12rem;line-height:1.25}
 .bidea{border-left:3px solid var(--yellow);padding-left:12px;display:flex;flex-direction:column;gap:4px}.btag{align-self:flex-start;font-size:.7rem;font-weight:700;border:1px solid var(--line);border-radius:99px;padding:2px 8px;color:var(--muted)}
 .bspine{width:40px;height:40px;border-radius:10px;background:var(--yellow);color:#000;display:grid;place-items:center}
@@ -2687,7 +2688,7 @@ function renderLearn(){
     '<div class="intro"><span class="marker y" style="font-size:1.05rem">Impara</span><h2>Una domanda al giorno</h2><p class="muted">Un minuto al giorno per allenare la testa ai soldi, poi una lezione nuova al giorno, con 5 domande. ' + done + ' di ' + LESSONS.length + ' completate.</p></div>' + qCard() +
     '<div class="note">Contenuti educativi e generali. Non sono consigli su cosa comprare o vendere: per scelte personali rivolgiti a un consulente finanziario indipendente.</div>' +
     CATS.map(c => '<div class="sec"><span class="label">' + c[1] + '</span><div class="list">' + LESSONS.filter(l => l.cat === c[0]).map(row).join('') + '</div></div>').join('') +
-    bookCard() + '<div class="sec"><span class="label">Gli altri libri consigliati</span><div class="carousel books">' + BOOKS.map((b, k) => k === bookOfWeek() ? '' : '<div class="slide"><div class="book"><span class="bspine">' + ic('book') + '</span><b>' + esc(b[0]) + '</b><span class="small y">' + esc(b[1]) + '</span><span class="btag">' + esc(b[4]) + '</span><p class="small muted">' + esc(b[2]) + '</p></div></div>').join('') + '</div><p class="small muted">Scorri ↔ · ' + BOOKS.length + ' libri, uno nuovo in evidenza ogni lunedì. Una selezione indicativa, senza link commerciali.</p></div></div>';
+    bookCard() + '<div class="sec"><span class="label">Gli altri libri consigliati</span><div class="carousel books">' + BOOKS.map((b, k) => k === bookOfWeek() ? '' : '<div class="slide"><div class="book bmini"><b>' + esc(b[0]) + '</b><span class="small y">' + esc(b[1]) + '</span><span class="btag">' + esc(b[4]) + '</span></div></div>').join('') + '</div><p class="small muted">Scorri ↔ · ' + BOOKS.length + ' libri, ogni lunedì uno nuovo in evidenza con tutti i dettagli. Una selezione indicativa, senza link commerciali.</p></div></div>';
   bindQ(renderLearn);
 }
 function renderLesson(){

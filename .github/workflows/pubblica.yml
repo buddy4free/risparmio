@@ -13,7 +13,7 @@ permissions:
 concurrency: pubblica
 jobs:
   pubblica:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.diff.outputs.nuove == '1'
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Prepara il browser per i test
         if: steps.diff.outputs.nuove == '1'
         run: npm install --no-save playwright@1.55.0 && npx playwright install --with-deps chromium

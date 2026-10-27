@@ -1818,6 +1818,10 @@ function psPress(k){ if (!PS) return; if (PS.fresh) { PS.fresh = false; if (/^[\
 function psClose(){ const o = document.getElementById('kpsheet'); if (o) o.remove(); PS = null; }
 document.addEventListener('click', e => { const inp = e.target.closest && e.target.closest('input[data-pad]'); if (inp) { e.preventDefault(); padSheet(inp); } });
 document.addEventListener('keydown', e => { if (!PS) return; const m = {Backspace:'del', Enter:'ok', '.':',', ',':',', '+':'+', '-':'-', Delete:'C'}; if (e.key === 'Escape') { e.preventDefault(); return psClose(); } const k = /^\d$/.test(e.key) ? e.key : m[e.key]; if (!k) return; e.preventDefault(); psPress(k); });
+/* la prima ripetizione dopo oggi (e dopo la data del movimento), con la cadenza scelta */
+function recFirstAfter(F){ const day = +F.d.slice(8), every = Math.max(1, F.every || 1), lim = F.d > today() ? F.d : today();
+  for (let k = 1; k < 2000; k++) { let d; if (F.unit === 'w') d = dayOffset(F.d, 7 * every * k); else { const ym = addMonths(ymOf(F.d), every * k), [y, m] = ym.split('-').map(Number); d = ym + '-' + pad(Math.min(day, new Date(y, m, 0).getDate())); } if (d > lim) return d; }
+  return dayOffset(lim, 1); }
 function renderAdd(){
   document.body.classList.remove('kpon', 'kpsave');
   if (!R.type && !R.edit && !R.editX && !R.xfer) return renderChooser();
@@ -1862,7 +1866,8 @@ function renderAdd(){
     body = (F.rf ? '<p class="small muted" style="margin:0">Rimborso di <b style="color:var(--fg)">' + esc(cur.n + (F.s ? ' › ' + F.s : '')) + '</b>: scrivi solo quanto ti è tornato.</p>' : '') + '<label class="amount t-' + F.t + '"><span>€</span><input id="f-a" inputmode="none" readonly placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"><em id="f-x" class="amtx"></em></label>' +
       '<div class="grid2"><div class="field"><label for="f-d">Data</label><input id="f-d" type="date" value="' + F.d + '"></div><div class="field"><label for="f-n">Nota</label><input id="f-n" placeholder="Facoltativa" value="' + esc(F.n) + '"></div></div>' +
       (R.edit && !F.recId && F.t === 'in' ? '<label class="check"><input type="checkbox" id="f-rf"' + (F.rf ? ' checked' : '') + '> È un rimborso di una spesa</label>' : '') +
-      (F.rf || (R.edit && !F.recId && F.t === 'in') ? '<input type="checkbox" id="f-rec" hidden>' : '<label class="check"><input type="checkbox" id="f-rec"' + (F.rec ? ' checked' : '') + (R.edit && !F.recId ? ' disabled' : '') + '> Si ripete</label>' + opt) +
+      (F.rf ? '<input type="checkbox" id="f-rec" hidden>' : '<label class="check"><input type="checkbox" id="f-rec"' + (F.rec ? ' checked' : '') + '> Si ripete</label>' + opt +
+        (R.edit && !F.recId && F.rec ? '<p class="small muted" style="margin:0">Questo movimento resta com\'è; le prossime volte compaiono da sole, dal ' + dshort(recFirstAfter(F)) + '.</p>' : '')) +
       (R.edit ? '<div id="delwrap" class="sec">' + (F.recId ? '<button class="btn danger" data-del="one">Elimina solo questa volta</button><button class="btn danger" data-del="stop">Interrompi da qui in poi</button>' : '<button class="btn danger" data-del="one">Elimina</button>') + '</div>' : '');
   }
   view.innerHTML = '<div class="sec" style="gap:16px">' + formBar(F.rf ? (R.edit ? 'Modifica rimborso' : 'Nuovo rimborso') : (R.edit ? 'Modifica ' : 'Nuova ') + T[0].toLowerCase()) +
@@ -1901,7 +1906,9 @@ function renderAdd(){
       save(); toast('Rimborso salvato · +' + eur2(a) + ' su ' + catOf('out', F.c).n); viewYM = ymOf(F.d) > curYM() ? curYM() : ymOf(F.d); F = null; return nav({screen:'tx'}); }
     const recFields = {every:F.every, unit:F.unit, count:F.end === 'count' ? F.count : null, until:F.end === 'until' ? (F.until || null) : null, start:F.d, day:+F.d.slice(8)};
     if (F.recId) { const r = S.rec.find(x => x.id === F.recId); Object.assign(r, {c:F.c, s:F.s, a, n:F.n, p:F.p}, recFields); if (r.unit === 'm') r.from = r.from || ymOf(F.d); else r.from = ymOf(r.start); }
-    else if (R.edit) Object.assign(S.tx.find(x => x.id === R.edit), {t:F.t, c:F.c, s:F.s, a, d:F.d, n:F.n, p:F.p});
+    else if (R.edit) { Object.assign(S.tx.find(x => x.id === R.edit), {t:F.t, c:F.c, s:F.s, a, d:F.d, n:F.n, p:F.p});
+      /* un movimento già registrato (anche importato) che si ripete: resta com'è e le volte successive diventano ricorrenti */
+      if (F.rec) { const st = recFirstAfter(F); S.rec.push(Object.assign({id:uid(), t:F.t, c:F.c, s:F.s, a, n:F.n, from:ymOf(st), to:null, skip:[], p:F.p}, recFields, {start:st, day:+F.d.slice(8)})); } }
     else if (F.rec) S.rec.push(Object.assign({id:uid(), t:F.t, c:F.c, s:F.s, a, n:F.n, from:ymOf(F.d), to:null, skip:[], p:F.p}, recFields));
     else S.tx.push(Object.assign({id:uid(), t:F.t, c:F.c, s:F.s, a, d:F.d, n:F.n, p:F.p}, F.d < pilFrom() ? {f:1} : {}));
     if (F.ocrKey && F.t === 'out') (S.ocrMap = S.ocrMap || {})[F.ocrKey] = {c:F.c, s:F.s || ''};

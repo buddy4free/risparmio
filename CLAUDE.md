@@ -14,7 +14,8 @@ Prima di qualsiasi modifica sostanziale (dati salvati, calcoli, struttura delle 
 ## Pubblicazioni raggruppate (deciso il 27/10/2026)
 - Le modifiche si fanno sul ramo `prossima`, non su `main`: `main` è il sito che arriva subito ai tester.
 - L'artifact si aggiorna subito come anteprima per Lorenzo.
-- Si unisce `prossima` in `main` una o due volte al giorno, o quando Lorenzo dice "pubblica", con un solo messaggio ai tester se serve.
+- La pubblicazione è automatica: il workflow `.github/workflows/pubblica.yml` alle 06:30 e alle 13:30 (ora italiana d'inverno) unisce `prossima` in `main`, ricostruisce, lancia i test di sicurezza e pubblica solo se passano. Si può lanciare anche a mano quando Lorenzo dice "pubblica".
+- Le novità che i tester noteranno si scrivono in `store/NOVITA.md` (una riga "- " per novità): alla pubblicazione diventano una issue con il messaggio pronto per i tester.
 - Eccezione: correzioni urgenti (errori che bloccano l'app o rischi sui dati) si pubblicano subito, dicendolo a Lorenzo.
 
 ## Da fare prima dell'uscita pubblica

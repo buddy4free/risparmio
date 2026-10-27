@@ -1,0 +1,67 @@
+# Pubblica ai tester le modifiche raccolte sul ramo "prossima", due volte al giorno (06:30 e 13:30 ora italiana d'inverno).
+# Si può lanciare anche a mano: Actions → "Pubblica ai tester" → Run workflow.
+# Se i test di sicurezza falliscono non pubblica nulla e GitHub manda una mail di errore.
+name: Pubblica ai tester
+on:
+  schedule:
+    - cron: '30 5 * * *'
+    - cron: '30 12 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: write
+concurrency: pubblica
+jobs:
+  pubblica:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Ci sono novità?
+        id: diff
+        run: |
+          git fetch origin prossima
+          n=$(git rev-list --count main..origin/prossima)
+          echo "Commit da pubblicare: $n"
+          echo "nuove=$([ "$n" -gt 0 ] && echo 1 || echo 0)" >> "$GITHUB_OUTPUT"
+      - name: Unisci prossima in main
+        if: steps.diff.outputs.nuove == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # index.html e sw.js sono generati: in caso di conflitto si rigenerano subito dopo
+          if ! git merge --no-edit origin/prossima; then
+            git checkout --theirs index.html sw.js && git add index.html sw.js
+            if git diff --name-only --diff-filter=U | grep -q .; then echo "Conflitto da risolvere a mano"; git diff --name-only --diff-filter=U; exit 1; fi
+            git commit --no-edit
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.diff.outputs.nuove == '1'
+        with:
+          node-version: '20'
+      - name: Prepara il browser per i test
+        if: steps.diff.outputs.nuove == '1'
+        run: npm install --no-save playwright@1.55.0 && npx playwright install --with-deps chromium
+      - name: Costruisci e lancia i test di sicurezza
+        if: steps.diff.outputs.nuove == '1'
+        run: sh sorgente/test-sicurezza/esegui.sh
+      - name: Pubblica
+        if: steps.diff.outputs.nuove == '1'
+        run: |
+          git add index.html sw.js
+          git commit -m "Pubblicazione per i tester $(TZ=Europe/Rome date '+%d/%m/%Y %H:%M')" || true
+          git push origin HEAD:main
+          git push origin HEAD:prossima || echo "prossima ha commit nuovi: verranno pubblicati la prossima volta"
+      - name: Avvisa Lorenzo con le novità per i tester
+        if: steps.diff.outputs.nuove == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          f=store/NOVITA.md
+          if [ -f "$f" ] && grep -q '^- ' "$f"; then
+            gh issue create --title "Pubblicato per i tester: $(TZ=Europe/Rome date '+%d/%m %H:%M')" --body-file "$f"
+            sed -i '/^- /d' "$f"
+            git add "$f" && git commit -m "Novità per i tester inviate" && git push origin HEAD:main && (git push origin HEAD:prossima || true)
+          fi

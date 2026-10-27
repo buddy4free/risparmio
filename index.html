@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-FGyzOMYmgg0AEVASmmKeIL+/LZqt1cuWXKj3IYk9CVQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-sUGsOzKZKKU1FxE2Fhf+sdCX0QsN182EC9VS0J99f8s='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1322,10 +1322,10 @@ const TAB_OF = {import:'home', privacy:'home', terms:'home', support:'home', wha
 function backBtn(label, r){ return '<button class="back" ' + nav$(r) + '>' + ic('left') + esc(label) + '</button>'; }
 function render(){
   const inApp = S.setup && !['welcome','setup'].includes(R.screen);
-  const tabs = document.getElementById('tabs'); tabs.hidden = !inApp || R.screen === 'add';
+  const tabs = document.getElementById('tabs'); tabs.hidden = !inApp || R.screen === 'add' || R.screen === 'howto';
   tabs.firstElementChild.innerHTML = TABS.map(t => '<button data-tab="' + t[0] + '" aria-current="' + (TAB_OF[R.screen] === t[0]) + '">' + ic(t[2]) + t[1] + '</button>').join('');
   tabs.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => nav({screen:b.dataset.tab}));
-  document.body.classList.remove('kpon', 'kpsave'); document.getElementById('fab').hidden = !inApp || ['add', 'breath'].includes(R.screen); dialClose();
+  document.body.classList.remove('kpon', 'kpsave'); document.getElementById('fab').hidden = !inApp || ['add', 'breath', 'howto'].includes(R.screen); dialClose();
   document.getElementById('fab').innerHTML = ic('plus');
   document.getElementById('topbar').hidden = R.screen === 'welcome' || R.screen === 'add';
   document.getElementById('gear').hidden = true; document.getElementById('help').hidden = true;
@@ -1393,39 +1393,66 @@ function renderWelcome(){
 }
 let SU = {};
 const SETUP_STEPS = 3;
-/* guida: il metodo, le schermate e le funzioni che pochi scoprono, ognuna con il pulsante per andarci */
+/* guida: un giro a schede con le immagini vere dell'app. Si resta nella guida finché non la chiudi:
+   avanti e indietro (anche col dito o col tasto indietro del telefono), più un indice per saltare a un argomento. */
+const GUIDE = [
+  ['Registrare', 'Il tasto +', 'aggiungi', 'In basso a destra, in ogni schermata: entrata, uscita, trasferimento tra pilastri o la foto dello scontrino, che legge importo e data e propone la categoria.', 'Tasto + in basso a destra'],
+  ['Registrare', 'Categoria e sottocategoria', 'categorie-scelta', 'Scegli dall\'elenco o dalla griglia. Il + accanto a una categoria apre le sottocategorie; "Nuova" ne crea una al momento.', 'Dopo aver toccato Entrata o Uscita'],
+  ['Home', 'Quanto risparmi questo mese', 'home-risparmio', 'Il risparmio reale fino a oggi, con entrate e uscite. Se hai movimenti programmati più avanti nel mese, sotto trovi la previsione di fine mese.', 'Barra in basso → Home'],
+  ['Home', 'Dove vanno i tuoi soldi', 'home-spese', 'Le categorie del mese dalla più alta, con la percentuale sul totale. Tocca una categoria per vederne i movimenti.', 'Home, subito sotto'],
+  ['Home', 'Il coach', 'home-coach', 'Legge i tuoi dati: scadenze vicine, ritmo degli obiettivi, spese in aumento, entrate e uscite già previste per il mese prossimo. Ogni messaggio dice su cosa si basa.', 'Home, più in basso'],
+  ['Movimenti', 'Tutti i movimenti', 'movimenti', 'Ricerca, filtri per tipo, categoria e periodo. Tocca un movimento per modificarlo, segnarlo come rimborso di una spesa o farlo ripetere.', 'Barra in basso → Movimenti'],
+  ['Movimenti', 'Ricorrenti', 'ricorrenti', 'Stipendio, affitto, abbonamenti: si inseriscono da soli alla data giusta. Qui li vedi tutti, con quanto entra ed esce ogni mese.', 'Movimenti → Ricorrenti, in alto'],
+  ['Movimenti', 'Scadenze e rinnovi', 'scadenze', 'Bollo, assicurazioni, abbonamenti annuali: quanto costano all\'anno e quanti giorni mancano. Il coach te le ricorda quando si avvicinano.', 'Movimenti → Scadenze, in alto'],
+  ['Statistiche', 'Il riepilogo', 'statistiche', 'Mese, anno o un periodo a scelta. Le schede si scorrono di lato: risparmio, categorie, andamento, pilastri.', 'Barra in basso → Statistiche'],
+  ['Statistiche', 'Analisi', 'analisi', 'Da una categoria alle sue sottocategorie, fino al singolo movimento: è il modo per capire da dove arriva una spesa.', 'Statistiche → Analisi'],
+  ['Statistiche', 'Revisione mensile', 'revisione', 'A inizio mese, in cima alla Home: com\'è andato il mese chiuso rispetto al precedente e le categorie che pesano di più.', 'In cima alla Home, a inizio mese'],
+  ['Pilastri e obiettivi', 'I 4 pilastri', 'pilastri', 'Dove stanno i tuoi soldi: liquidità, fondo di emergenza, salvadanaio degli obiettivi e investimenti. Ogni pilastro ha il suo saldo, lo storico e "Correggi il saldo".', 'Barra in basso → Pilastri'],
+  ['Pilastri e obiettivi', 'Investimenti: versato e plus/minus', 'investimenti', 'Quando correggi il saldo degli investimenti puoi indicare quanto hai versato: l\'app separa i tuoi versamenti dall\'andamento dei mercati.', 'Pilastri → Investimenti'],
+  ['Pilastri e obiettivi', 'I tuoi obiettivi', 'obiettivo', 'Quanto manca, il passo che servirebbe al mese e il tuo ritmo reale, calcolato su tutto lo storico. Anche "Patrimonio totale", che somma i 4 pilastri.', 'Home, oppure Pilastri → Salvadanaio'],
+  ['Pilastri e obiettivi', 'E se…?', 'ese', 'Per ogni obiettivo: quando ci arriveresti con qualche euro in più al mese o con una data diversa, e cosa potresti permetterti con quella cifra.', 'Dentro un obiettivo, in fondo'],
+  ['Pilastri e obiettivi', 'Finanziamenti e "Simula prima"', 'finanziamenti', 'Quanto costano davvero i finanziamenti in corso. Prima di firmarne uno: dalla rata o dal TAEG vedi costo totale e peso sulle tue entrate.', 'Pilastri → Finanziamenti e debiti'],
+  ['Crescere', 'La palestra del risparmio', 'palestra', 'Un percorso a tappe: ogni giorno una lettura breve e un\'azione concreta sulle tue spese.', 'Barra in basso → Palestra'],
+  ['Crescere', 'Impara', 'impara', 'La domanda del giorno e lezioni di pochi minuti su risparmio, debiti e investimenti, più il libro della settimana.', 'Palestra → Impara'],
+  ['Crescere', 'Benessere', 'benessere', 'L\'indice di benessere finanziario, la respirazione guidata e le abitudini che fanno bene anche al portafoglio.', 'Barra in basso → Benessere'],
+  ['Dati e sicurezza', 'Importa da un\'altra app', 'importa', 'Carica un file CSV con lo storico: l\'app abbina le categorie, riconosce i rimborsi e segnala i doppioni dei ricorrenti.', 'Impostazioni → Importa movimenti'],
+  ['Dati e sicurezza', 'Backup, report e PIN', 'impostazioni', 'Backup cifrato con password, report PDF e CSV, PIN e impronta per aprire l\'app. L\'occhio in alto a destra nasconde tutte le cifre.', 'Menu → Impostazioni']
+];
 function renderHowto(){
-  const g = mainGoal(), go = (r, l) => r ? '<button class="btn sm ghost" style="align-self:flex-start" ' + nav$(r) + '>' + (l || 'Aprila') + ic('right') + '</button>' : '';
-  const step = (n, t, d) => '<div class="card" style="gap:6px;padding:14px 16px"><div class="row" style="gap:10px;align-items:center"><span class="marker y" style="font-size:1.4rem">' + n + '</span><b>' + t + '</b></div><p class="small muted" style="margin:0">' + d + '</p></div>';
-  const item = (i, t, d, r) => '<div class="card" style="gap:6px;padding:14px 16px"><b>' + ic(i) + ' ' + t + '</b><p class="small muted" style="margin:0">' + d + '</p>' + go(r) + '</div>';
-  view.innerHTML = '<div class="sec" style="gap:18px">' + backBtn('Indietro', {screen:'home'}) +
-    '<div class="intro"><span class="label">Guida</span><h2>Tutto quello che l\'app sa fare</h2><p class="muted">Il metodo è semplice, gli strumenti sono tanti. Qui c\'è tutto in pochi minuti: ogni voce ha il pulsante per andarci.</p></div>' +
-    '<span class="label">Il metodo in 4 passi</span>' +
-    step('1', 'Registra', 'Ogni entrata e ogni spesa, appena succede: tasto + in basso a destra, oppure la foto dello scontrino. Stipendio, affitto e abbonamenti si inseriscono da soli con i ricorrenti.') +
-    step('2', 'Guarda', 'Home e Statistiche mostrano quanto risparmi e dove vanno i soldi. A inizio mese, in cima alla Home, c\'è la revisione del mese chiuso.') +
-    step('3', 'Metti da parte', 'I soldi stanno in 4 pilastri: liquidità, fondo di emergenza, salvadanaio degli obiettivi, investimenti. Lì vedi a che punto sei in ognuno.') +
-    step('4', 'Raggiungi', 'Ogni obiettivo ha il suo passo: quanto serve al mese, a che ritmo stai andando e cosa cambierebbe con qualche spesa in meno.') +
-    '<span class="label">Le schermate</span>' +
-    item('house', 'Home', 'Il risparmio del mese reale fino a oggi (con la previsione dei movimenti programmati), dove vanno i soldi, i tuoi obiettivi e il coach, che legge i tuoi dati.', {screen:'home'}) +
-    item('list', 'Movimenti', 'L\'elenco di tutto, con ricerca e filtri per tipo, categoria e periodo. In cima trovi Ricorrenti e Scadenze. Tocca un movimento per modificarlo, segnarlo come rimborso o farlo ripetere.', {screen:'tx'}) +
-    item('chart', 'Statistiche', 'Mese, anno o periodo libero. Scorri le schede di lato; con Analisi scendi da categoria a sottocategoria fino al singolo movimento.', {screen:'stats'}) +
-    item('pillars', 'Pilastri', 'I saldi dei 4 pilastri, lo storico mese per mese, "Correggi il saldo" e, per gli investimenti, quanto hai versato e il plus/minus.', {screen:'pillars'}) +
-    item('dumbbell', 'Palestra', 'Un percorso a tappe, le lezioni di Impara con la domanda del giorno, il libro della settimana e le sfide.', {screen:'gym'}) +
-    item('leaf', 'Benessere', 'L\'indice di benessere finanziario, la respirazione guidata e le abitudini che aiutano anche il portafoglio.', {screen:'well'}) +
-    '<span class="label">Da scoprire</span>' +
-    (OCR_PATH ? item('receipt', 'Scontrino in foto', 'Dal tasto + scegli "Scontrino in foto": l\'app legge importo e data e propone la categoria. La foto resta sul telefono.') : '') +
-    item('repeat', 'Ricorrenti', 'Entrate e uscite che si ripetono ogni mese o settimana: si inseriscono da sole, e le vedi tutte insieme.', {screen:'rec'}) +
-    item('calendar', 'Scadenze', 'Bollo, assicurazioni, rinnovi: l\'app ti ricorda cosa scade e quanto costa all\'anno.', {screen:'dues'}) +
-    item('tag', 'Categorie e sottocategorie', 'Crea, rinomina, sposta e riordina trascinando. Tocca una sottocategoria per vederne il riepilogo e i movimenti.', {screen:'cats', t:'out'}) +
-    item('list', 'Importa da un\'altra app', 'Carica un file CSV con lo storico: l\'app abbina le categorie e segnala i doppioni dei ricorrenti.', {screen:'import'}) +
-    item('calendar', 'Revisione mensile', '15 minuti a inizio mese per vedere com\'è andato il mese chiuso e scegliere una cosa da cambiare.', {screen:'review'}) +
-    (g ? item('target', 'E se…?', 'Per ogni obiettivo: quando ci arriveresti con qualche euro in più al mese o con una data diversa.', {screen:'whatif', id:g.id}) : '') +
-    item('chart', 'Simulatore del futuro', 'Quanto possono diventare i risparmi nel tempo, con capitale, versamento mensile e rendimento a tua scelta.', {screen:'sim'}) +
-    item('bank', 'Finanziamenti e "Simula prima"', 'Quanto costano davvero i finanziamenti in corso e, prima di firmarne uno, rata, TAEG e peso sulle entrate.', {screen:'debts'}) +
-    item('gear', 'Report, backup e sicurezza', 'Nelle Impostazioni: report PDF e CSV, backup cifrato con password, PIN e impronta per aprire l\'app.', {screen:'settings'}) +
-    item('shield', 'Nascondi gli importi', 'L\'occhio in alto a destra copre tutte le cifre: utile se usi l\'app davanti ad altri.') +
-    item('book', 'Legenda', 'Cosa significano colori, pilastri e voci dell\'app.', {screen:'legend'}) +
-    '<p class="small muted">Qualcosa non è chiaro o hai un\'idea? Dal menu: "Dammi un suggerimento".</p></div>';
+  const N = GUIDE.length, i = Math.max(-1, Math.min(N, R.g === undefined ? -1 : +R.g)), to = k => nav({screen:'howto', g:k});
+  const top = '<div class="spread"><button class="textlink" id="gd-x">' + ic('left') + 'Esci dalla guida</button>' + (i >= 0 && i < N ? '<span class="small muted">' + (i + 1) + ' di ' + N + '</span>' : '') + '</div>' +
+    (i >= 0 && i < N ? '<div class="qbar"><i style="width:' + ((i + 1) / N * 100) + '%;background:var(--yellow)"></i></div>' : '');
+  const navb = (pl, nl) => '<div class="row" style="gap:10px;margin-top:4px">' + (pl ? '<button class="btn ghost" id="gd-p" style="flex:1">' + ic('left') + pl + '</button>' : '') + '<button class="btn" id="gd-n" style="flex:1">' + nl + (i < N ? ic('right') : '') + '</button></div>';
+  let body;
+  if (i < 0) {
+    const secs = [...new Set(GUIDE.map(g => g[0]))];
+    const step = (n, t, d) => '<div class="row" style="gap:12px;align-items:flex-start;flex-wrap:nowrap"><span class="marker y" style="font-size:1.5rem;line-height:1;min-width:22px">' + n + '</span><span><b>' + t + '</b><br><span class="small muted">' + d + '</span></span></div>';
+    body = '<div class="intro"><span class="label">Guida</span><h2>Il metodo in 4 passi</h2></div><div class="card" style="gap:14px">' +
+      step('1', 'Registra', 'Ogni entrata e ogni spesa, appena succede.') + step('2', 'Guarda', 'Dove vanno i soldi e quanto risparmi.') +
+      step('3', 'Metti da parte', 'Nei 4 pilastri: liquidità, emergenza, obiettivi, investimenti.') + step('4', 'Raggiungi', 'Gli obiettivi, con il tuo passo reale.') + '</div>' +
+      '<p class="small muted" style="margin:0">Poi un giro di ' + N + ' schede, una per ogni schermata e funzione, con le immagini dell\'app. Oppure salta a un argomento:</p>' +
+      '<div class="bigchips">' + secs.map(t => '<button data-gs="' + GUIDE.findIndex(g => g[0] === t) + '">' + t + '</button>').join('') + '</div>' + navb('', 'Inizia il giro');
+  } else if (i >= N) {
+    body = '<div class="intro" style="text-align:center;align-items:center"><span class="marker y" style="font-size:1.6rem">Fatto!</span><h2>Ora hai visto tutto</h2><p style="color:var(--muted)">La guida resta nel menu, alla voce Guida, quando vuoi ripassare. Qualcosa non è chiaro o hai un\'idea? Dal menu: "Dammi un suggerimento".</p></div>' +
+      '<button class="btn wide" id="gd-end">Esci dalla guida</button><button class="textlink" id="gd-p" style="align-self:center">' + ic('left') + 'Torna all\'ultima scheda</button><button class="textlink" data-gs="-1" style="align-self:center">Torna all\'inizio</button>';
+  } else {
+    const [sec, t, img, d, where] = GUIDE[i];
+    body = '<div class="gslide sec" style="gap:12px"><span class="label">' + esc(sec) + '</span><h2 style="margin:0">' + esc(t) + '</h2><p style="margin:0">' + esc(d) + '</p>' +
+      '<p class="small" style="margin:0;color:var(--yellow)">' + ic('right') + ' Dove: ' + esc(where) + '</p>' +
+      '<img src="guida/' + img + '.webp" alt="' + esc(t) + ': esempio" style="width:100%;border-radius:14px;border:1px solid var(--line);background:#111;min-height:120px"><span class="small muted" style="align-self:center;margin-top:-6px">Esempio con dati di prova</span>' +
+      navb('Indietro', i === N - 1 ? 'Fine' : 'Avanti') + '<button class="textlink small" data-gs="-1" style="align-self:center">Indice</button></div>';
+    if (GUIDE[i + 1]) { const pre = new Image(); pre.src = 'guida/' + GUIDE[i + 1][2] + '.webp'; }
+  }
+  view.innerHTML = '<div class="sec" style="gap:16px">' + top + body + '</div>';
+  const exit = () => nav({screen:'home'});
+  view.querySelector('#gd-x').onclick = exit; const ge = view.querySelector('#gd-end'); if (ge) ge.onclick = exit;
+  const gn = view.querySelector('#gd-n'); if (gn) gn.onclick = () => to(i + 1);
+  const gp = view.querySelector('#gd-p'); if (gp) gp.onclick = () => to(i >= N ? N - 1 : i - 1);
+  view.querySelectorAll('[data-gs]').forEach(b => b.onclick = () => to(+b.dataset.gs));
+  /* col dito: a sinistra avanti, a destra indietro */
+  let x0 = null, y0 = 0; view.ontouchstart = e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; };
+  view.ontouchend = e => { if (x0 === null || R.screen !== 'howto') return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { if (dx < 0 && i < N) to(i + 1); else if (dx > 0 && i > -1) to(i - 1); } };
 }
 /* la guida si propone una volta: a fine configurazione, o alla prima apertura per chi aveva già l'app */
 function guidePopup(){ setTimeout(guidePopNow, 700); }

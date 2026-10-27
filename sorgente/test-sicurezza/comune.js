@@ -24,7 +24,7 @@ async function apri(opts = {}){
 }
 async function demo(p){
   await p.goto(BASE + '?' + Date.now()); await p.waitForTimeout(800); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(700);
-  await p.check('#w-terms'); await p.click('#demo'); await p.waitForTimeout(400); await p.evaluate(() => { S.demo = false; save(); });
+  await p.check('#w-terms'); await p.click('#demo'); await p.waitForTimeout(400); await p.evaluate(() => { S.demo = false; S.guideSeen = today(); save(); });
 }
 const PAYLOAD = `"'><img src=x onerror=__x(1)><svg/onload=__x(2)></style></script><script>__x(3)</script>\`\${__x(4)}`;
 module.exports = {BASE, OUT, ok, fine, apri, demo, PAYLOAD, fs};

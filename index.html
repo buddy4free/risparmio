@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-tjWrUx/HnxKyWf2UICChMMEL1rP6WLFJPgLM/hMALsQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-v53F5fdFmApSAkVsWr3ROZ9k5BRcv/omZ4wNSZgVv84='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1693,7 +1693,7 @@ function renderTx(){
     '<button ' + nav$({screen:'dues'}) + '>' + ic('calendar') + '<span class="t"><b>Scadenze</b><span>' + ((S.dues || []).length ? (upcomingDues().length ? '<i style="color:var(--yellow);font-style:normal;font-weight:700">' + upcomingDues().length + ' da decidere</i>' : (S.dues || []).length + ' in calendario') : 'Bollo, assicurazioni…') + '</span></span></button></div>' +
     (TXC && TXBACK ? backBtn((TABS.find(t => t[0] === TXBACK.screen) || [0, TXBACK.screen === 'charts' ? 'Grafici' : TXBACK.screen === 'an' ? 'Analisi' : 'Indietro'])[1], TXBACK) : '') +
     period + catSel +
-    (TXC ? '<div class="spread"><span class="chip" style="background:' + catColor(TXC.t, cat) + ';color:#fff">' + ic(cat.i) + esc(cat.n) + (TXC.s ? ' › ' + esc(TXC.s) : '') + '</span><button class="textlink" id="tx-clr">Togli il filtro</button></div>'
+    (TXC ? '<div class="spread"><span class="chip" style="background:' + catColor(TXC.t, cat) + ';color:#fff">' + ic(cat.i) + esc(cat.n) + (TXC.s ? ' › ' + esc(TXC.s) : TXC.s === '' ? ' › senza sottocategoria' : '') + '</span><button class="textlink" id="tx-clr">Togli il filtro</button></div>'
       : '<div class="filters">' + [['all','Tutti'],['out','Uscite'],['in','Entrate'],['xfer','Trasferimenti']].map(f => '<button data-f="' + f[0] + '" aria-pressed="' + (txFilter === f[0]) + '">' + f[1] + '</button>').join('') + '</div>') +
     summary + selBar() +
     (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => '<div class="dayhead">' + dl(d) + '</div><div class="list">' + groups[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
@@ -3855,6 +3855,23 @@ function subPop(t, c, sb, after){
           box.querySelector('#cp-ok').onclick = () => { opSubDel(t, c, sb); done('Sottocategoria eliminata'); }; } }); }
     menu(); }, true);
 }
+function noSubPop(t, c, after){
+  const k = catUse(t, c.id, '');
+  catPop('<div class="cxact"></div>', (o, close) => {
+    const box = o.querySelector('.cxact'), head = '<div class="spread"><b style="font-size:1.15rem">Senza sottocategoria</b><button class="textlink" data-x>Chiudi</button></div><p class="small muted" style="margin:0">In ' + esc(c.n) + ' · ' + movN(k) + '</p>';
+    function menu(){
+      box.innerHTML = head + '<div class="actopts"><button class="actopt" data-a="see"><b>Vedi i movimenti</b><span>Apre l\'elenco già filtrato</span></button><button class="actopt" data-a="put"><b>Mettili in una sottocategoria</b><span>Tutti i ' + movN(k) + ' insieme</span></button></div>';
+      box.querySelector('[data-a="see"]').onclick = () => { close(); TXC = {t, c:c.id, s:''}; TXP = 'a'; TXBACK = {screen:'cats'}; nav({screen:'tx'}); };
+      box.querySelector('[data-a="put"]').onclick = () => {
+        box.innerHTML = head + '<b>In quale sottocategoria?</b><div class="actlist">' + c.subs.map((sb, i) => '<button data-to="' + i + '"><span>' + esc(sb) + '</span></button>').join('') + '</div><div class="row"><input id="ns-n" placeholder="Oppure una nuova" style="flex:1;width:auto"><button class="btn sm" id="ns-ok">Crea</button></div><button class="textlink" data-back>‹ Indietro</button>';
+        box.querySelector('[data-back]').onclick = menu;
+        const go = sb => { recat(t, x => x.c === c.id && !(x.s || ''), x => x.s = sb); if (!c.subs.includes(sb)) addSub(t, c, sb); save(); close(); toast(movN(k) + ' in ' + sb); after(); };
+        box.querySelectorAll('[data-to]').forEach(b => b.onclick = () => go(c.subs[+b.dataset.to]));
+        box.querySelector('#ns-ok').onclick = () => { const nn = val('ns-n').trim(); if (nn) go(nn); };
+      };
+    }
+    menu(); }, true);
+}
 function confirmDo(msg, label, f){ catPop('<b style="font-size:1.1rem">Sei sicuro?</b><p style="margin:0">' + msg + '</p><div class="row"><button class="btn" id="cp-ok">' + label + '</button><button class="btn ghost" data-x>Annulla</button></div>', (o, close) => { o.querySelector('#cp-ok').onclick = () => { f(); save(); close(); }; }); }
 const TNAME = {out:['Categorie uscite', 'uscita', '#E5484D'], in:['Categorie entrate', 'entrata', '#22A45D']};
 function dragCat(e, grip, t){
@@ -3965,7 +3982,7 @@ function renderCatEdit(t){
       (t === 'out' ? '<label class="check"><input type="checkbox" id="ce-d"' + (c.disc ? ' checked' : '') + '> Spesa non essenziale: conta nei suggerimenti su dove tagliare</label>' : '') +
       '<div class="row"><button class="btn sm" id="ce-ok">' + ic('check') + 'Salva</button><button class="btn sm ghost" id="ce-lx">Annulla</button></div></div>') +
     '<div class="card" id="ce-subs"><span class="label">Sottocategorie</span>' +
-      (c.subs.length ? '<div class="list subbox" style="margin:0;padding:0;border:0">' + c.subs.map((sb, i) => '<button class="item subrow nt" data-sm="' + i + '"><span class="t"><b>' + esc(sb) + '</b><span class="sub">' + movN(catUse(t, c.id, sb)) + '</span></span>' + ic('right') + '</button>').join('') + '</div>' + (noSub ? '<p class="small muted">' + movN(noSub) + ' senza sottocategoria.</p>' : '') : '<p class="small muted">Nessuna sottocategoria. Aggiungile se vuoi più dettaglio, per esempio dentro "Animali": Cibo, Veterinario.</p>') +
+      (c.subs.length ? '<div class="list subbox" style="margin:0;padding:0;border:0">' + c.subs.map((sb, i) => '<button class="item subrow nt" data-sm="' + i + '"><span class="t"><b>' + esc(sb) + '</b><span class="sub">' + movN(catUse(t, c.id, sb)) + '</span></span>' + ic('right') + '</button>').join('') + '</div>' + (noSub ? '<div class="list subbox" style="margin:0;padding:0;border:0"><button class="item subrow nt" id="ce-nosub"><span class="t"><b style="font-style:italic">Senza sottocategoria</b><span class="sub">' + movN(noSub) + '</span></span>' + ic('right') + '</button></div>' : '') : '<p class="small muted">Nessuna sottocategoria. Aggiungile se vuoi più dettaglio, per esempio dentro "Animali": Cibo, Veterinario.</p>') +
       '<div class="row"><input id="ce-sn" placeholder="Nuova sottocategoria" style="flex:1;width:auto"><button class="btn sm" id="ce-sa">Aggiungi</button></div>' +
       (others.some(o => (o.subs || []).length) ? '<div class="row"><select id="ce-cf" style="flex:1;width:auto" aria-label="Copia sottocategorie da"><option value="">Copia le sottocategorie da…</option>' + others.filter(o => (o.subs || []).length).map(o => '<option value="' + o.id + '">' + esc(o.n) + ' (' + o.subs.length + ')</option>').join('') + '</select><button class="btn sm ghost" id="ce-cp">Copia</button></div>' : '') + '</div>' +
     (!CATX.more ? '<button class="btn ghost" id="ce-more" style="align-self:flex-start">Altre azioni: duplica, sposta, unisci, elimina…</button>' : '<div class="card"><span class="label">Duplica</span><p class="small muted" style="margin:0">Crea una nuova categoria con la stessa icona e le stesse sottocategorie, senza movimenti. Utile per esempio per Casa Vicenza e Casa Monopoli.</p><button class="btn sm ghost" id="ce-dup" style="align-self:flex-start">' + ic('plus') + 'Duplica categoria</button></div>' +
@@ -3997,6 +4014,7 @@ function renderCatEdit(t){
     confirmDo(list + (v === '__own' ? ' diventano categorie a sé' : ' passano in <b>' + esc(d.n) + '</b>') + (selSN ? ', con i loro ' + movN(selSN) : '') + '.', 'Sposta', () => { selS.forEach(sb => opSubMove(t, c, sb, v)); CATX.ssel.clear(); toast(v === '__own' ? 'Ora sono categorie' : 'Spostate in ' + d.n); keepY(); }); };
   const csd = view.querySelector('#cs-del'); if (csd) csd.onclick = () => confirmDo('Elimini ' + selS.map(sb => '"' + esc(sb) + '"').join(', ') + '.' + (selSN ? ' I loro ' + movN(selSN) + ' restano in ' + esc(c.n) + ' senza sottocategoria.' : ''), 'Elimina', () => { selS.forEach(sb => opSubDel(t, c, sb)); CATX.ssel.clear(); toast('Sottocategorie eliminate'); keepY(); });
   view.querySelectorAll('[data-sm]').forEach(b => b.onclick = () => subPop(t, c, c.subs[+b.dataset.sm], keepY));
+  const ns = view.querySelector('#ce-nosub'); if (ns) ns.onclick = () => noSubPop(t, c, keepY);
   const bi = view.querySelector('#ce-in'); if (bi) bi.onclick = () => { const d = to();
     confirmDo('"' + esc(c.n) + '" diventa una sottocategoria di <b>' + esc(d.n) + '</b>' + (n ? ' e i suoi ' + movN(n) + ' passano lì' : '') + '.' + (c.subs.length ? ' Le sue sottocategorie finiscono nella nota dei movimenti.' : ''), 'Sposta', () => { opCatInto(t, c, d); toast('"' + c.n + '" ora è dentro ' + d.n); nav({screen:'cats', t, id:d.id}); }); };
   const bm = view.querySelector('#ce-mg'); if (bm) bm.onclick = () => { const d = to();

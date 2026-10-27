@@ -18,6 +18,12 @@ Prima di qualsiasi modifica sostanziale (dati salvati, calcoli, struttura delle 
 - Le novità che i tester noteranno si scrivono in `store/NOVITA.md` (una riga "- " per novità): alla pubblicazione diventano una issue con il messaggio pronto per i tester.
 - Eccezione: correzioni urgenti (errori che bloccano l'app o rischi sui dati) si pubblicano subito, dicendolo a Lorenzo.
 
+## Da fare il 28/10/2026 (sicurezza della pubblicazione)
+- Guidare Lorenzo ad attivare la verifica in due passaggi (meglio passkey) su GitHub, account Google (Gmail Buddy4Free e Play Console) e Claude, e a controllare le sessioni attive su GitHub.
+- "Guardiano" nel workflow `pubblica.yml`: blocca la pubblicazione se la CSP viene allentata, se compaiono indirizzi esterni a cui spedire dati o codice eseguito al volo (eval, new Function).
+- Avviso (issue) a ogni pubblicazione, non solo quando ci sono novità per i tester.
+- Guidare Lorenzo a proteggere il ramo `main` su GitHub (niente force push), verificando che la pubblicazione automatica continui a funzionare.
+
 ## Da fare prima dell'uscita pubblica
 - Copia locale (service worker): tenere caratteri, libreria PDF, icone e motore scontrini in una cache stabile, per non riscaricarli a ogni aggiornamento. Rimandato perché tocca il meccanismo degli aggiornamenti: va provato bene, compreso il passaggio dalla versione precedente.
 - Soluzione Android definitiva, non legata al browser (vedi `store/ANDROID.md`).

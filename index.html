@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-qnUKFIRMSKCtEbYDrZM/gvRk/+H29egPvIZMRKhoJGk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-95yhZ3ua3WFpODmJzyuLaaINOEhwxMEMZomSnnK5RCA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1863,7 +1863,7 @@ function renderAdd(){
   const f4 = four && !LISTV, stepNo = {cat:1, sub:2, dest:f4 ? 3 : 2, amt:f4 ? 4 : 3}[F.step], steps = f4 ? 4 : 3;
   let body = '';
   if (F.step === 'cat') {
-    body = (F.t === 'in' && !R.edit ? '<label class="check rfbox"><input type="checkbox" id="f-rf"' + (F.rf ? ' checked' : '') + '><span><b>È un rimborso di una spesa</b><br><span class="small muted">Un reso, una nota spese, una quota che un amico ti restituisce. Scegli la spesa che ti hanno rimborsato: il rimborso la riduce e non conta come entrata.</span></span></label>' : '') +
+    body = (F.t === 'in' && !F.recId ? '<label class="check rfbox"><input type="checkbox" id="f-rf"' + (F.rf ? ' checked' : '') + '><span><b>È un rimborso di una spesa</b><br><span class="small muted">Un reso, una nota spese, una quota che un amico ti restituisce. Scegli la spesa che ti hanno rimborsato: il rimborso la riduce e non conta come entrata.</span></span></label>' : '') +
       '<div class="spread"><h3 style="margin:0">' + (F.rf ? 'Che spesa ti hanno rimborsato?' : 'Scegli la categoria') + '</h3><div class="catview">' + [['list', 'Elenco'], ['grid', 'Griglia']].map(v => '<button data-cv="' + v[0] + '" aria-pressed="' + ((S.catView || 'list') === v[0]) + '">' + v[1] + '</button>').join('') + '</div></div>' +
       (LISTV ? '<div class="catlist">' + cats.map(c => { const subs = c.subs || [], op = F.open === c.id;
         return '<div class="cl' + (op ? ' open' : '') + '"><button class="clrow" data-cl="' + c.id + '" aria-expanded="' + op + '"' + (F.c === c.id ? ' aria-current="true"' : '') + '>' + catTile(CT, c) + '<span class="t"><b>' + esc(c.n) + '</b>' + (subs.length ? '<span class="sub">' + subs.length + (subs.length === 1 ? ' sottocategoria' : ' sottocategorie') + '</span>' : '') + '</span><span class="clchev">' + (subs.length ? (op ? '−' : '+') : ic('right')) + '</span></button>' +
@@ -1884,7 +1884,8 @@ function renderAdd(){
       (F.end === 'until' ? '<input id="r-ut" type="date" value="' + (F.until || dayOffset(F.d, 365)) + '">' : '') + '</div>' : '';
     body = (F.rf ? '<p class="small muted" style="margin:0">Rimborso di <b style="color:var(--fg)">' + esc(cur.n + (F.s ? ' › ' + F.s : '')) + '</b>: scrivi solo quanto ti è tornato.</p>' : '') + '<label class="amount t-' + F.t + '"><span>€</span><input id="f-a" inputmode="none" readonly placeholder="0,00" value="' + esc(F.a) + '" aria-label="Importo"><em id="f-x" class="amtx"></em></label>' +
       '<div class="grid2"><div class="field"><label for="f-d">Data</label><input id="f-d" type="date" value="' + F.d + '"></div><div class="field"><label for="f-n">Nota</label><input id="f-n" placeholder="Facoltativa" value="' + esc(F.n) + '"></div></div>' +
-      (F.rf ? '<input type="checkbox" id="f-rec" hidden>' : '<label class="check"><input type="checkbox" id="f-rec"' + (F.rec ? ' checked' : '') + (R.edit && !F.recId ? ' disabled' : '') + '> Si ripete</label>' + opt) +
+      (R.edit && !F.recId && F.t === 'in' ? '<label class="check"><input type="checkbox" id="f-rf"' + (F.rf ? ' checked' : '') + '> È un rimborso di una spesa</label>' : '') +
+      (F.rf || (R.edit && !F.recId && F.t === 'in') ? '<input type="checkbox" id="f-rec" hidden>' : '<label class="check"><input type="checkbox" id="f-rec"' + (F.rec ? ' checked' : '') + (R.edit && !F.recId ? ' disabled' : '') + '> Si ripete</label>' + opt) +
       (R.edit ? '<div id="delwrap" class="sec">' + (F.recId ? '<button class="btn danger" data-del="one">Elimina solo questa volta</button><button class="btn danger" data-del="stop">Interrompi da qui in poi</button>' : '<button class="btn danger" data-del="one">Elimina</button>') + '</div>' : '');
   }
   view.innerHTML = '<div class="sec" style="gap:16px">' + formBar(F.rf ? (R.edit ? 'Modifica rimborso' : 'Nuovo rimborso') : (R.edit ? 'Modifica ' : 'Nuova ') + T[0].toLowerCase()) +
@@ -1895,7 +1896,7 @@ function renderAdd(){
     if (F.rec && document.getElementById('r-ev')) { F.every = Math.max(1, +val('r-ev') || 1); F.unit = val('r-un'); if (document.getElementById('r-ct')) F.count = Math.max(1, +val('r-ct') || 1); if (document.getElementById('r-ut')) F.until = val('r-ut'); } };
   const go = st => { keep(); const O = {cat:0, sub:1, dest:2, amt:3}; if (O[st] > O[F.step]) histPush(); F.step = st; renderAdd(); window.scrollTo({top:0}); };
   view.querySelectorAll('[data-step]').forEach(b => b.onclick = () => { if (b.dataset.step === 'cat') { F.open = F.c; F.newSub = false; } go(b.dataset.step); });
-  const rfc = document.getElementById('f-rf'); if (rfc) rfc.onchange = () => { F.rf = rfc.checked; F.c = null; F.s = ''; F.p = 'liq'; F.rec = false; renderAdd(); };
+  const rfc = document.getElementById('f-rf'); if (rfc) rfc.onchange = () => { keep(); F.rf = rfc.checked; F.c = null; F.s = ''; F.p = 'liq'; F.rec = false; F.open = null; if (F.step !== 'cat') { histPush(); F.step = 'cat'; window.scrollTo({top:0}); } renderAdd(); };
   view.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { if (b.dataset.c === '__new') { F.newCat = !F.newCat; return renderAdd(); } F.c = b.dataset.c; F.newCat = false; if ((catOf(CT, F.c).subs || []).length) { F.s = ''; go('sub'); } else go(R.edit ? 'amt' : 'dest'); });
   view.querySelectorAll('[data-cv]').forEach(b => b.onclick = () => { S.catView = b.dataset.cv; save(); renderAdd(); });
   const stay = () => { const y = window.scrollY; renderAdd(); window.scrollTo({top:y}); };

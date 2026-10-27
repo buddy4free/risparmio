@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-VcuFb27l3WobHjY/PqYiu6p+cB5V6V5o+pH8Qo2os/w='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-QCBqrtQcW+qAMhKrRHV0Onbed7E9Tekafgx64cI/WUI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -2927,11 +2927,17 @@ function debtExtra(d, extra){
 function debtBand(t){ return t >= 10 ? ['#E5484D', 'Costoso'] : t >= 5 ? ['#e3a008', 'Medio'] : ['#22A45D', 'Contenuto']; }
 /* simulazione di un finanziamento che stai valutando: dall'importo, la durata e il TAEG si ricava la rata */
 function debtRata(cap, n, taeg, bal){ const r = Math.pow(1 + (taeg || 0) / 100, 1 / 12) - 1, b = bal || 0; if (!(cap > 0) || !(n > 0)) return 0; return r ? (cap - b / Math.pow(1 + r, n)) * r / (1 - Math.pow(1 + r, -n)) : (cap - b) / n; }
+/* dalla rata proposta al TAEG implicito: il tasso annuo che rende le rate uguali all'importo finanziato (null se le rate non bastano a restituirlo) */
+function debtTaeg(cap, n, rata, bal){ const b = bal || 0, pv = r => r ? rata * (1 - Math.pow(1 + r, -n)) / r + b / Math.pow(1 + r, n) : rata * n + b;
+  if (!(cap > 0) || !(n > 0) || !(rata > 0) || pv(0) < cap - 0.005) return null; let lo = 0, hi = 0.1;
+  while (pv(hi) > cap && hi < 10) hi *= 2; for (let i = 0; i < 100; i++) { const m = (lo + hi) / 2; if (pv(m) > cap) lo = m; else hi = m; }
+  return (Math.pow(1 + (lo + hi) / 2, 12) - 1) * 100; }
 function avgIncome(){ const v = []; for (let i = 1; i <= 12; i++) { const ym = addMonths(curYM(), -i); if (monthTx(ym).length) v.push(stats(ym).inc); } return v.length ? robustAvg(v) : 0; }
 let DSIM = null;
 function debtSimHTML(){
-  DSIM = DSIM || {kind:'prestito', cap:'', down:'', months:'', taeg:'', balloon:'', n:''};
-  const D = DSIM, dn = +D.down || 0, fin = Math.max(0, (+D.cap || 0) - dn), rata = debtRata(fin, +D.months, +D.taeg, +D.balloon), paid = rata * (+D.months || 0) + (+D.balloon || 0), cost = Math.max(0, paid - fin);
+  DSIM = DSIM || {kind:'prestito', by:'taeg', cap:'', down:'', months:'', taeg:'', rata:'', balloon:'', n:''};
+  const D = DSIM, byR = D.by === 'rata', dn = +D.down || 0, fin = Math.max(0, (+D.cap || 0) - dn);
+  const tg = byR ? debtTaeg(fin, +D.months, +D.rata, +D.balloon) : +D.taeg, rata = byR ? (tg === null ? 0 : +D.rata) : debtRata(fin, +D.months, +D.taeg, +D.balloon), paid = rata * (+D.months || 0) + (+D.balloon || 0), cost = Math.max(0, paid - fin);
   const inc = avgIncome(), others = (S.debts || []).filter(d => debtInfo(d).left > 0).reduce((t, d) => t + d.rata, 0), sv = avgSave(), share = inc > 0 ? (rata + others) / inc * 100 : null;
   const f = (id, l, v, ph, pad, hint) => '<div class="field"><label for="' + id + '">' + l + '</label><div' + (pad ? '' : ' class="eur"') + '><input id="' + id + '" inputmode="none" readonly data-pad' + (pad === 'int' ? '="int"' : '') + ' value="' + (v === '' ? '' : String(v).replace('.', ',')) + '" placeholder="' + ph + '"></div>' + (hint ? '<span class="small muted">' + hint + '</span>' : '') + '</div>';
   const ok = rata > 0;
@@ -2939,10 +2945,12 @@ function debtSimHTML(){
     '<div class="bigchips">' + DEBT_KINDS.map(k => '<button data-sk="' + k[0] + '" aria-pressed="' + (D.kind === k[0]) + '">' + k[1] + '</button>').join('') + '</div>' +
     '<div class="grid2">' + f('ds-cap', 'Prezzo o importo', D.cap, 'Es. 10000') + f('ds-dn', 'Anticipo', D.down, 'Nessuno') + '</div>' +
     (dn > 0 && dn >= (+D.cap || 0) ? '<span class="small" style="color:#E5484D">L\'anticipo copre tutto il prezzo: non resta nulla da finanziare.</span>' : dn > 0 && fin > 0 ? '<span class="small muted">Importo finanziato: <b style="color:var(--fg)">' + eur(fin) + '</b></span>' : '') +
-    '<div class="grid2">' + f('ds-m', 'Durata in mesi', D.months, 'Es. 60', 'int') + f('ds-t', 'TAEG %', D.taeg, 'Es. 7,9', 'pct') + '</div>' +
+    '<span class="label">Conosci il TAEG o la rata?</span><div class="bigchips"><button data-by="taeg" aria-pressed="' + !byR + '">Il TAEG</button><button data-by="rata" aria-pressed="' + byR + '">La rata</button></div>' +
+    '<div class="grid2">' + f('ds-m', 'Durata in mesi', D.months, 'Es. 60', 'int') + (byR ? f('ds-r', 'Rata al mese', D.rata, 'Es. 210') : f('ds-t', 'TAEG %', D.taeg, 'Es. 7,9', 'pct')) + '</div>' +
+    (byR && +D.rata > 0 && +D.months > 0 && fin > 0 && tg === null ? '<span class="small" style="color:#E5484D">Con queste rate restituiresti meno dell\'importo finanziato: controlla rata e durata.</span>' : '') +
     f('ds-b', 'Maxi-rata finale', D.balloon, 'Nessuna') +
-    '<span class="small muted">Il TAEG è nel preventivo e nel modulo SECCI: comprende interessi e spese obbligatorie. Con il TAN al posto del TAEG il costo risulterebbe più basso del reale.</span>' +
-    (ok ? '<div class="io"><div><span class="label">Rata al mese</span><b>' + eur2(rata) + '</b></div><div><span class="label">Costo del finanziamento</span><b style="color:#E5484D">' + eur(cost) + '</b></div></div>' +
+    (byR ? '' : '<span class="small muted">Il TAEG è nel preventivo e nel modulo SECCI: comprende interessi e spese obbligatorie. Con il TAN al posto del TAEG il costo risulterebbe più basso del reale.</span>') +
+    (ok ? (byR ? '<div class="io"><div><span class="label">TAEG risultante</span><b style="color:' + debtBand(tg)[0] + '">' + tg.toFixed(2).replace('.', ',') + '%</b></div><div><span class="label">Paghi in più</span><b style="color:#E5484D">' + eur(cost) + '</b></div></div><p class="small muted" style="margin:0">È il costo annuo che risulta da importo, rata e durata: ' + debtBand(tg)[1].toLowerCase() + '. Se dall\'importo vengono trattenute spese iniziali, il TAEG reale è più alto: confrontalo con quello scritto nel SECCI.</p>' : '') + (byR ? '' : '<div class="io"><div><span class="label">Rata al mese</span><b>' + eur2(rata) + '</b></div><div><span class="label">Costo del finanziamento</span><b style="color:#E5484D">' + eur(cost) + '</b></div></div>') +
       '<p class="small" style="margin:0">In totale restituiresti <b>' + eur(paid) + '</b> per ' + eur(fin) + ' finanziati' + (+D.balloon ? ', compresa una maxi-rata di ' + eur(+D.balloon) + ' alla fine' : '') + '.' + (dn > 0 ? ' Con l\'anticipo di ' + eur(dn) + ', in tutto sarebbero <b>' + eur(paid + dn) + '</b> per un prezzo di ' + eur(+D.cap) + '.' : '') + ' Finiresti a <b>' + ymLabel(addMonths(curYM(), +D.months), {month:'long', year:'numeric'}) + '</b>.</p>' +
       (share !== null ? '<p class="small" style="margin:0">Con le tue entrate medie (' + eur(inc) + ' al mese) ' + (others ? 'questa rata e quelle che hai già (' + eur(others) + ') sarebbero' : 'questa rata sarebbe') + ' il <b style="color:' + (share > 33 ? '#E5484D' : share > 25 ? '#e3a008' : IN_COL) + '">' + Math.round(share) + '%</b> delle entrate. Come riferimento, le banche di solito guardano che le rate restino sotto circa un terzo del reddito netto.</p>' +
         '<p class="small" style="margin:0">Oggi in media ti avanzano ' + eur(sv) + ' al mese: con questa rata ne resterebbero <b style="color:' + (sv - rata >= 0 ? IN_COL : '#E5484D') + '">' + eur(sv - rata) + '</b>.</p>' : '<p class="small muted" style="margin:0">Con qualche mese di entrate registrate vedresti anche quanto pesa la rata sulle tue entrate.</p>') +
@@ -3004,11 +3012,13 @@ function renderDebts(){
   }
   view.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => nav({screen:'debts', open:R.open, extra:+b.dataset.ex}));
   if (R.sim) { const again = () => { const y = window.scrollY; renderDebts(); postRender(); window.scrollTo({top:y}); };
-    [['ds-cap', 'cap'], ['ds-dn', 'down'], ['ds-m', 'months'], ['ds-t', 'taeg'], ['ds-b', 'balloon']].forEach(([id, k]) => { const i = document.getElementById(id); if (i) i.onchange = () => { DSIM[k] = i.value.trim() === '' ? '' : k === 'months' ? Math.round(+i.value) : parseAmt(i.value); again(); }; });
+    [['ds-cap', 'cap'], ['ds-dn', 'down'], ['ds-r', 'rata'], ['ds-m', 'months'], ['ds-t', 'taeg'], ['ds-b', 'balloon']].forEach(([id, k]) => { const i = document.getElementById(id); if (i) i.onchange = () => { DSIM[k] = i.value.trim() === '' ? '' : k === 'months' ? Math.round(+i.value) : parseAmt(i.value); again(); }; });
     const dn = document.getElementById('ds-n'); if (dn) dn.oninput = () => DSIM.n = dn.value;
     view.querySelectorAll('[data-sk]').forEach(b => b.onclick = () => { DSIM.kind = b.dataset.sk; again(); });
+    view.querySelectorAll('[data-by]').forEach(b => b.onclick = () => { DSIM.by = b.dataset.by; again(); });
     const da = document.getElementById('ds-add'); if (da) da.onclick = () => { const D = DSIM, id = uid();
-      S.debts.push({id, kind:D.kind, n:D.n.trim(), rata:Math.round(debtRata(Math.max(0, (+D.cap || 0) - (+D.down || 0)), +D.months, +D.taeg, +D.balloon) * 100) / 100, months:+D.months, taeg:+D.taeg, balloon:+D.balloon || 0, down:+D.down || 0, start:today()});
+      const fin = Math.max(0, (+D.cap || 0) - (+D.down || 0)), byR = D.by === 'rata', tg = byR ? Math.round(debtTaeg(fin, +D.months, +D.rata, +D.balloon) * 100) / 100 : +D.taeg;
+      S.debts.push({id, kind:D.kind, n:D.n.trim(), rata:byR ? +D.rata : Math.round(debtRata(fin, +D.months, +D.taeg, +D.balloon) * 100) / 100, months:+D.months, taeg:tg, balloon:+D.balloon || 0, down:+D.down || 0, start:today()});
       DSIM = null; save(); toast('Finanziamento aggiunto'); nav({screen:'debts', open:id}); }; }
 }
 

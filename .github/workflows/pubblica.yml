@@ -14,6 +14,9 @@ concurrency: pubblica
 jobs:
   pubblica:
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,7 +49,9 @@ jobs:
         run: npm install --no-save playwright@1.55.0 && npx playwright install --with-deps chromium
       - name: Costruisci e lancia i test di sicurezza
         if: steps.diff.outputs.nuove == '1'
-        run: sh sorgente/test-sicurezza/esegui.sh
+        run: |
+          set -o pipefail
+          sh sorgente/test-sicurezza/esegui.sh 2>&1 | tee test.log || { grep -E 'FAIL|Error|error' test.log | head -20 | while read -r l; do echo "::error::$l"; done; exit 1; }
       - name: Pubblica
         if: steps.diff.outputs.nuove == '1'
         run: |

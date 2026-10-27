@@ -1130,8 +1130,9 @@ function monthTxCalc(ym){
   S.rec.forEach(r => { if (r.from > ym) return; recDates(r, ym).forEach(d => list.push({id:'r:' + r.id + ':' + d, rec:r.id, t:r.t, c:r.c, s:r.s, a:r.a, d, n:r.n, p:r.p, plan:d > today()})); });
   return list.sort((a, b) => b.d.localeCompare(a.d));
 }
-function stats(ym){
-  const L = monthTx(ym);
+/* di default conta solo i movimenti già avvenuti; con all anche quelli programmati (previsione di fine mese) */
+function stats(ym, all){
+  const L = all || ym < curYM() ? monthTx(ym) : monthTx(ym).filter(x => !x.plan);
   let inc = 0, out = 0, disc = 0; const byCat = {};
   L.forEach(x => { if (x.t === 'in') inc += x.a; else { out += x.a; byCat[x.c] = (byCat[x.c] || 0) + x.a; if (catOf('out', x.c).disc || ['Bar e caffè','Delivery','Pranzo fuori'].includes(x.s)) disc += x.a; } });
   const save = inc - out, rate = inc > 0 ? save / inc * 100 : null;
@@ -1155,7 +1156,7 @@ function avgEssential(){ const m = prevMonthsWithData(3); if (m.length) return m
 /* media robusta: tutti i mesi disponibili (al massimo 24); da 6 mesi in su si tolgono il più alto e il più basso, così un mese eccezionale non sposta la media */
 function robustAvg(vals){ if (!vals.length) return 0; const v = vals.slice(); if (v.length >= 6) { v.sort((a, b) => a - b); v.shift(); v.pop(); } return v.reduce((t, x) => t + x, 0) / v.length; }
 function saveMonths(){ const ms = []; for (let i = 1; i <= 24; i++) { const ym = addMonths(curYM(), -i); if (monthTx(ym).length) ms.push(stats(ym).save); } return ms; }
-const avgSave = () => { const ms = saveMonths(); return ms.length ? robustAvg(ms) : stats(curYM()).save; };
+const avgSave = () => { const ms = saveMonths(); return ms.length ? robustAvg(ms) : stats(curYM(), true).save; };
 const targets = () => ({liq:S.tgt.liq || Math.round(avgOut() * S.liqMonths / 50) * 50, emerg:S.tgt.emerg || Math.round(avgEssential() * S.emergMonths / 50) * 50});
 /* Entrate e uscite muovono i pilastri: di default entrano ed escono dalla liquidità, oppure dal pilastro scelto nel movimento */
 const pilFrom = () => S.pilFrom || today();
@@ -1459,13 +1460,16 @@ function loadDemo(){
 /* ---------- home ---------- */
 function rateHero(s){
   const b = band(s.rate), pos = s.rate === null ? 0 : Math.max(0, Math.min(100, s.rate));
-  return '<div class="hero"><span class="label">' + (viewYM === curYM() ? 'Questo mese risparmi' : 'Risparmio di ' + ymLabel(viewYM, {month:'long'})) + '</span>' +
+  return '<div class="hero"><span class="label">' + (viewYM === curYM() ? 'Questo mese risparmi' : viewYM > curYM() ? 'Previsto per ' + ymLabel(viewYM, {month:'long'}) : 'Risparmio di ' + ymLabel(viewYM, {month:'long'})) + '</span>' +
     '<div class="rate"><span class="big num">' + (s.rate === null ? '–' : Math.round(s.rate) + '%') + '</span><span class="status" style="background:' + b.c + '">' + b.l + '</span></div>' +
     '<p class="num" style="font-size:1.05rem"><b>' + eur(s.save) + '</b> <span class="muted">' + (s.save >= 0 ? 'rimasti' : 'oltre le entrate') + ' su ' + eur(s.inc) + ' di entrate</span></p>' +
     '<div class="sec" style="gap:5px"><div class="scale" role="img" aria-label="Scala: rosso fino a 10%, arancio fino a 25%, giallo fino a 39%, verde da 40%"><span style="background:var(--critical)"></span><span style="background:var(--serious)"></span><span style="background:var(--warn)"></span><span style="background:var(--good)"></span>' + (s.rate === null ? '' : '<i style="left:' + pos + '%"></i>') + '</div>' +
     '<div class="scale-lbl"><span style="left:0">0</span><span style="left:10%">10</span><span style="left:25%">25</span><span style="left:40%">40</span><span style="left:100%">100%</span></div></div>' +
-    '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur(s.inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur(s.out) + '</b></div></div></div>';
+    '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur(s.inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur(s.out) + '</b></div></div>' + planLine(s) + '</div>';
 }
+/* previsione di fine mese: i numeri sopra sono reali a oggi, qui si aggiungono i movimenti programmati */
+function planLine(s){ if (viewYM !== curYM()) return ''; const f = stats(curYM(), true), k = f.n - s.n; if (k < 1) return '';
+  return '<p class="small muted" style="margin:0">Con ' + k + (k === 1 ? ' movimento programmato' : ' movimenti programmati') + ' fino a fine mese, il mese chiuderebbe ' + (f.rate === null ? 'a ' + eur(f.save) : 'al <b style="color:var(--fg)">' + Math.round(f.rate) + '%</b> (' + eur(f.save) + ')') + '.</p>'; }
 function oldSetupRecs(){ return S.rec.filter(r => /\(stima\)$/.test(r.n) || r.n === 'Affitto o mutuo' || (r.n === '' && ['stipendio','affitto_in'].includes(r.c))); }
 /* promemoria backup: una volta al mese, rimandabile */
 function backupNotice(){
@@ -1537,7 +1541,7 @@ function reviewTop(){ const pm = addMonths(curYM(), -1); if (viewYM !== curYM() 
   return '<div class="sec" style="gap:6px"><button class="readcard" ' + nav$({screen:'review'}) + '><span class="t"><b>' + ic('calendar') + ' Revisione mensile di ' + ymLabel(pm, {month:'long'}) + '</b><span>Il mese è chiuso: 15 minuti per tenere la rotta</span></span>' + ic('right') + '</button><button class="textlink small" id="rv-later" style="align-self:flex-end">Più tardi</button></div>'; }
 function renderHome(){
   if (!S.setup) return nav({screen:'welcome'});
-  const s = stats(viewYM), mv = nextMove(), ins = insights(viewYM);
+  const s = stats(viewYM, viewYM > curYM()), mv = nextMove(), ins = insights(viewYM);
   const sp = viewYM === curYM() ? splitPlan() : [];
   const nCat = Object.keys(s.byCat).length;
   view.innerHTML = '<div class="sec" style="gap:24px">' + demoBar() + monthNav() + reviewTop() + rateHero(s) + oldRecNotice() + backupNotice() +
@@ -2059,9 +2063,9 @@ function goalSwitch(g){ const L = S.goals; if (L.length < 2) return ''; return '
 function goalShare(g){ const sv = Math.max(0, avgSave()), act = S.goals.filter(x => x.kind !== 'patrimonio' && goalPlan(x).left > 0), tot = act.reduce((t, x) => t + goalPlan(x).need, 0), need = goalPlan(g).need; return Math.floor(Math.min(need, tot && g.kind !== 'patrimonio' ? sv * need / tot : sv) / 10) * 10; }
 function autoTip(g){ const p = goalPlan(g), a = goalShare(g), sv = Math.round(Math.max(0, avgSave()));
   if (g.kind === 'patrimonio') return a >= p.need ? 'Al ritmo attuale ci sei: in media ti avanzano <b>' + eur(sv) + ' al mese</b> e ne servono ' + eur(p.need) + '. Conta tutto quello che resta, in qualunque pilastro.' : 'In media ti avanzano <b>' + eur(sv) + ' al mese</b>, dopo tutte le spese: per arrivare in tempo ne servirebbero ' + eur(p.need) + '. Qui conta tutto quello che resta, in qualunque pilastro: con E se…? puoi provare una data o una cifra più comode.';
-  if (a >= p.need) return 'Potresti valutare un bonifico automatico di <b>' + eur(p.need) + '</b> il giorno dopo lo stipendio: in base ai tuoi movimenti rientra in quello che ti avanza in media ogni mese (' + eur(sv) + ').';
-  if (a >= 20) return 'Una cifra da valutare: un bonifico automatico intorno a <b>' + eur(a) + ' al mese</b>, il giorno dopo lo stipendio. È la parte di quello che ti avanza in media (' + eur(sv) + ' al mese, dopo tutte le spese) che resterebbe a questo obiettivo. Per arrivare in tempo ne servirebbero ' + eur(p.need) + ': con E se…? puoi provare altre strade o una data più comoda.';
-  return 'Oggi a fine mese avanza poco: si potrebbe valutare di partire con 20-30 € al mese e cercare spazio in una spesa che si ripete. Per arrivare in tempo servirebbero ' + eur(p.need) + ' al mese: con E se…? puoi provare una data o una cifra più comode.'; }
+  if (a >= p.need) return 'In media ti avanzano <b>' + eur(sv) + ' al mese</b>, dopo tutte le spese: ci stanno i ' + eur(p.need) + ' al mese che servono per arrivare in tempo.';
+  if (a >= 20) return 'In media ti avanzano <b>' + eur(sv) + ' al mese</b>, dopo tutte le spese. Divisi tra i tuoi obiettivi, a questo toccherebbero circa <b>' + eur(a) + ' al mese</b>; per arrivare in tempo ne servirebbero ' + eur(p.need) + '. Con E se…? puoi provare altre date o cifre.';
+  return 'Oggi a fine mese avanza poco: per arrivare in tempo servirebbero ' + eur(p.need) + ' al mese. Con E se…? puoi provare una data o una cifra diverse.'; }
 const TIP_NOTE = '<p class="small muted">Sono spunti calcolati sui tuoi movimenti, non consigli finanziari: valuta tu cosa è sostenibile per te.</p>';
 function renderGoal(){
   const isNew = R.id === 'new', g = isNew ? {id:uid(), kind:'viaggio', name:'', target:0, date:addMonths(curYM(), 12), saved:0} : S.goals.find(x => x.id === R.id);
@@ -2093,9 +2097,8 @@ function renderGoal(){
   const p = goalPlan(g), s = stats(curYM()), sv = avgSave();
   const disc = S.cats.out.filter(c => c.disc).map(c => [c, avgMonths(st => st.byCat[c.id] || 0, 3)]).filter(x => x[1] > 20).sort((a, b) => b[1] - a[1]).slice(0, 3);
   const ideas = disc.map(([c, a]) => { const cut = Math.round(a * .3); const newMonths = p.left && sv + cut > 0 ? Math.ceil(p.left / (Math.max(0, sv) + cut)) : null;
-    return {t:'Riduci ' + esc(c.n.toLowerCase()) + ' del 30%', d:'+' + eur(cut) + ' al mese. ' + (SAVE_TIPS[c.id] || ''), m:newMonths}; });
-  const extra = [['usato','Vendi un oggetto che non usi','Subito, Vinted, eBay: registra l\'entrata come "Vendita usato" e mettila qui.'],['regali','Regali in denaro','Compleanni e feste: spostali direttamente nell\'obiettivo.'],['extra','Un\'entrata extra al mese','Ripetizioni, piccoli lavori, cashback: anche 50 € al mese accorciano la strada.']];
-  const tip1 = ideas[0] ? 'Da valutare: ' + ideas[0].t.charAt(0).toLowerCase() + ideas[0].t.slice(1) + ', ' + ideas[0].d.split('. ')[0] + '.' : 'Vendi un oggetto che non usi e manda l\'entrata a questo obiettivo.';
+    return {t:esc(c.n) + ' con il 30% in meno', d:'+' + eur(cut) + ' al mese. ' + (SAVE_TIPS[c.id] || ''), m:newMonths}; });
+  const tip1 = ideas[0] ? ideas[0].t + ': ' + ideas[0].d.split('. ')[0] + '.' : 'Un oggetto che non usi più, venduto, diventa un\'entrata in più per questo obiettivo.';
   view.innerHTML = '<div class="sec" style="gap:18px">' + goalBack() + goalSwitch(g) +
     (p.left ? '<div class="card tipstop"><span class="label">' + ic('star') + ' Suggerimenti per arrivarci prima</span><ul class="tiplist"><li>' + autoTip(g) + '</li><li>' + esc(tip1) + '</li></ul>' + TIP_NOTE + '<button class="btn sm" style="align-self:flex-start" ' + nav$({screen:'gtips', id:g.id}) + '>Tutti i suggerimenti</button></div>' : '') +
     goalCardHTML(g, true) +
@@ -2355,17 +2358,17 @@ function renderGoalTips(){
   const g = S.goals.find(x => x.id === R.id); if (!g) return nav({screen:'pillars'});
   const p = goalPlan(g), sv = Math.max(0, goalPace(g).pace);
   const disc = S.cats.out.filter(c => c.disc).map(c => [c, avgMonths(st => st.byCat[c.id] || 0, 3)]).filter(x => x[1] > 15).sort((a, b) => b[1] - a[1]).slice(0, 3);
-  const ideas = disc.map(([c, a]) => { const cut = Math.round(a * .3), m = p.left && sv + cut > 0 ? Math.ceil(p.left / (sv + cut)) : null; return {t:'Riduci ' + esc(c.n.toLowerCase()) + ' del 30%', d:'In media spendi ' + eur(Math.round(a)) + ' al mese: +' + eur(cut) + ' al mese per l\'obiettivo. ' + (SAVE_TIPS[c.id] || ''), m}; });
-  const extra = [['usato','Vendi un oggetto che non usi','Subito, Vinted, eBay: registra l\'entrata come "Vendita usato" e mandala direttamente a questo obiettivo.'],['regali','Regali in denaro','Compleanni e feste: alla voce "Dove va questa entrata?" scegli questo obiettivo.'],['freelance','Un\'entrata extra al mese','Ripetizioni, piccoli lavori, cashback: anche 50 € al mese accorciano la strada.']];
+  const ideas = disc.map(([c, a]) => { const cut = Math.round(a * .3), m = p.left && sv + cut > 0 ? Math.ceil(p.left / (sv + cut)) : null; return {t:esc(c.n) + ' con il 30% in meno', d:'In media spendi ' + eur(Math.round(a)) + ' al mese: con il 30% in meno, +' + eur(cut) + ' al mese per l\'obiettivo. ' + (SAVE_TIPS[c.id] || ''), m}; });
+  const extra = [['usato','Vendita di oggetti che non usi','Subito, Vinted, eBay: l\'entrata si registra come "Vendita usato" e può andare direttamente a questo obiettivo.'],['regali','Regali in denaro','Compleanni e feste: alla voce "Dove va questa entrata?" si può scegliere questo obiettivo.'],['freelance','Un\'entrata extra al mese','Ripetizioni, piccoli lavori, cashback: anche 50 € al mese accorciano la strada.']];
   const top = Object.entries(stats(curYM()).byCat).concat(Object.entries(stats(addMonths(curYM(), -1)).byCat)).sort((a, b) => b[1] - a[1]).map(x => x[0]);
   const MAP = {abbonamenti:2, bollette:3, alimentari:5, banca:7, assicurazioni:8, svago:11, trasporti:12, ristoranti:17, shopping:10, abbigliamento:10};
   const gymIdx = [...new Set(top.map(c => MAP[c]).filter(x => x !== undefined).concat([13, 14, 9, 18]))].slice(0, 5);
   view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn(g.name, {screen:'goal', id:g.id}) +
     '<div class="intro"><span class="label">Suggerimenti</span><h2>Arrivare prima a ' + esc(g.name) + '</h2>' + (p.left ? '<p class="muted">Ti mancano ' + eur(p.left) + '. Il passo giusto è ' + eur(p.need) + ' al mese' + (sv ? ', oggi accantoni in media ' + eur(Math.round(sv)) : '') + '.</p>' : '') + '</div>' +
     '<button class="readcard" ' + nav$({screen:'sim'}) + '><span class="t"><b>' + ic('chart') + ' Simulatore del futuro</b><span>Guarda quanto pesa ogni euro risparmiato nel tempo</span></span>' + ic('right') + '</button>' +
-    '<div class="card"><b>1. Un\'abitudine da valutare</b><p class="small muted">' + autoTip(g) + ' Verso un conto o un salvadanaio dedicato; se decidi di farlo, registralo con "Accantona".</p>' + TIP_NOTE + '</div>' +
-    (ideas.length ? '<div class="sec"><span class="label">Spendi meno, dove pesa di più</span>' + ideas.map(x => '<div class="card" style="gap:6px;padding:14px 16px"><b>' + x.t + '</b><p class="small muted">' + esc(x.d) + '</p>' + (x.m ? '<span class="chip" style="align-self:flex-start;color:var(--yellow)">Con questo ci arrivi in circa ' + x.m + ' mesi</span>' : '') + '</div>').join('') + '</div>' : '') +
-    '<div class="sec"><span class="label">Guadagna di più</span><div class="list">' + extra.map(x => '<button class="item" ' + nav$({screen:'add', type:'in'}) + '>' + catTile('in', catOf('in', x[0])) + '<span class="t"><b>' + x[1] + '</b><span class="sub" style="white-space:normal">' + x[2] + '</span></span>' + ic('right') + '</button>').join('') + '</div></div>' +
+    '<div class="card"><b>1. Quanto ti avanza</b><p class="small muted">' + autoTip(g) + ' Quello che metti da parte si registra con "Accantona".</p>' + TIP_NOTE + '</div>' +
+    (ideas.length ? '<div class="sec"><span class="label">Le spese che pesano di più</span>' + ideas.map(x => '<div class="card" style="gap:6px;padding:14px 16px"><b>' + x.t + '</b><p class="small muted">' + esc(x.d) + '</p>' + (x.m ? '<span class="chip" style="align-self:flex-start;color:var(--yellow)">Così ci si arriverebbe in circa ' + x.m + ' mesi</span>' : '') + '</div>').join('') + '</div>' : '') +
+    '<div class="sec"><span class="label">Entrate in più</span><div class="list">' + extra.map(x => '<button class="item" ' + nav$({screen:'add', type:'in'}) + '>' + catTile('in', catOf('in', x[0])) + '<span class="t"><b>' + x[1] + '</b><span class="sub" style="white-space:normal">' + x[2] + '</span></span>' + ic('right') + '</button>').join('') + '</div></div>' +
     '<div class="sec"><span class="label">Dalla palestra del risparmio</span><p class="small muted">Le letture più utili per le tue spese di questi mesi.</p><div class="list">' + gymIdx.map(i => '<button class="item" ' + nav$({screen:'read', i, back:g.id}) + '><span class="ic">' + ic('book') + '</span><span class="t"><b>' + esc(GYM[i].t) + '</b><span class="sub">Tappa ' + (i + 1) + ' · lettura di 3 minuti' + (S.read.includes(i) ? ' · letta' : '') + '</span></span>' + ic('right') + '</button>').join('') + '</div></div>' +
   '</div>';
 }
@@ -2453,8 +2456,8 @@ function coachMsgs(){
   if (pilBalance('liq') < 0) out.push({i:'wallet', c:'#E5484D', t:'La liquidità è sotto zero (' + eur(pilBalance('liq')) + '): dal conto sono uscite più spese di quante entrate hai registrato.', b:'Saldo della liquidità'});
   if (g) { const p = goalPlan(g), {pace, any} = goalPace(g);
     if (p.left && any && pace > 0) { const eta = addMonths(curYM(), Math.ceil(p.left / pace)), d = monthsBetween(eta, g.date);
-      out.push({i:'target', c:d >= 0 ? '#22A45D' : '#d95926', t:'Se mantieni questo ritmo (' + eur(Math.round(pace)) + ' al mese), raggiungerai «' + g.name + '» ' + (d > 0 ? 'con ' + d + (d === 1 ? ' mese' : ' mesi') + ' di anticipo.' : d === 0 ? 'proprio alla scadenza.' : 'con ' + (-d) + (d === -1 ? ' mese' : ' mesi') + ' di ritardo: servirebbero ' + eur(p.need) + ' al mese.'), b:'Media di tutti i mesi registrati (fino a 24): un mese eccezionale non la sposta'}); }
-    else if (p.left) out.push({i:'target', c:'#e3a008', t:'Per «' + g.name + '» non hai ancora accantonato nulla: servono ' + eur(p.need) + ' al mese fino a ' + ymLabel(g.date, {month:'long', year:'numeric'}) + '.', b:'Cifra mancante divisa per i mesi alla scadenza'}); }
+      out.push({i:'target', c:d >= 0 ? '#22A45D' : '#d95926', t:'Al ritmo attuale (' + eur(Math.round(pace)) + ' al mese), «' + g.name + '» si raggiungerebbe ' + (d > 0 ? 'con ' + d + (d === 1 ? ' mese' : ' mesi') + ' di anticipo.' : d === 0 ? 'proprio alla scadenza.' : 'con ' + (-d) + (d === -1 ? ' mese' : ' mesi') + ' di ritardo: per la scadenza servirebbero ' + eur(p.need) + ' al mese.'), b:'Media di tutti i mesi registrati (fino a 24): un mese eccezionale non la sposta'}); }
+    else if (p.left) out.push({i:'target', c:'#e3a008', t:'Per «' + g.name + '» non c\'è ancora nulla da parte: servirebbero ' + eur(p.need) + ' al mese fino a ' + ymLabel(g.date, {month:'long', year:'numeric'}) + '.', b:'Cifra mancante divisa per i mesi alla scadenza'}); }
   S.goals.filter(x => !linkedGoal(x) && x !== g).forEach(x => { const p = goalPlan(x); if (p.left && monthsBetween(curYM(), x.date) <= 3) out.push({i:'calendar', c:'#e3a008', t:'Hai previsto «' + x.name + '» entro ' + ymLabel(x.date, {month:'long'}) + ', ma mancano ' + eur(p.left) + ': servono ' + eur(p.need) + ' al mese.', b:'Obiettivi con scadenza entro 3 mesi'}); });
   const avg = {}; S.cats.out.forEach(c => { avg[c.id] = [1, 2, 3].reduce((t, k) => t + (stats(addMonths(curYM(), -k)).byCat[c.id] || 0), 0) / 3; });
   const spikes = S.cats.out.map(c => ({c, a:s.byCat[c.id] || 0, m:avg[c.id]})).filter(x => x.m > 0 && x.a - x.m >= 15 && x.a / x.m >= 1.15).sort((a, b) => (b.a - b.m) - (a.a - a.m));
@@ -2462,9 +2465,11 @@ function coachMsgs(){
   const ess = avgEssential(); if (ess > 0) { const mo = pilBalance('emerg') / ess; if (mo < 3) out.push({i:'shield', c:'#d95926', t:'Il fondo di emergenza copre ' + mo.toFixed(1).replace('.', ',') + ' mesi di spese essenziali. L\'indicazione più diffusa è di avere da 3 a 6 mesi.', b:'Fondo di emergenza ÷ spese essenziali medie (' + eur(Math.round(ess)) + ' al mese)'}); }
   const prev = stats(addMonths(curYM(), -1));
   if (s.rate !== null && prev.rate !== null && Math.abs(s.rate - prev.rate) >= 5) out.push({i:'chart', c:s.rate > prev.rate ? '#22A45D' : '#d95926', t:'Il tasso di risparmio è ' + Math.round(s.rate) + '%, ' + (s.rate > prev.rate ? 'in crescita' : 'in calo') + ' di ' + Math.round(Math.abs(s.rate - prev.rate)) + ' punti rispetto al mese scorso.', b:'Entrate e uscite registrate'});
-  upcomingDues().slice(0, 1).forEach(d => out.unshift({i:'calendar', c:'#e3a008', t:(dueDays(d) < 0 ? esc(d.n) + ' è scaduto' : 'Tra ' + dueDays(d) + ' giorni scade ' + esc(d.n)) + ' (' + eur2(d.a) + ' ' + FREQ[d.freq][0] + '). Rinnovi, rinegozi, riduci o disdici?', b:'Il tuo calendario delle scadenze', go:{screen:'dues', open:d.id}}));
+  const fc = stats(curYM(), true); if (fc.n > s.n && fc.save < 0) out.push({i:'calendar', c:'#d95926', t:'Con i movimenti programmati fino a fine mese, le uscite supererebbero le entrate di ' + eur(-fc.save) + '.', b:'Movimenti registrati più ricorrenti e programmati del mese'});
+  const nx = stats(addMonths(curYM(), 1), true); if (nx.inc > 0) out.push({i:'repeat', c:'#3987e5', t:'Per ' + ymLabel(addMonths(curYM(), 1), {month:'long'}) + ' sono già previsti ' + eur(nx.inc) + ' di entrate e ' + eur(nx.out) + ' di uscite tra ricorrenti e programmati: restano ' + eur(nx.save) + ' per tutto il resto.', b:'Ricorrenti e movimenti programmati'});
+  upcomingDues().slice(0, 1).forEach(d => out.unshift({i:'calendar', c:'#e3a008', t:(dueDays(d) < 0 ? esc(d.n) + ' è scaduto' : 'Tra ' + dueDays(d) + ' giorni scade ' + esc(d.n)) + ' (' + eur2(d.a) + ' ' + FREQ[d.freq][0] + ').', b:'Il tuo calendario delle scadenze', go:{screen:'dues', open:d.id}}));
   const last = S.tx.map(x => x.d).filter(d => d <= today()).sort().pop();
-  if (last && daysBetween(last, today()) >= 3) out.push({i:'list', c:'#3987e5', t:'Non registri movimenti da ' + daysBetween(last, today()) + ' giorni: hai speso qualcosa? Segnalo adesso, poi prova a farlo appena paghi.', b:'Data dell\'ultimo movimento'});
+  if (last && daysBetween(last, today()) >= 3) out.push({i:'list', c:'#3987e5', t:'Nessun movimento registrato da ' + daysBetween(last, today()) + ' giorni: se nel frattempo hai speso qualcosa, puoi aggiungerlo ora.', b:'Data dell\'ultimo movimento'});
   return out.slice(0, 4);
 }
 function coachHTML(){

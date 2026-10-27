@@ -21,6 +21,7 @@ Prima di qualsiasi modifica sostanziale (dati salvati, calcoli, struttura delle 
 ## Da fare prima dell'uscita pubblica
 - Copia locale (service worker): tenere caratteri, libreria PDF, icone e motore scontrini in una cache stabile, per non riscaricarli a ogni aggiornamento. Rimandato perché tocca il meccanismo degli aggiornamenti: va provato bene, compreso il passaggio dalla versione precedente.
 - Soluzione Android definitiva, non legata al browser (vedi `store/ANDROID.md`).
+- Notifiche vere (programmate, native) con l'app Android definitiva: deciso il 27/10/2026, niente server di notifiche nel frattempo.
 
 ## Linguaggio dei testi (coach, suggerimenti, obiettivi)
 - Mai frasi che sembrino consigli finanziari o ordini ("fai questo", "sposta questo", "riduci", "imposta un bonifico"): l'app descrive i dati e le conseguenze ("al ritmo attuale…", "servirebbero…", "con il 30% in meno…"), la scelta resta all'utente.

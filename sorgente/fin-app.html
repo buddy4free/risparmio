@@ -1307,7 +1307,7 @@ function render(){
   document.getElementById('topbar').hidden = R.screen === 'welcome' || R.screen === 'add';
   document.getElementById('gear').hidden = true; document.getElementById('help').hidden = true;
   ({welcome:renderWelcome, setup:renderSetup, home:renderHome, tx:renderTx, charts:renderStats, stats:renderStats, add:renderAdd, pillars:renderPillars, pillar:renderPillar, goal:renderGoal,
-    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, import:renderImport, cats:renderCats, an:renderAn, notif:renderNotif, legend:renderLegend, sim:renderSim, dues:renderDues, rec:renderRec, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
+    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, import:renderImport, cats:renderCats, an:renderAn, notif:renderNotif, legend:renderLegend, howto:renderHowto, sim:renderSim, dues:renderDues, rec:renderRec, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
   postRender(); bindCarousels();
 }
 function demoBar(){ return S.demo ? '<div class="demo"><span>Stai guardando dati di esempio.</span><button id="demo-end">Inizia con i tuoi dati</button></div>' : ''; }
@@ -1339,7 +1339,7 @@ function renderSupport(){
 /* una volta al mese, mai nei primi 3 giorni */
 function supportPopup(){
   const now = today(); S.since = S.since || now;
-  if (S.demo || document.getElementById('suppop') || daysBetween(S.since, now) < 3 || (S.supportSeen && daysBetween(S.supportSeen, now) < 30)) return;
+  if (S.demo || document.getElementById('suppop') || document.getElementById('guidepop') || daysBetween(S.since, now) < 3 || (S.supportSeen && daysBetween(S.supportSeen, now) < 30)) return;
   S.supportSeen = now; save();
   const o = document.createElement('div'); o.className = 'psheet pcenter'; o.id = 'suppop';
   o.innerHTML = '<div class="pin"><div class="spread"><span class="marker y" style="font-size:1.1rem">Buddy4Free</span><button class="textlink" data-x>Chiudi</button></div>' + supportHTML() + '</div>';
@@ -1369,7 +1369,54 @@ function renderWelcome(){
   view.querySelector('#demo').onclick = gate(() => { loadDemo(); acceptTerms(); nav({screen:'home'}); });
 }
 let SU = {};
-const SETUP_STEPS = 4;
+const SETUP_STEPS = 3;
+/* guida: il metodo, le schermate e le funzioni che pochi scoprono, ognuna con il pulsante per andarci */
+function renderHowto(){
+  const g = mainGoal(), go = (r, l) => r ? '<button class="btn sm ghost" style="align-self:flex-start" ' + nav$(r) + '>' + (l || 'Aprila') + ic('right') + '</button>' : '';
+  const step = (n, t, d) => '<div class="card" style="gap:6px;padding:14px 16px"><div class="row" style="gap:10px;align-items:center"><span class="marker y" style="font-size:1.4rem">' + n + '</span><b>' + t + '</b></div><p class="small muted" style="margin:0">' + d + '</p></div>';
+  const item = (i, t, d, r) => '<div class="card" style="gap:6px;padding:14px 16px"><b>' + ic(i) + ' ' + t + '</b><p class="small muted" style="margin:0">' + d + '</p>' + go(r) + '</div>';
+  view.innerHTML = '<div class="sec" style="gap:18px">' + backBtn('Indietro', {screen:'home'}) +
+    '<div class="intro"><span class="label">Guida</span><h2>Tutto quello che l\'app sa fare</h2><p class="muted">Il metodo è semplice, gli strumenti sono tanti. Qui c\'è tutto in pochi minuti: ogni voce ha il pulsante per andarci.</p></div>' +
+    '<span class="label">Il metodo in 4 passi</span>' +
+    step('1', 'Registra', 'Ogni entrata e ogni spesa, appena succede: tasto + in basso a destra, oppure la foto dello scontrino. Stipendio, affitto e abbonamenti si inseriscono da soli con i ricorrenti.') +
+    step('2', 'Guarda', 'Home e Statistiche mostrano quanto risparmi e dove vanno i soldi. A inizio mese, in cima alla Home, c\'è la revisione del mese chiuso.') +
+    step('3', 'Metti da parte', 'I soldi stanno in 4 pilastri: liquidità, fondo di emergenza, salvadanaio degli obiettivi, investimenti. Lì vedi a che punto sei in ognuno.') +
+    step('4', 'Raggiungi', 'Ogni obiettivo ha il suo passo: quanto serve al mese, a che ritmo stai andando e cosa cambierebbe con qualche spesa in meno.') +
+    '<span class="label">Le schermate</span>' +
+    item('house', 'Home', 'Il risparmio del mese reale fino a oggi (con la previsione dei movimenti programmati), dove vanno i soldi, i tuoi obiettivi e il coach, che legge i tuoi dati.', {screen:'home'}) +
+    item('list', 'Movimenti', 'L\'elenco di tutto, con ricerca e filtri per tipo, categoria e periodo. In cima trovi Ricorrenti e Scadenze. Tocca un movimento per modificarlo, segnarlo come rimborso o farlo ripetere.', {screen:'tx'}) +
+    item('chart', 'Statistiche', 'Mese, anno o periodo libero. Scorri le schede di lato; con Analisi scendi da categoria a sottocategoria fino al singolo movimento.', {screen:'stats'}) +
+    item('pillars', 'Pilastri', 'I saldi dei 4 pilastri, lo storico mese per mese, "Correggi il saldo" e, per gli investimenti, quanto hai versato e il plus/minus.', {screen:'pillars'}) +
+    item('dumbbell', 'Palestra', 'Un percorso a tappe, le lezioni di Impara con la domanda del giorno, il libro della settimana e le sfide.', {screen:'gym'}) +
+    item('leaf', 'Benessere', 'L\'indice di benessere finanziario, la respirazione guidata e le abitudini che aiutano anche il portafoglio.', {screen:'well'}) +
+    '<span class="label">Da scoprire</span>' +
+    (OCR_PATH ? item('receipt', 'Scontrino in foto', 'Dal tasto + scegli "Scontrino in foto": l\'app legge importo e data e propone la categoria. La foto resta sul telefono.') : '') +
+    item('repeat', 'Ricorrenti', 'Entrate e uscite che si ripetono ogni mese o settimana: si inseriscono da sole, e le vedi tutte insieme.', {screen:'rec'}) +
+    item('calendar', 'Scadenze', 'Bollo, assicurazioni, rinnovi: l\'app ti ricorda cosa scade e quanto costa all\'anno.', {screen:'dues'}) +
+    item('tag', 'Categorie e sottocategorie', 'Crea, rinomina, sposta e riordina trascinando. Tocca una sottocategoria per vederne il riepilogo e i movimenti.', {screen:'cats', t:'out'}) +
+    item('list', 'Importa da un\'altra app', 'Carica un file CSV con lo storico: l\'app abbina le categorie e segnala i doppioni dei ricorrenti.', {screen:'import'}) +
+    item('calendar', 'Revisione mensile', '15 minuti a inizio mese per vedere com\'è andato il mese chiuso e scegliere una cosa da cambiare.', {screen:'review'}) +
+    (g ? item('target', 'E se…?', 'Per ogni obiettivo: quando ci arriveresti con qualche euro in più al mese o con una data diversa.', {screen:'whatif', id:g.id}) : '') +
+    item('chart', 'Simulatore del futuro', 'Quanto possono diventare i risparmi nel tempo, con capitale, versamento mensile e rendimento a tua scelta.', {screen:'sim'}) +
+    item('bank', 'Finanziamenti e "Simula prima"', 'Quanto costano davvero i finanziamenti in corso e, prima di firmarne uno, rata, TAEG e peso sulle entrate.', {screen:'debts'}) +
+    item('gear', 'Report, backup e sicurezza', 'Nelle Impostazioni: report PDF e CSV, backup cifrato con password, PIN e impronta per aprire l\'app.', {screen:'settings'}) +
+    item('shield', 'Nascondi gli importi', 'L\'occhio in alto a destra copre tutte le cifre: utile se usi l\'app davanti ad altri.') +
+    item('book', 'Legenda', 'Cosa significano colori, pilastri e voci dell\'app.', {screen:'legend'}) +
+    '<p class="small muted">Qualcosa non è chiaro o hai un\'idea? Dal menu: "Dammi un suggerimento".</p></div>';
+}
+/* la guida si propone una volta: a fine configurazione, o alla prima apertura per chi aveva già l'app */
+function guidePopup(){ setTimeout(guidePopNow, 700); }
+function guidePopNow(){
+  if (S.demo || !S.setup || S.guideSeen || R.screen !== 'home' || document.querySelector('.psheet') || document.getElementById('lock') || document.getElementById('dial')) return;
+  S.guideSeen = today(); save();
+  const fresh = S.pilFrom === today(), o = document.createElement('div'); o.className = 'psheet pcenter'; o.id = 'guidepop';
+  o.innerHTML = '<div class="pin" style="text-align:center;align-items:center"><span class="marker y" style="font-size:1.4rem">' + (fresh ? 'Pronti!' : 'Novità: la guida') + '</span>' +
+    '<p style="margin:0">' + (fresh ? 'L\'app fa molte cose. Vuoi vedere in un minuto il metodo e gli strumenti che hai a disposizione?' : 'Molte funzioni dell\'app sono poco visibili. Nella nuova guida trovi il metodo e tutti gli strumenti, ognuno con il pulsante per andarci.') + '</p>' +
+    '<button class="btn wide" data-g>Apri la guida</button><button class="textlink" data-x style="align-self:center">Dopo</button><p class="small muted" style="margin:0">La ritrovi sempre nel menu, alla voce Guida.</p></div>';
+  document.body.appendChild(o);
+  o.querySelector('[data-g]').onclick = () => { o.remove(); nav({screen:'howto'}); };
+  o.onclick = e => { if (e.target === o || e.target.closest('[data-x]')) o.remove(); };
+}
 function renderSetup(){
   const i = R.i;
   const top = (i > 0 ? backBtn('Indietro', {screen:'setup', i:i - 1}) : backBtn('Esci', {screen:'welcome'})) +
@@ -1395,16 +1442,12 @@ function renderSetup(){
     body = '<div class="intro"><h2>Da dove parti</h2><p class="muted">I tuoi soldi stanno in 4 contenitori, i pilastri. Scrivi quanto hai oggi in ognuno: una stima basta.</p></div>' +
       money('su-liq', pl('liq'), SU.liq, 'Quanto hai sul conto corrente per le spese di tutti i giorni.') + money('su-em', pl('emerg'), SU.em, 'Quanto hai già messo da parte solo per gli imprevisti.') +
       (!['emergenza', 'patrimonio'].includes(SU.kind) && !SU.noGoal ? money('su-gs', pl('goal'), SU.gs, 'Quanto hai già messo da parte per il tuo obiettivo: ' + esc(SU.gname || '') + '.') : '') + money('su-inv', pl('inv'), SU.inv, 'Fondo pensione, ETF, altri investimenti a lungo termine.');
-    next = () => { SU.liq = parseAmt(val('su-liq')); SU.em = parseAmt(val('su-em')); SU.gs = parseAmt(val('su-gs')); SU.inv = parseAmt(val('su-inv')); return true; };
-  } else {
-    body = '<div class="intro"><h2>I tuoi promemoria</h2><p class="muted">Scegli gli orari. Dopo potrai aggiungerli al calendario del telefono, dalle Impostazioni e dalla sezione Benessere, per ricevere le notifiche.</p></div>' +
-      '<div>' + WELL.map(w => '<div class="rem"><span><b>' + w.n + '</b><br><span class="small muted">' + w.d + '</span></span><span></span><input type="time" id="t-' + w.id + '" value="' + S.times[w.id] + '"></div>').join('') + '</div>';
-    next = () => { WELL.forEach(w => S.times[w.id] = val('t-' + w.id) || w.time); finishSetup(); return false; };
-  }
+    next = () => { SU.liq = parseAmt(val('su-liq')); SU.em = parseAmt(val('su-em')); SU.gs = parseAmt(val('su-gs')); SU.inv = parseAmt(val('su-inv')); finishSetup(); return false; };
+  } else return nav({screen:'setup', i:SETUP_STEPS - 1}); /* i promemoria si scelgono dalle Impostazioni */
   view.innerHTML = '<div class="sec" style="gap:22px">' + top + body + '<button class="btn wide" id="next">' + (i === SETUP_STEPS - 1 ? 'Inizia' : 'Avanti') + '</button>' + (i === 1 || i === 2 ? '<button class="textlink" style="align-self:center" id="skip">Salta</button>' : '') + (i === 0 ? '<button class="textlink" style="align-self:center" id="nogoal">Non ho ancora un obiettivo: lo scelgo dopo</button>' : '') + '</div>';
   view.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { SU.gname = val('su-gn'); SU.gt = val('su-gt'); SU.date = val('su-gd'); SU.kind = b.dataset.k; renderSetup(); });
   view.querySelector('#next').onclick = () => { if (i === 0) SU.noGoal = false; if (next()) nav({screen:'setup', i:i + 1}); };
-  const sk = view.querySelector('#skip'); if (sk) sk.onclick = () => nav({screen:'setup', i:i + 1});
+  const sk = view.querySelector('#skip'); if (sk) sk.onclick = () => i === SETUP_STEPS - 1 ? finishSetup() : nav({screen:'setup', i:i + 1});
   const ng = view.querySelector('#nogoal'); if (ng) ng.onclick = () => { SU.noGoal = true; nav({screen:'setup', i:1}); };
 }
 const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
@@ -1555,7 +1598,7 @@ function renderHome(){
   bindMonth(); bindDemo(); bindOldRec(); bindBackupNotice();
   const rl = document.getElementById('rv-later'); if (rl) rl.onclick = () => { S.reviewLater = addMonths(curYM(), -1); save(); renderHome(); };
   view.querySelectorAll('.catscroll .hbar, [data-allout]').forEach(b => { b.removeAttribute('data-nav'); b.onclick = () => { txFilter = 'out'; nav({screen:'tx'}); }; });
-  supportPopup();
+  guidePopup(); supportPopup();
   const spg = document.getElementById('sp-go'); if (spg) spg.onclick = () => { sp.forEach(x => transfer('liq', x.k, x.v)); save(); toast('Fatto: soldi spostati nei pilastri'); renderHome(); };
 }
 
@@ -3435,7 +3478,7 @@ const MENU = [
   ['Il mio denaro', [['home', 'Home', 'house'], ['tx', 'Movimenti', 'list'], ['rec', 'Ricorrenti', 'repeat'], ['dues', 'Scadenze e rinnovi', 'calendar'], ['stats', 'Statistiche', 'chart'], ['review', 'Revisione mensile', 'check']]],
   ['Patrimonio', [['pillars', 'I 4 pilastri', 'pillars'], ['goals', 'Obiettivi', 'target'], ['sim', 'Simulatore del futuro', 'chart'], ['debts', 'Finanziamenti e debiti', 'bank']]],
   ['Crescere', [['gym', 'Palestra: percorso', 'dumbbell'], ['missions', 'Sfide e missioni', 'star'], ['learn', 'Impara', 'book'], ['wbi', 'Indice di benessere', 'heart'], ['well', 'Benessere', 'leaf']]],
-  ['App', [['guide', 'Video guida', 'play'], ['idea', 'Dammi un suggerimento', 'star'], ['support', 'Sostieni Buddy4Free', 'heart'], ['settings', 'Impostazioni', 'gear'], ['legend', 'Legenda', 'book'], ['terms', 'Termini e condizioni', 'shield'], ['privacy', 'Privacy', 'shield']]]
+  ['App', [['howto', 'Guida', 'book'], ['guide', 'Video guida', 'play'], ['idea', 'Dammi un suggerimento', 'star'], ['support', 'Sostieni Buddy4Free', 'heart'], ['settings', 'Impostazioni', 'gear'], ['legend', 'Legenda', 'book'], ['terms', 'Termini e condizioni', 'shield'], ['privacy', 'Privacy', 'shield']]]
 ];
 function openDrawer(open){
   const d = document.getElementById('drawer'), bg = document.getElementById('drawer-bg');
@@ -4123,6 +4166,7 @@ function notifCard(){
   const on = S.notif && S.notif.on && Notification.permission === 'granted', den = Notification.permission === 'denied' || (!!(S.notif && S.notif.on) && Notification.permission !== 'granted');
   return '<div class="card" style="gap:10px"><div class="spread"><b>Notifiche dell\'app</b><span class="chip" style="background:' + (on ? 'var(--green,#22A45D)' : 'var(--soft2)') + ';color:#fff">' + (on ? 'Attive' : 'Spente') + '</span></div>' +
     '<p class="small muted" style="margin:0">Al massimo una al giorno: la domanda del giorno, la tappa della palestra o, la sera, un controllo delle spese. È il telefono a decidere il momento preciso, di giorno.</p>' +
+    '<p class="small" style="margin:0">Da sapere: in questa versione gli avvisi automatici <b>possono non arrivare</b>, perché è il telefono a decidere se e quando svegliare l\'app. Arriveranno puntuali con la prossima versione Android. Per un promemoria sicuro, oggi, c\'è il calendario qui sotto.</p>' +
     (on && S.notif.periodic === false ? '<p class="small" style="margin:0;color:var(--yellow)">Per ora il browser non concede gli avvisi automatici: succede con le app appena installate e di solito si sblocca da solo dopo qualche giorno di uso. L\'app riprova a ogni apertura. Intanto, per non perdere i promemoria, usa il calendario qui sotto.</p>' : '') +
     (den ? '<p class="small" style="margin:0;color:var(--yellow)">Le notifiche sono bloccate sul telefono: tocca il pulsante qui sotto e ti dico dove sbloccarle.</p>' : '') +
     '<p class="small muted" style="margin:0" id="nt-diag">Dettagli tecnici: permesso ' + Notification.permission + ' · copia offline ' + (navigator.serviceWorker.controller ? 'sì' : 'no') + ' · avvisi automatici ' + (S.notif && S.notif.periodic ? 'sì' : 'no') + ' · ' + (/SamsungBrowser/.test(navigator.userAgent) ? 'Samsung Internet' : 'Chrome') + '</p>' +
@@ -4174,6 +4218,7 @@ function renderSettings(){
       (downloads ? '<button class="item" id="s-csv"><span class="ic">' + ic('list') + '</span><span class="t"><b>Esporta i movimenti in CSV</b><span class="sub">Da aprire con Excel o Fogli Google</span></span>' + ic('right') + '</button>' : '') +
       '<button class="item" ' + nav$({screen:'terms'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Termini e condizioni</b><span class="sub">Versione ' + TERMS_V + (S.termsAt ? ', accettata il ' + dshort(S.termsAt) : '') + '</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'privacy'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Informativa sulla privacy</b><span class="sub">I tuoi dati restano sul tuo dispositivo</span></span>' + ic('right') + '</button>' +
+      '<button class="item" ' + nav$({screen:'howto'}) + '><span class="ic">' + ic('book') + '</span><span class="t"><b>Guida</b><span class="sub">Il metodo, le schermate e tutte le funzioni</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'legend'}) + '><span class="ic">' + ic('book') + '</span><span class="t"><b>Legenda</b><span class="sub">Cosa significano colori, pilastri e voci dell\'app</span></span>' + ic('right') + '</button>' +
       '<button class="item" data-ask="demo"><span class="ic">' + ic('star') + '</span><span class="t"><b>Carica il conto di esempio</b><span class="sub">Tre mesi di movimenti per provare l\'app</span></span>' + ic('right') + '</button>' +
       '<button class="item" data-ask="setup"><span class="ic">' + ic('calendar') + '</span><span class="t"><b>Rifai la configurazione iniziale</b><span class="sub">Stipendio, spese fisse, obiettivo, saldi</span></span>' + ic('right') + '</button>' +

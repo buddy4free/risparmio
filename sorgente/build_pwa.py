@@ -1,7 +1,8 @@
 import json,re,os,time,shutil
 import os
-P=os.environ.get('B4F_SRC','/home/user/risparmio/sorgente/')
-D='/home/user/risparmio/'
+_HERE=os.path.dirname(os.path.abspath(__file__))
+P=os.environ.get('B4F_SRC',_HERE+'/')
+D=os.path.dirname(_HERE)+'/'
 s=open(P+'fin-app.html').read()
 L=json.load(open(P+'logo.json'))
 for k in ['ENSO','WORD','FULL']: s=s.replace('__'+k+'__',L[k.lower()])

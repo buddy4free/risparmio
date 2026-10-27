@@ -24,6 +24,13 @@ Prima di qualsiasi modifica sostanziale (dati salvati, calcoli, struttura delle 
 - Avviso (issue) a ogni pubblicazione, non solo quando ci sono novità per i tester.
 - Guidare Lorenzo a proteggere il ramo `main` su GitHub (niente force push), verificando che la pubblicazione automatica continui a funzionare.
 
+## In coda dopo la sicurezza: tema chiaro (scelte di Lorenzo del 27/10/2026)
+- Opzione in Impostazioni → Visualizzazione: Scuro / Chiaro / Come il telefono; predefinito Scuro (per i tester non cambia nulla finché non scelgono).
+- Chiaro: sfondo bianco caldo (#F5F4EF), schede bianche con bordo leggero, testo quasi nero; giallo Buddy4Free per pulsanti, + e bordo della scheda principale; verdi/arancioni/rossi un po' più scuri.
+- Logo nel tondo nero (cerchio giallo + BUDDY + 4 FREE, come sulla maglietta); "Risparmio" in alto in ambra (#9A6A00); icone in alto nere.
+- Barra in basso: voce attiva con icona nera dentro una pillola gialla piena (come il +), scritta nera in grassetto; le altre grigie.
+- Da rifinire: grafici, illustrazioni, PDF, immagini della guida anche in versione chiara. Prova di riferimento: script `light.js` nello scratchpad della sessione del 27/10.
+
 ## Da fare prima dell'uscita pubblica
 - Copia locale (service worker): tenere caratteri, libreria PDF, icone e motore scontrini in una cache stabile, per non riscaricarli a ogni aggiornamento. Rimandato perché tocca il meccanismo degli aggiornamenti: va provato bene, compreso il passaggio dalla versione precedente.
 - Soluzione Android definitiva, non legata al browser (vedi `store/ANDROID.md`).

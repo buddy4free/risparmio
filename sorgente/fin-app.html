@@ -3635,7 +3635,11 @@ function renderImport(){
     (g.t === 'in' && IMP.outSrc.has(g.src) ? '<option value="__rf"' + (v === '__rf' ? ' selected' : '') + '>↩ Rimborso della spesa "' + esc(g.src) + '"</option>' : '') + '<option value="__ask">+ Nuova categoria madre…</option><option value="__skip"' + (v === '__skip' ? ' selected' : '') + '>Non importare</option></select>'; };
   const dest = k => { const r = impResolve(k); if (!r) return '<span class="small muted">non importata</span>'; return '<span class="small to">' + (r.rf ? '↩ rimborso di ' : '→ ') + esc(r.name) + (r.sub ? ' › ' + esc(r.sub) : '') + (r.isNew ? ' <i class="muted">(nuova)</i>' : '') + '</span>'; };
   const list = t => G.filter(([, g]) => g.t === t).map(([k, g]) => '<div class="improw"><input type="checkbox" data-pick="' + esc(k) + '"' + (IMP.pick.has(k) ? ' checked' : '') + ' aria-label="Seleziona ' + esc(g.src) + '"><div><b>' + esc(g.src) + '</b><span class="small muted">' + g.n + (g.n === 1 ? ' movimento' : ' movimenti') + ' · ' + eur(Math.round(g.a)) + '</span>' + dest(k) + '</div>' + sel(k, g) + '</div>').join('');
-  const nImp = rows.filter(x => IMP.map[x.t + '|' + x.src] !== '__skip').length;
+  IMP.dupKeep = IMP.dupKeep || new Set(); const DUP = impRecDups(rows), dupRows = rows.filter(x => DUP.has(x.ext));
+  const nImp = rows.filter(x => IMP.map[x.t + '|' + x.src] !== '__skip' && !(DUP.has(x.ext) && !IMP.dupKeep.has(x.ext))).length;
+  const dupCard = dupRows.length ? '<div class="card"><span class="label">Possibili doppioni dei ricorrenti</span><p class="small muted" style="margin:0">Questi movimenti del file hanno stessa categoria, stesso importo e stesso mese di un movimento ricorrente che l\'app aggiunge già da sola. Spunta quelli da importare comunque; gli altri vengono saltati e resta il ricorrente.</p><div class="list">' +
+    dupRows.slice().sort((a, b) => b.d.localeCompare(a.d)).map(x => { const rc = DUP.get(x.ext), c = catOf(rc.t, rc.c); return '<label class="item" style="grid-template-columns:auto 1fr auto;cursor:pointer"><input type="checkbox" data-dk="' + esc(x.ext) + '"' + (IMP.dupKeep.has(x.ext) ? ' checked' : '') + '><span class="t"><b>' + esc(x.src) + (x.n ? ' · ' + esc(x.n) : '') + '</b><span class="sub">' + dshort(x.d) + ' · come il ricorrente ' + esc(rc.n || c.n) + '</span></span><span class="num">' + eur2(x.a) + '</span></label>'; }).join('') +
+    '</div><div class="row"><button class="textlink small" id="dk-all">Importali tutti</button><button class="textlink small" id="dk-none">Saltali tutti</button></div></div>' : '';
   const allNames = [...new Set(S.cats.out.concat(S.cats.in).map(c => c.n).concat(newNames('out'), newNames('in')))].sort((a, b) => a.localeCompare(b));
   view.innerHTML = '<div class="sec" style="gap:18px">' + back + '<div class="intro"><span class="label">Dati</span><h2>Controlla prima di importare</h2></div>' +
     '<div class="card"><div class="io"><div><span class="label">Movimenti</span><b>' + rows.length + '</b></div><div><span class="label">Periodo nel file</span><b style="font-size:1rem">' + ymLabel(first.slice(0, 7), {month:'short', year:'numeric'}) + ' – ' + ymLabel(last.slice(0, 7), {month:'short', year:'numeric'}) + '</b></div></div>' +
@@ -3649,7 +3653,7 @@ function renderImport(){
       '<b class="small" style="color:' + OUT_COL + '">Uscite</b><div class="implist">' + list('out') + '</div>' +
       '<b class="small" style="color:' + IN_COL + '">Entrate</b><div class="implist">' + list('in') + '</div></div>' +
     (IMP.pick.size ? '<div class="card impbulk"><b>' + IMP.pick.size + (IMP.pick.size === 1 ? ' voce selezionata' : ' voci selezionate') + '</b><div class="row"><input id="imp-gn" list="imp-gl" placeholder="Nome della categoria madre" style="flex:1;width:auto" value="' + esc(IMP.gname || '') + '"><datalist id="imp-gl">' + allNames.map(n => '<option value="' + esc(n) + '">').join('') + '</datalist><button class="btn sm" id="imp-gb">Raggruppa</button></div><span class="small muted">Scrivi un nome nuovo o uno che esiste già. Le voci diventano sue sottocategorie.</span><button class="textlink" id="imp-gx" style="align-self:flex-start">Deseleziona tutto</button></div>' : '') +
-    '<div class="note small">I movimenti importati servono per statistiche e storico: <b>non cambiano i saldi dei pilastri</b>. Dopo l\'importazione, nei Pilastri usa "Correggi il saldo" per mettere i saldi reali di oggi.</div>' +
+    dupCard + '<div class="note small">I movimenti importati servono per statistiche e storico: <b>non cambiano i saldi dei pilastri</b>. Dopo l\'importazione, nei Pilastri usa "Correggi il saldo" per mettere i saldi reali di oggi.</div>' +
     '<div class="row"><button class="btn" id="imp-go">' + ic('check') + 'Importa ' + nImp + ' movimenti</button><button class="btn ghost" id="imp-x">Annulla</button></div></div>';
   const keepY = () => { const y = window.scrollY; renderImport(); window.scrollTo({top:y}); };
   view.querySelectorAll('[data-map]').forEach(s => s.onchange = () => { const k = s.dataset.map; if (s.value === '__ask') { IMP.pick.add(k); keepY(); const i = document.getElementById('imp-gn'); if (i) { i.scrollIntoView({block:'center'}); i.focus(); } return; } IMP.map[k] = s.value; keepY(); });
@@ -3663,8 +3667,18 @@ function renderImport(){
   const w = view.querySelector('#imp-wipe'); if (w) w.onchange = () => IMP.wipe = w.checked;
   const rp = view.querySelector('#imp-rep'); if (rp) rp.onchange = () => { IMP.replace = rp.checked; IMP.rows = IMP.replace ? IMP.all : IMP.fresh; renderImport(); };
   view.querySelector('#imp-x').onclick = () => { IMP = null; nav({screen:'settings'}); };
-  view.querySelector('#imp-go').onclick = () => doImport(rows);
+  view.querySelectorAll('[data-dk]').forEach(c => c.onchange = () => { c.checked ? IMP.dupKeep.add(c.dataset.dk) : IMP.dupKeep.delete(c.dataset.dk); keepY(); });
+  const dka = view.querySelector('#dk-all'); if (dka) dka.onclick = () => { dupRows.forEach(x => IMP.dupKeep.add(x.ext)); keepY(); };
+  const dkn = view.querySelector('#dk-none'); if (dkn) dkn.onclick = () => { IMP.dupKeep.clear(); keepY(); };
+  view.querySelector('#imp-go').onclick = () => doImport(rows.filter(x => !(DUP.has(x.ext) && !IMP.dupKeep.has(x.ext))));
 }
+/* movimenti del file uguali a un ricorrente già nell'app (stesso tipo, categoria, importo e mese): ext → ricorrente */
+function impRecDups(rows){ const out = new Map(); if (S.demo || !(S.rec || []).length) return out;
+  /* ogni volta di un ricorrente può avere un solo doppione: il movimento con la data più vicina */
+  const cand = []; rows.forEach(x => { const k = x.t + '|' + x.src; if (IMP.map[k] === '__skip' || IMP.map[k] === '__rf') return; const r = impResolve(k); if (!r || !r.id) return;
+    S.rec.forEach(q => { if (q.t !== x.t || q.c !== r.id || Math.abs(q.a - x.a) >= 0.005) return; recDates(q, ymOf(x.d)).forEach(d => cand.push({x, q, key:q.id + d, gap:Math.abs(daysBetween(x.d, d))})); }); });
+  const used = new Set(); cand.sort((a, b) => a.gap - b.gap).forEach(c => { if (used.has(c.key) || out.has(c.x.ext)) return; used.add(c.key); out.set(c.x.ext, c.q); });
+  return out; }
 /* dove finisce una categoria del file: {id|null, name, sub, isNew} */
 function impResolve(k){
   const v = IMP.map[k]; if (!v || v === '__skip') return null;

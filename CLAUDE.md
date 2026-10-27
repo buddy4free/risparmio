@@ -11,6 +11,16 @@ Prima di qualsiasi modifica sostanziale (dati salvati, calcoli, struttura delle 
 4. Le modifiche al pacchetto Android (icona, browser, nome) richiedono una nuova versione sul Play Store: raggrupparle (vedi `store/ANDROID.md`).
 5. Prima di pubblicare: test di sicurezza (`sh sorgente/test-sicurezza/esegui.sh`) e prova del flusso toccato.
 
+## Pubblicazioni raggruppate (deciso il 27/10/2026)
+- Le modifiche si fanno sul ramo `prossima`, non su `main`: `main` è il sito che arriva subito ai tester.
+- L'artifact si aggiorna subito come anteprima per Lorenzo.
+- Si unisce `prossima` in `main` una o due volte al giorno, o quando Lorenzo dice "pubblica", con un solo messaggio ai tester se serve.
+- Eccezione: correzioni urgenti (errori che bloccano l'app o rischi sui dati) si pubblicano subito, dicendolo a Lorenzo.
+
+## Da fare prima dell'uscita pubblica
+- Copia locale (service worker): tenere caratteri, libreria PDF, icone e motore scontrini in una cache stabile, per non riscaricarli a ogni aggiornamento. Rimandato perché tocca il meccanismo degli aggiornamenti: va provato bene, compreso il passaggio dalla versione precedente.
+- Soluzione Android definitiva, non legata al browser (vedi `store/ANDROID.md`).
+
 ## Linguaggio dei testi (coach, suggerimenti, obiettivi)
 - Mai frasi che sembrino consigli finanziari o ordini ("fai questo", "sposta questo", "riduci", "imposta un bonifico"): l'app descrive i dati e le conseguenze ("al ritmo attuale…", "servirebbero…", "con il 30% in meno…"), la scelta resta all'utente.
 - I numeri del mese in corso sono reali a oggi; i movimenti programmati compaiono solo come previsione, dichiarata come tale.

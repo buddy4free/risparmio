@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-bA2fqdv96lVr8UaZj6WtKyMQawR5oji3mk5OfhDQ7JQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-rb55Vln+yjbhLtaiQqPwFq/fY0yzSsFdOz/m3iaSvzU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -3854,8 +3854,10 @@ function ocrGuess(p, text){
 let OCRW = null, OCRF = null, ocrIdle = 0;
 const ocrLib = () => window.Tesseract ? Promise.resolve() : new Promise((ok, ko) => { const t = document.createElement('script'); t.src = OCR_PATH + 'tesseract.min.js'; t.onload = ok; t.onerror = ko; document.head.appendChild(t); });
 async function ocrImage(file){
-  const bmp = await createImageBitmap(file), sc = Math.min(1, 2000 / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
-  c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc); const x = c.getContext('2d'); x.filter = 'grayscale(1) contrast(1.5)'; x.drawImage(bmp, 0, 0, c.width, c.height); return c;
+  /* le foto dei telefoni arrivano a 50-200 milioni di pixel: si decodificano già ridotte, altrimenti la memoria esplode e il telefono si blocca */
+  let bmp; try { bmp = await createImageBitmap(file, {resizeWidth:1600, resizeQuality:'medium'}); } catch(e) { bmp = await createImageBitmap(file); }
+  const sc = Math.min(1, 2000 / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc); const x = c.getContext('2d'); x.filter = 'grayscale(1) contrast(1.5)'; x.drawImage(bmp, 0, 0, c.width, c.height); if (bmp.close) bmp.close(); return c;
 }
 function ocrPick(){ const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.setAttribute('capture', 'environment'); i.onchange = () => { if (i.files[0]) ocrStart(i.files[0]); }; i.click(); }
 function ocrStart(file){
@@ -3864,7 +3866,7 @@ function ocrStart(file){
     try {
       clearTimeout(ocrIdle); await ocrLib(); const abs = new URL(OCR_PATH, location.href).href;
       if (!OCRW) OCRW = await Tesseract.createWorker('ita', 1, {workerPath:abs + 'worker.min.js', corePath:abs, langPath:abs, workerBlobURL:false, logger:m => { if (m.status === 'recognizing text') { st('Leggo lo scontrino…'); bar(.3 + m.progress * .7); } else { st('Preparo il lettore…'); bar((m.progress || 0) * .3); } }});
-      st('Leggo lo scontrino…'); const text = (await OCRW.recognize(await ocrImage(file))).data.text;
+      st('Leggo lo scontrino…'); const cv = await ocrImage(file), text = (await OCRW.recognize(cv)).data.text; cv.width = cv.height = 0;
       /* il motore di lettura occupa molta memoria: si chiude dopo un minuto senza nuove foto */
       ocrIdle = setTimeout(() => { const w = OCRW; OCRW = null; if (w) w.terminate().catch(() => {}); }, 60000);
       if (!document.body.contains(o)) return;

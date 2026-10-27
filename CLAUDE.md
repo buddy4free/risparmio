@@ -19,6 +19,7 @@ Prima di qualsiasi modifica sostanziale (dati salvati, calcoli, struttura delle 
 - Eccezione: correzioni urgenti (errori che bloccano l'app o rischi sui dati) si pubblicano subito, dicendolo a Lorenzo.
 
 ## Da fare il 28/10/2026 (sicurezza della pubblicazione)
+Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minuti, guidato); 2) tema chiaro (sezione più sotto); 3) guardiano, avviso a ogni pubblicazione e protezione di `main`.
 - Guidare Lorenzo ad attivare la verifica in due passaggi (meglio passkey) su GitHub, account Google (Gmail Buddy4Free e Play Console) e Claude, e a controllare le sessioni attive su GitHub.
 - "Guardiano" nel workflow `pubblica.yml`: blocca la pubblicazione se la CSP viene allentata, se compaiono indirizzi esterni a cui spedire dati o codice eseguito al volo (eval, new Function).
 - Avviso (issue) a ogni pubblicazione, non solo quando ci sono novità per i tester.

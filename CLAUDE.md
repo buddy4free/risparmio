@@ -25,6 +25,9 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - Avviso (issue) a ogni pubblicazione, non solo quando ci sono novità per i tester.
 - Guidare Lorenzo a proteggere il ramo `main` su GitHub (niente force push), verificando che la pubblicazione automatica continui a funzionare.
 
+## In coda: controllo iPhone (chiesto il 28/10/2026)
+- Rivedere i punti delicati su Safari/iOS (tastierina, campi data, fotocamera scontrini, schermo intero, area sicura in basso) e aggiungere i meta per la schermata Home di iOS. Un utente iPhone usa la versione web come tester (non conta per il test chiuso di Google).
+
 ## In coda dopo la sicurezza: tema chiaro (scelte di Lorenzo del 27/10/2026)
 - Opzione in Impostazioni → Visualizzazione: Scuro / Chiaro / Come il telefono; predefinito Scuro (per i tester non cambia nulla finché non scelgono).
 - Chiaro: sfondo bianco caldo (#F5F4EF), schede bianche con bordo leggero, testo quasi nero; giallo Buddy4Free per pulsanti, + e bordo della scheda principale; verdi/arancioni/rossi un po' più scuri.

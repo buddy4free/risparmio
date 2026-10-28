@@ -511,6 +511,7 @@ i.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right
 .simchart div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-width:0}
 .simchart span{display:block;width:100%}
 .simchart span:first-child{border-radius:3px 3px 0 0}
+.simchart div{position:relative}.simchart i.sr{position:absolute;left:-1px;right:-1px;height:3px;border-radius:2px;background:#3987e5}
 
 .cmsg{border:0;background:none;padding:0;text-align:left;color:inherit;width:100%}
 button.cmsg span > span:first-child{text-decoration:underline;text-decoration-color:rgba(255,201,10,.6);text-underline-offset:3px}
@@ -2528,7 +2529,7 @@ function renderGym(){
   }
   view.innerHTML = '<div class="sec" style="gap:22px">' + gymTabs('gym') + '<div class="intro"><span class="marker y" style="font-size:1.05rem">La palestra del risparmio</span><h2>21 tappe per una nuova abitudine</h2><p class="muted">Una tappa al giorno: una lettura di 3 minuti e da 2 a 3 azioni concrete. Servono circa tre settimane perché un gesto diventi abitudine.</p></div>' +
     '<div class="sec" style="gap:8px"><span class="small muted">Scorri ↔ · tocca una tappa fatta per rileggerla</span><div class="hscroll stops" id="stops">' + Array.from({length:21}, (_, i) => { const cls = i < g.idx ? 'done' : i === g.idx ? 'now' : '';
-      const open = i < g.idx || (i === g.idx && !g.doneToday);
+      const open = PREVIEW || i < g.idx || (i === g.idx && !g.doneToday);
       return '<button class="stop ' + cls + '"' + (open && i < 21 ? ' ' + nav$({screen:'read', i}) : ' disabled') + ' aria-label="Tappa ' + (i + 1) + (open ? '' : ', si apre più avanti') + '"><span class="bub">' + (i < g.idx ? '✓' : i === g.idx && g.doneToday ? '🔒' : i + 1) + '</span><span class="st">' + esc(GYM[i].t) + '</span></button>'; }).join('') + '</div>' +
       '<div class="spread small muted"><span>' + g.idx + ' di 21 tappe</span><span>Risparmi trovati: <b style="color:var(--fg)">' + eur(found) + ' all\'anno</b></span></div></div>' +
     stepCard + '</div>';
@@ -2539,7 +2540,7 @@ function renderGym(){
 }
 function renderRead(){
   const G = GYM[R.i]; if (!G) return nav({screen:'gym'});
-  { const g = gymDay(); if (!R.back && (R.i > g.idx || (R.i === g.idx && g.doneToday))) return nav({screen:'gym'}); }
+  { const g = gymDay(); if (!PREVIEW && !R.back && (R.i > g.idx || (R.i === g.idx && g.doneToday))) return nav({screen:'gym'}); }
   const read = S.read.includes(R.i);
   view.innerHTML = '<div class="sec" style="gap:20px">' + (R.back ? backBtn('Suggerimenti', {screen:'gtips', id:R.back}) : backBtn('Palestra', {screen:'gym'})) + '<div class="intro"><span class="label">Tappa ' + (R.i + 1) + ' · lettura di 3 minuti</span><h2>' + G.t + '</h2></div>' +
     '<div class="tip"><p class="lead">' + G.i + '</p>' + G.deep.map(p => '<p>' + p + '</p>').join('') +
@@ -2637,8 +2638,8 @@ function renderSim(){
       '<label class="check small"><input type="checkbox" id="sm-inf"' + (P.infl ? ' checked' : '') + '> Mostra anche il valore reale, al netto dell\'inflazione</label></div>' +
     '<div class="card"><span class="label">Tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + '</span><div class="simres"><b class="num">' + eur(Math.round(res.v)) + '</b>' + (P.infl ? '<span class="small muted">circa ' + eur(Math.round(defl(res.v))) + ' in potere d\'acquisto di oggi</span>' : '') + '</div>' +
       '<div class="io"><div><span class="label">Hai versato</span><b>' + eur(Math.round(res.paid)) + '</b></div><div><span class="label">Crescita</span><b style="color:var(--ytext)">' + eur(Math.round(res.v - res.paid)) + '</b></div></div>' +
-      '<div class="legend small"><span><i class="sw" style="background:#6b6b66"></i>Versato</span><span><i class="sw" style="background:var(--yellow)"></i>Crescita</span></div>' +
-      '<div class="simchart" role="img" aria-label="Valore anno per anno">' + res.ys.map(y => '<div title="Anno ' + y.y + ': ' + eur(Math.round(y.v)) + ' (versato ' + eur(Math.round(y.paid)) + ')"><span style="height:' + Math.max(0, (y.v - y.paid) / mx * 150) + 'px;background:var(--yellow)"></span><span style="height:' + (y.paid / mx * 150) + 'px;background:#6b6b66"></span></div>').join('') + '</div>' +
+      '<div class="legend small"><span><i class="sw" style="background:#6b6b66"></i>Versato</span><span><i class="sw" style="background:var(--yellow)"></i>Crescita</span>' + (P.infl ? '<span><i class="sw" style="background:#3987e5"></i>Valore reale (al netto dell\'inflazione del ' + irs + ')</span>' : '') + '</div>' +
+      '<div class="simchart" role="img" aria-label="Valore anno per anno">' + res.ys.map(y => { const rv = y.v / Math.pow(1 + ir / 100, y.y); return '<div title="Anno ' + y.y + ': ' + eur(Math.round(y.v)) + ' (versato ' + eur(Math.round(y.paid)) + (P.infl ? ', valore reale ' + eur(Math.round(rv)) : '') + ')"><span style="height:' + Math.max(0, (y.v - y.paid) / mx * 150) + 'px;background:var(--yellow)"></span><span style="height:' + (y.paid / mx * 150) + 'px;background:#6b6b66"></span>' + (P.infl ? '<i class="sr" style="bottom:' + (rv / mx * 150 - 1.5).toFixed(1) + 'px"></i>' : '') + '</div>'; }).join('') + '</div>' +
       '<div class="spread small muted"><span>Anno 1</span><span>Anno ' + P.years + '</span></div></div>' +
     '<div class="card"><span class="label">E se i soldi restano fermi?</span><p style="margin:0">Gli stessi ' + eur(Math.round(res.paid)) + ' tenuti sul conto senza interessi, tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + ' e con un\'inflazione del ' + irs + ' all\'anno, equivarrebbero a <b>' + eur(Math.round(still)) + ' di oggi</b>: <b style="color:var(--critical)">' + eur(Math.round(res.paid - still)) + ' di potere d\'acquisto in meno</b> (−' + Math.round((1 - 1 / fI) * 100) + '%).</p>' +
       inflChart(P, res, ir) +
@@ -2923,6 +2924,9 @@ const QUIZ = [
 function qState(){ S.qd = S.qd || {n:0, ok:0, streak:0, last:null}; return S.qd; }
 function qToday(){ const st = qState(); return st.last === today() ? st : null; }
 let QOPEN = false;
+/* solo nell'anteprima di Lorenzo: tutte le domande con risposta giusta e spiegazione, per rileggerle */
+function qAllHTML(){ return '<details class="card"><summary><b>Anteprima: tutte le ' + QUIZ.length + ' domande del giorno</b></summary><div class="sec" style="gap:14px;margin-top:10px">' +
+  QUIZ.map((Q, i) => '<div><b>' + (i + 1) + '. ' + Q.q + '</b><ol type="A" class="small" style="margin:6px 0;padding-left:20px">' + Q.o.map((o, oi) => '<li' + (oi === Q.a ? ' style="color:var(--good);font-weight:700"' : '') + '>' + o + (oi === Q.a ? ' ✓' : '') + '</li>').join('') + '</ol><span class="small muted">' + Q.e + (Q.l ? ' · lezione: ' + Q.l : '') + '</span></div>').join('') + '</div></details>'; }
 function qCard(){
   const st = qState(), done = st.last === today(), i = done ? st.ans.i : st.n % QUIZ.length, Q = QUIZ[i], L = Q.l && LESSONS.find(x => x.id === Q.l);
   /* già fatta oggi: una riga compatta, che si riapre toccandola */
@@ -2974,7 +2978,7 @@ function renderLearn(){
     if (!u) return '<div class="item off" aria-disabled="true"><span class="ic">🔒</span><span class="t"><b>' + l.t + '</b><span class="sub">' + (next ? 'Si sblocca domani' : 'Si sblocca più avanti, una lezione al giorno') + '</span></span></div>';
     return '<button class="item" ' + nav$({screen:'lesson', id:l.id}) + '><span class="ic' + (ok ? ' y' : '') + '">' + (ok ? ic('check') : (i + 1)) + '</span><span class="t"><b>' + l.t + '</b><span class="sub">' + (st.quiz !== undefined ? 'Fatta' + (st.ans ? ' · ' + st.quiz + ' su ' + l.q.length + ' giuste' : '') : '5 minuti · ' + l.q.length + ' domande · nuova') + '</span></span>' + ic('right') + '</button>'; };
   view.innerHTML = '<div class="sec" style="gap:20px">' + gymTabs('learn') +
-    '<div class="intro"><span class="marker y" style="font-size:1.05rem">Impara</span><h2>Una domanda al giorno</h2><p class="muted">Un minuto al giorno per allenare la testa ai soldi, poi una lezione nuova al giorno, con 5 domande. ' + done + ' di ' + LESSONS.length + ' completate.</p></div>' + qCard() +
+    '<div class="intro"><span class="marker y" style="font-size:1.05rem">Impara</span><h2>Una domanda al giorno</h2><p class="muted">Un minuto al giorno per allenare la testa ai soldi, poi una lezione nuova al giorno, con 5 domande. ' + done + ' di ' + LESSONS.length + ' completate.</p></div>' + qCard() + (PREVIEW ? qAllHTML() : '') +
     '<div class="note">Contenuti educativi e generali. Non sono consigli su cosa comprare o vendere: per scelte personali rivolgiti a un consulente finanziario indipendente.</div>' +
     CATS.map(c => '<div class="sec"><span class="label">' + c[1] + '</span><div class="list">' + LESSONS.filter(l => l.cat === c[0]).map(row).join('') + '</div></div>').join('') +
     bookCard() + '<div class="sec"><span class="label">Gli altri libri consigliati</span><div class="carousel books">' + BOOKS.map((b, k) => k === bookOfWeek() ? '' : '<div class="slide"><div class="book bmini"><b>' + esc(b[0]) + '</b><span class="small y">' + esc(b[1]) + '</span><span class="btag">' + esc(b[4]) + '</span></div></div>').join('') + '</div><p class="small muted">Scorri ↔ · ' + BOOKS.length + ' libri, ogni lunedì uno nuovo in evidenza con tutti i dettagli. Una selezione indicativa, senza link commerciali.</p></div></div>';

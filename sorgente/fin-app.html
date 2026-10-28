@@ -6,7 +6,7 @@
 /* Layout: phone-first column with a fixed bottom tab bar (Home, Movimenti, Pilastri, Palestra). Single dark look on purpose: the Buddy4Free logo is yellow on black */
 :root{
   --bg:#000000; --soft:#141414; --soft2:#1F1F1F; --fg:#FFFFFF; --muted:#A3A39E; --line:#2A2A2A;
-  --yellow:#FFC90A; --red:#FF453A;
+  --yellow:#FFC90A; --ytext:#FFC90A; --red:#FF453A;
   --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --critical:#e5484d;
   --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
   --body:"Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -28,7 +28,7 @@ h1{font-size:clamp(1.9rem,7.5vw,2.5rem);font-weight:900;letter-spacing:-.025em}
 h2{font-size:clamp(1.6rem,6vw,2rem);font-weight:900;letter-spacing:-.02em}
 h3{font-size:1.15rem;font-weight:800}
 .hl{color:var(--red);background:linear-gradient(var(--red),var(--red)) 0 100%/100% 3px no-repeat;padding-bottom:2px}
-.y{color:var(--yellow)}
+.y{color:var(--ytext)}
 p{margin:0}
 .muted{color:var(--muted)}
 .small{font-size:.875rem}
@@ -36,7 +36,7 @@ p{margin:0}
 .label{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--muted)}
 .marker{font-family:var(--marker);letter-spacing:.02em}
 button{font:inherit;cursor:pointer;color:inherit}
-a{color:var(--yellow)}
+a{color:var(--ytext)}
 :focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
 input,select,textarea{font:inherit;color:var(--fg);background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-width:0;width:100%}
 textarea{resize:vertical;min-height:80px}
@@ -67,7 +67,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:15;background:rgba(0,0,0,.94);border-top:1px solid var(--line);padding:6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));display:flex;justify-content:center}
 .tabs div{display:grid;grid-template-columns:repeat(6,1fr);max-width:560px;width:100%}
 .tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-size:.62rem;font-weight:700;color:var(--muted);min-width:0;letter-spacing:-.01em}
-.tabs button[aria-current="true"]{color:var(--yellow)}
+.tabs button[aria-current="true"]{color:var(--ytext)}
 .fab{position:fixed;right:max(18px, calc(env(safe-area-inset-right, 0px) + 18px));bottom:calc(84px + env(safe-area-inset-bottom, 0px));z-index:16;width:58px;height:58px;border-radius:50%;border:0;background:var(--yellow);color:#000;display:grid;place-items:center;box-shadow:0 6px 24px rgba(255,201,10,.35)}
 .fab svg.i{width:28px;height:28px;stroke-width:2.6}
 @media (min-width:640px){.fab{right:calc(50% - 280px)}}
@@ -121,7 +121,7 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .goal .gbar i{display:block;height:100%;background:#000;border-radius:99px}
 .goal .btn{background:#000;color:#fff;align-self:flex-start}
 .goal .muted{color:rgba(0,0,0,.65)}
-.pill-ok{display:inline-flex;align-self:flex-start;border-radius:99px;padding:3px 10px;font-weight:800;font-size:.78rem;background:#000;color:var(--yellow)}
+.pill-ok{display:inline-flex;align-self:flex-start;border-radius:99px;padding:3px 10px;font-weight:800;font-size:.78rem;background:#000;color:var(--ytext)}
 
 /* lists */
 .list{display:flex;flex-direction:column;border-top:1px solid var(--line)}
@@ -150,17 +150,17 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .catview{display:flex;border:1px solid var(--line);border-radius:99px;padding:2px;flex:none}.catview button{border:0;background:none;color:var(--muted);font-size:.75rem;font-weight:700;padding:5px 10px;border-radius:99px}.catview button[aria-pressed="true"]{background:var(--yellow);color:#000}
 .catlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:16px;overflow:hidden}
 .cl+.cl{border-top:1px solid var(--line)}.clrow{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;background:none;border:0;color:inherit;text-align:left}
-.clrow .t{flex:1;display:flex;flex-direction:column;min-width:0}.clrow .t b{font-size:1rem}.clrow .sub{font-size:.78rem;color:var(--muted)}.clrow[aria-current="true"] .t b{color:var(--yellow)}
+.clrow .t{flex:1;display:flex;flex-direction:column;min-width:0}.clrow .t b{font-size:1rem}.clrow .sub{font-size:.78rem;color:var(--muted)}.clrow[aria-current="true"] .t b{color:var(--ytext)}
 .clchev{font-size:1.3rem;color:var(--muted);width:22px;text-align:center}.clchev .i{width:18px;height:18px}.cl.open{background:var(--soft)}
 .clsubs{display:flex;flex-wrap:wrap;gap:8px;padding:2px 14px 14px 62px}.clsubs button{border:1px solid var(--line);background:#000;border-radius:99px;padding:9px 14px;font-weight:600;font-size:.88rem;color:inherit}.clsubs button[aria-pressed="true"]{background:var(--yellow);color:#000;border-color:var(--yellow)}.clsubs .muted{color:var(--muted)}
 .clnew{padding:0 14px 14px 62px}
 .list .item.off{opacity:.55}
 .ocrcat{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-radius:14px;padding:12px}.ocrtxt{white-space:pre-wrap;font-size:.72rem;max-height:160px;overflow:auto;margin:6px 0 0}
-.qmini{display:flex!important;flex-direction:row!important;justify-content:flex-start!important;align-items:center;gap:12px;width:100%;text-align:left;color:inherit;padding:12px 14px}.qmini .t{flex:1;display:flex;flex-direction:column;min-width:0}.qmini .sub{font-size:.8rem;color:var(--muted)}.qmini .qmore{font-size:.8rem;font-weight:700;color:var(--yellow)}
-.amount{position:relative;cursor:pointer}.amount input{cursor:pointer;caret-color:transparent}.amtx{position:absolute;right:0;bottom:-22px;font-style:normal;font-size:.85rem;font-weight:700;color:var(--yellow)}
+.qmini{display:flex!important;flex-direction:row!important;justify-content:flex-start!important;align-items:center;gap:12px;width:100%;text-align:left;color:inherit;padding:12px 14px}.qmini .t{flex:1;display:flex;flex-direction:column;min-width:0}.qmini .sub{font-size:.8rem;color:var(--muted)}.qmini .qmore{font-size:.8rem;font-weight:700;color:var(--ytext)}
+.amount{position:relative;cursor:pointer}.amount input{cursor:pointer;caret-color:transparent}.amtx{position:absolute;right:0;bottom:-22px;font-style:normal;font-size:.85rem;font-weight:700;color:var(--ytext)}
 .kpad{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 12px calc(12px + env(safe-area-inset-bottom,0px));background:#0b0b0b;border-top:1px solid var(--line);max-width:560px;margin:0 auto}
 .kpad button{height:58px;border:0;border-radius:16px;background:var(--soft);color:var(--fg);font-family:var(--display);font-size:1.55rem;font-weight:800;display:grid;place-items:center;-webkit-user-select:none;user-select:none;touch-action:manipulation}
-.kpad button:active{transform:scale(.96);background:var(--soft2)}.kpad .kop{color:var(--yellow)}.kpad .kok{background:var(--yellow);color:#000}.kpad .kok .i{width:30px;height:30px;stroke-width:3}
+.kpad button:active{transform:scale(.96);background:var(--soft2)}.kpad .kop{color:var(--ytext)}.kpad .kok{background:var(--yellow);color:#000}.kpad .kok .i{width:30px;height:30px;stroke-width:3}
 .kpsheet{position:fixed;inset:0;z-index:80}.kpsbg{position:absolute;inset:0;background:rgba(0,0,0,.55)}.kpsbox{position:absolute;left:0;right:0;bottom:0;max-width:560px;margin:0 auto;background:#0b0b0b;border-top:2px solid var(--yellow);border-radius:20px 20px 0 0}
 .kpshead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:14px 16px 4px}.kpshead b{font-family:var(--display);font-size:2rem;margin-left:auto}.kpsheet .kpad{position:static;border-top:0;background:none}
 .kpbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px calc(12px + env(safe-area-inset-bottom,0px));background:#0b0b0b;border-top:1px solid var(--line);max-width:560px;margin:0 auto}.kpbar .btn{height:58px;border-radius:16px;justify-content:center;font-size:1.05rem}
@@ -182,7 +182,7 @@ body.kpon #tabs,body.kpon .savebig,body.kpon #delwrap{display:none!important}bod
 .colpick .cg{width:auto;border-radius:99px;padding:0 12px;background:var(--soft);border:1px solid var(--line);font-weight:600;font-size:.85rem;display:inline-flex;align-items:center;gap:6px}
 .colpick .cg .i{width:16px;height:16px}
 .cman2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.txlinks{display:grid;grid-template-columns:1fr 1fr;gap:10px}.txlinks button{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:11px 12px;color:inherit}.txlinks .i{width:22px;height:22px;color:var(--yellow);flex:none}.txlinks .t{display:flex;flex-direction:column;min-width:0}.txlinks b{font-size:.95rem}.txlinks .t span{font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.txlinks{display:grid;grid-template-columns:1fr 1fr;gap:10px}.txlinks button{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:11px 12px;color:inherit}.txlinks .i{width:22px;height:22px;color:var(--ytext);flex:none}.txlinks .t{display:flex;flex-direction:column;min-width:0}.txlinks b{font-size:.95rem}.txlinks .t span{font-size:.78rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .choose .cmanage{border-style:dashed;grid-template-columns:auto 1fr;padding:12px;gap:10px}
 .choose .cmanage .ic{width:36px;height:36px;border-radius:11px}
 .choose .cmanage .t b{font-size:1.02rem;line-height:1.15}
@@ -268,11 +268,11 @@ body.dragnow{user-select:none;-webkit-user-select:none;overscroll-behavior:none}
 .days21{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .days21 button{aspect-ratio:1;max-width:100%;border-radius:50%;border:2px solid var(--line);background:var(--bg);font-weight:800;font-family:var(--display);font-size:.85rem;display:grid;place-items:center;padding:0;color:var(--muted)}
 .days21 button.done{background:var(--yellow);border-color:var(--yellow);color:#000}
-.days21 button.now{border-color:var(--yellow);color:var(--yellow);box-shadow:0 0 0 4px rgba(255,201,10,.18)}
+.days21 button.now{border-color:var(--yellow);color:var(--ytext);box-shadow:0 0 0 4px rgba(255,201,10,.18)}
 .days21 button:disabled{cursor:default}
 .wk{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;font-size:.66rem;color:var(--muted);text-align:center;font-weight:700}
 .step{border:2px solid var(--yellow);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px}
-.step .marker{color:var(--yellow)}
+.step .marker{color:var(--ytext)}
 .tip{display:flex;flex-direction:column;gap:14px;font-size:1.03rem;line-height:1.65}
 .tipi{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;border-top:1px solid var(--line);padding-top:14px}
 .tipi .tag{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800;background:var(--yellow);color:#000;border-radius:6px;padding:3px 7px;margin-top:3px}
@@ -287,14 +287,14 @@ body.dragnow{user-select:none;-webkit-user-select:none;overscroll-behavior:none}
 .rem input{width:120px;padding:8px 10px}
 .trophy{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:26px 18px;border-radius:22px;border:2px solid var(--yellow);background:radial-gradient(circle at 50% 80%, rgba(255,201,10,.18), transparent 65%), #000}
 .trophy img{width:140px;height:auto}
-.trophy .big{font-family:var(--display);font-weight:900;font-size:clamp(2.6rem,12vw,3.6rem);color:var(--yellow);line-height:1}
+.trophy .big{font-family:var(--display);font-weight:900;font-size:clamp(2.6rem,12vw,3.6rem);color:var(--ytext);line-height:1}
 
 /* welcome & setup */
 .welcome{display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px;padding-top:6px}
 .welcome{min-height:calc(100dvh - 120px);justify-content:center}
 .welcome h1{margin:0}
 .wtitle{font-family:var(--display);font-weight:900;font-size:clamp(2.3rem,11vw,3.2rem);line-height:1.02;letter-spacing:-.01em}
-.welcome img{width:min(290px,72vw);height:auto;margin:4px 0}
+.welcome img{width:min(290px,72vw);height:auto;margin:4px 0;border-radius:28px}
 .welcome p{max-width:42ch}
 .supcard p{margin:0}
 .histbox{border:1px solid var(--line);border-radius:14px;padding:0 14px;background:var(--soft)}
@@ -307,7 +307,7 @@ body.dragnow{user-select:none;-webkit-user-select:none;overscroll-behavior:none}
 .improw > div{display:flex;flex-direction:column;min-width:0}
 .improw b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .improw select{width:100%;font-size:.85rem;padding:8px}
-.improw .to{color:var(--yellow);white-space:normal}
+.improw .to{color:var(--ytext);white-space:normal}
 .improw input[type=checkbox]{width:20px;height:20px;margin:0}
 .impbulk{position:sticky;bottom:calc(84px + env(safe-area-inset-bottom));z-index:5;border:1px solid var(--yellow);box-shadow:0 8px 30px rgba(0,0,0,.6)}
 .impbulk .bkhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -319,7 +319,7 @@ body.dragnow{user-select:none;-webkit-user-select:none;overscroll-behavior:none}
 .terms details{border:1px solid var(--line);border-radius:14px;background:var(--soft);padding:0 14px}
 .terms summary{cursor:pointer;font-weight:800;padding:14px 0;list-style:none;display:flex;justify-content:space-between;gap:10px}
 .terms summary::-webkit-details-marker{display:none}
-.terms summary::after{content:'+';color:var(--yellow);font-size:1.2rem;line-height:1}
+.terms summary::after{content:'+';color:var(--ytext);font-size:1.2rem;line-height:1}
 .terms details[open] summary::after{content:'−'}
 .terms details > div{padding-bottom:14px;display:flex;flex-direction:column;gap:10px;font-size:.92rem;line-height:1.5}
 .terms p{margin:0}
@@ -349,7 +349,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-conten
 .bcirc{width:106px;height:106px;border-radius:50%;border:5px solid var(--yellow);display:grid;place-items:center;transition-property:transform;transition-timing-function:ease-in-out;box-shadow:0 0 34px rgba(255,201,10,.35)}
 .bcirc.grow{transform:scale(2.1)}
 .bcirc span{font-weight:800;font-family:var(--display);text-align:center;line-height:1.1}
-.bcirc small{display:block;font-size:1.5rem;color:var(--yellow)}
+.bcirc small{display:block;font-size:1.5rem;color:var(--ytext)}
 .center{justify-content:center;text-align:center}
 
 .toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%) translateY(20px);background:var(--yellow);color:#000;padding:10px 18px;border-radius:99px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;z-index:30;max-width:calc(100vw - 32px)}
@@ -472,7 +472,7 @@ i.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right
 .psheet.pcenter{align-items:center;padding:16px}
 .psheet.pcenter .pin{border:3px solid var(--yellow);border-radius:22px;max-height:calc(100dvh - 32px);overflow-y:auto;padding:22px 18px}
 .esebtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:3px solid var(--yellow);background:rgba(255,201,10,.1);color:var(--fg);border-radius:16px;padding:12px 14px;font-weight:600}
-.esebtn .marker{font-size:1.15rem;color:var(--yellow);white-space:nowrap}
+.esebtn .marker{font-size:1.15rem;color:var(--ytext);white-space:nowrap}
 .esebtn span:nth-child(2){flex:1;font-size:.88rem;line-height:1.3}
 .labinfo{display:flex;align-items:center}
 .infonote{margin:0;font-size:.85rem;color:var(--muted);background:var(--soft);border-radius:12px;padding:10px 12px}
@@ -495,7 +495,7 @@ i.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right
 .formbar b{display:flex;align-items:center;justify-content:center}
 .tipsbtn{border-color:var(--yellow)}
 
-.topbtn{width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(255,201,10,.6);background:var(--soft);color:var(--yellow);display:grid;place-items:center;font-weight:900;font-family:var(--display);font-size:1rem;padding:0}
+.topbtn{width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(255,201,10,.6);background:var(--soft);color:var(--ytext);display:grid;place-items:center;font-weight:900;font-family:var(--display);font-size:1rem;padding:0}
 .topbtn svg.i{width:20px;height:20px}
 .card,.hero,.readcard,.tbox,.dstep,.goal2:not([style]){border:2px solid var(--yellow)}
 .list{border-top-color:rgba(255,201,10,.38)}
@@ -506,7 +506,7 @@ i.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right
 .cmsg{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start}
 .cmsg .ic{width:34px;height:34px;border-radius:10px}
 .cmsg .ic svg.i{width:18px;height:18px}
-.simres b{font-family:var(--display);font-weight:900;font-size:clamp(2.2rem,10vw,3rem);color:var(--yellow);display:block;line-height:1.05}
+.simres b{font-family:var(--display);font-weight:900;font-size:clamp(2.2rem,10vw,3rem);color:var(--ytext);display:block;line-height:1.05}
 .simchart{display:flex;gap:2px;align-items:flex-end;height:156px}
 .simchart div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-width:0}
 .simchart span{display:block;width:100%}
@@ -531,7 +531,7 @@ button.cmsg span > span:first-child{text-decoration:underline;text-decoration-co
 .gymtabs button[aria-pressed="true"]{background:var(--yellow);color:#000}
 .badges{display:flex;flex-direction:column;gap:8px}
 .badge2{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;border:2px solid var(--yellow);border-radius:14px;padding:10px 12px}
-.badge2 svg.i{color:var(--yellow)}
+.badge2 svg.i{color:var(--ytext)}
 .quiz-opt{display:flex;flex-direction:column;gap:8px}
 .quiz-opt button{text-align:left;border:1px solid var(--line);background:var(--soft);border-radius:12px;padding:12px 14px;font-weight:500}
 .quiz-opt button.right{border-color:var(--good);box-shadow:inset 4px 0 0 var(--good)}
@@ -555,7 +555,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .drawer .label{margin-top:12px;margin-bottom:2px}
 .drawer button[data-go]{display:flex;align-items:center;gap:12px;border:0;background:none;border-radius:10px;padding:10px 8px;font-weight:600;text-align:left}
 .drawer button[aria-current="true"]{background:var(--yellow);color:#000}
-.infobtn{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:8px;border-radius:50%;border:1.5px solid var(--yellow);background:none;color:var(--yellow);font:700 .8rem var(--body);vertical-align:4px;padding:0}
+.infobtn{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:8px;border-radius:50%;border:1.5px solid var(--yellow);background:none;color:var(--ytext);font:700 .8rem var(--body);vertical-align:4px;padding:0}
 .infobtn.on{background:var(--yellow);color:#000}
 .fab{transition:transform .25s ease, opacity .25s}
 .fab.away{transform:translateY(140px);opacity:0;pointer-events:none}
@@ -638,7 +638,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 .stop.done:not(:last-child)::after{background:var(--yellow)}
 .stop .bub{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;border:3px solid var(--line);font:900 1.3rem var(--display);background:var(--bg)}
 .stop.done .bub{background:var(--yellow);border-color:var(--yellow);color:#000}
-.stop.now .bub{border-color:var(--yellow);color:var(--yellow);box-shadow:0 0 0 6px rgba(255,201,10,.2)}
+.stop.now .bub{border-color:var(--yellow);color:var(--ytext);box-shadow:0 0 0 6px rgba(255,201,10,.2)}
 .stop .st{font-size:.72rem;line-height:1.2;text-align:center;font-weight:600}
 .stop.now .st,.stop.done .st{color:var(--fg)}
 .readyellow{background:var(--yellow)!important;border-color:var(--yellow)!important;color:#000}
@@ -692,11 +692,40 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 .tiplist{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
 
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+/* ---------- tema chiaro (Impostazioni → Visualizzazione) ---------- */
+:root[data-theme="light"]{--bg:#F5F4EF;--soft:#FFFFFF;--soft2:#ECEAE3;--fg:#17170F;--muted:#6A685F;--line:#E0DDD3;--ytext:#9A6A00;--good:#0B8A0B;--warn:#B77900;--serious:#C9562B;--critical:#D23B40;color-scheme:light}
+:root[data-theme="light"],[data-theme="light"] body{background:var(--bg);color:var(--fg)}
+[data-theme="light"] .dream{background:var(--soft)}
+[data-theme="light"] body::before{background:var(--bg)}
+[data-theme="light"] .top{background:rgba(245,244,239,.94)}
+[data-theme="light"] .tabs{background:rgba(255,255,255,.97)}
+[data-theme="light"] .tabs button{color:#77756C}
+[data-theme="light"] .tabs button[aria-current="true"]{color:var(--fg);font-weight:800}
+[data-theme="light"] .tabs button[aria-current="true"] svg{background:var(--yellow);color:#17170F;border-radius:999px;padding:4px 14px;box-sizing:content-box;margin-bottom:-2px}
+[data-theme="light"] .formbar{background:rgba(245,244,239,.92)}
+[data-theme="light"] .formbar.typed{background:color-mix(in srgb, var(--tc) 16%, rgba(245,244,239,.94))}
+[data-theme="light"] .savebar{background:linear-gradient(to bottom, rgba(245,244,239,0), var(--bg) 40%)}
+[data-theme="light"] .kpsbox,[data-theme="light"] .drawer{background:#FFFFFF}
+[data-theme="light"] .burger i{background:var(--fg)}
+[data-theme="light"] .topbtn{color:var(--fg);border-color:#C9C5B8;background:#FFFFFF}
+[data-theme="light"] .clsubs button{background:var(--soft)}
+[data-theme="light"] .subs button[aria-pressed="true"]{color:var(--bg)}
+[data-theme="light"] .colpick button[aria-pressed="true"]{border-color:var(--fg)}
+[data-theme="light"] .pbreak::after{background:repeating-linear-gradient(90deg,var(--fg) 0 6px,transparent 6px 10px)}
+[data-theme="light"] .brk-key{background:repeating-linear-gradient(90deg,var(--fg) 0 4px,transparent 4px 7px)}
+[data-theme="light"] .daily .avgline,[data-theme="light"] .avgline-key{border-top-color:var(--fg)}
+[data-theme="light"] .psheet{background:rgba(23,23,15,.45)}
+[data-theme="light"] .fab{box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.logo .lgr{display:none}
+[data-theme="light"] .logo{background:#000;border-radius:50%;width:54px;height:54px;justify-content:center;padding:0}
+[data-theme="light"] .logo img{display:none}
+[data-theme="light"] .logo img.lgr{display:block;height:43px}
 </style>
 
 <div class="app">
   <div class="top" id="topbar">
-    <span class="row" style="gap:12px"><button class="burger" id="burger" aria-label="Apri il menù"><i></i><i></i><i></i></button><button class="logo" id="logo" aria-label="Buddy4Free, vai alla home"><img src="data:image/jpeg;base64,__WORD__" alt="Buddy4Free"></button></span>
+    <span class="row" style="gap:12px"><button class="burger" id="burger" aria-label="Apri il menù"><i></i><i></i><i></i></button><button class="logo" id="logo" aria-label="Buddy4Free, vai alla home"><img src="data:image/jpeg;base64,__WORD__" alt="Buddy4Free"><img class="lgr" alt=""></button></span>
     <span class="row" style="gap:8px"><span class="marker y">Risparmio</span><button class="topbtn" id="eye" aria-label="Nascondi gli importi"></button><button class="topbtn" id="help" aria-label="Legenda" hidden>?</button><button class="topbtn" id="gear" aria-label="Impostazioni" hidden></button></span>
   </div>
   <main id="view"></main>
@@ -709,6 +738,14 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 
 <script>
 const LOGO = document.getElementById('logo-full').src;
+document.querySelector('#logo .lgr').src = LOGO;
+/* tema: è una preferenza di questo telefono (non va nei backup); predefinito scuro */
+const THEME_Q = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
+function themePref(){ try { return localStorage.getItem('b4f-theme') || 'dark'; } catch(e) { return 'dark'; } }
+function applyTheme(){ const p = themePref(), t = p === 'auto' ? (THEME_Q && THEME_Q.matches ? 'light' : 'dark') : p;
+  document.documentElement.dataset.theme = t; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === 'light' ? '#F5F4EF' : '#000000';
+  const cs = document.querySelector('meta[name="color-scheme"]'); if (cs) cs.content = t === 'light' ? 'light only' : 'dark only'; }
+applyTheme(); if (THEME_Q && THEME_Q.addEventListener) THEME_Q.addEventListener('change', () => { if (themePref() === 'auto') applyTheme(); });
 const IC = {
   dog:'<path d="M8 5.5C5.5 5.5 3.5 7.5 3.5 10.5c0 2 1 3.5 2.5 3.5M16 5.5c2.5 0 4.5 2 4.5 5 0 2-1 3.5-2.5 3.5"/><path d="M8 5.5h8c1.2 1.3 2 3 2 5V15a6 6 0 0 1-12 0v-4.5c0-2 .8-3.7 2-5z"/><path d="M10 11h.01M14 11h.01M10.5 15.5h3L12 17z"/>',
   cat:'<path d="M5 4l3.5 4h7L19 4v9a7 7 0 0 1-14 0z"/><path d="M9.5 12h.01M14.5 12h.01M11 15h2l-1 1zM2 14h4M2.5 17.5L6 16.5M22 14h-4M21.5 17.5L18 16.5"/>',
@@ -1395,6 +1432,7 @@ const GUIDE = [
   ['Dati e sicurezza', 'Importa da un\'altra app', 'importa', 'Carica un file CSV con lo storico: l\'app abbina le categorie, riconosce i rimborsi e segnala i doppioni dei ricorrenti.', 'Impostazioni → Importa movimenti'],
   ['Dati e sicurezza', 'Backup, report e PIN', 'impostazioni', 'Backup cifrato con password, report PDF e CSV, PIN e impronta per aprire l\'app. L\'occhio in alto a destra nasconde tutte le cifre.', 'Menu → Impostazioni']
 ];
+const guideImg = n => 'guida/' + (document.documentElement.dataset.theme === 'light' ? 'chiaro/' : '') + n + '.webp';
 function renderHowto(){
   const N = GUIDE.length, i = Math.max(-1, Math.min(N, R.g === undefined ? -1 : +R.g)), to = k => nav({screen:'howto', g:k});
   const top = '<div class="spread"><button class="textlink" id="gd-x">' + ic('left') + 'Esci dalla guida</button>' + (i >= 0 && i < N ? '<span class="small muted">' + (i + 1) + ' di ' + N + '</span>' : '') + '</div>' +
@@ -1415,10 +1453,10 @@ function renderHowto(){
   } else {
     const [sec, t, img, d, where] = GUIDE[i];
     body = '<div class="gslide sec" style="gap:12px"><span class="label">' + esc(sec) + '</span><h2 style="margin:0">' + esc(t) + '</h2><p style="margin:0">' + esc(d) + '</p>' +
-      '<p class="small" style="margin:0;color:var(--yellow)">' + ic('right') + ' Dove: ' + esc(where) + '</p>' +
-      '<img src="guida/' + img + '.webp" alt="' + esc(t) + ': esempio" style="width:100%;border-radius:14px;border:1px solid var(--line);background:#111;min-height:120px"><span class="small muted" style="align-self:center;margin-top:-6px">Esempio con dati di prova</span>' +
+      '<p class="small" style="margin:0;color:var(--ytext)">' + ic('right') + ' Dove: ' + esc(where) + '</p>' +
+      '<img src="' + guideImg(img) + '" alt="' + esc(t) + ': esempio" style="width:100%;border-radius:14px;border:1px solid var(--line);background:#111;min-height:120px"><span class="small muted" style="align-self:center;margin-top:-6px">Esempio con dati di prova</span>' +
       navb('Indietro', i === N - 1 ? 'Fine' : 'Avanti') + '<button class="textlink small" data-gs="-1" style="align-self:center">Indice</button></div>';
-    if (GUIDE[i + 1]) { const pre = new Image(); pre.src = 'guida/' + GUIDE[i + 1][2] + '.webp'; }
+    if (GUIDE[i + 1]) { const pre = new Image(); pre.src = guideImg(GUIDE[i + 1][2]); }
   }
   view.innerHTML = '<div class="sec" style="gap:16px">' + top + body + '</div>';
   const exit = () => nav({screen:'home'});
@@ -1741,7 +1779,7 @@ function renderTx(){
             '<div class="field"><label for="mv-s">Sottocategoria</label><select id="mv-s"><option value="">Nessuna</option>' + (mvCat.subs || []).map(x => '<option value="' + esc(x) + '"' + (x === TXMV.s ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '<option value="__new">+ Nuova…</option></select></div></div>' +
             '<div class="row"><button class="btn sm" id="mv-go">Sposta</button><button class="btn sm danger" id="mv-del">Elimina</button></div>') + '</div>' : '<div class="card impbulk"><span class="small">Tocca i movimenti da spostare o da eliminare.</span></div>');
   view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + '<div class="txlinks"><button ' + nav$({screen:'rec'}) + '>' + ic('repeat') + '<span class="t"><b>Ricorrenti</b><span>' + (S.rec.some(r => recNext(r)) ? S.rec.filter(r => recNext(r)).length + ' attive' : 'Stipendio, affitto…') + '</span></span></button>' +
-    '<button ' + nav$({screen:'dues'}) + '>' + ic('calendar') + '<span class="t"><b>Scadenze</b><span>' + ((S.dues || []).length ? (upcomingDues().length ? '<i style="color:var(--yellow);font-style:normal;font-weight:700">' + upcomingDues().length + ' da decidere</i>' : (S.dues || []).length + ' in calendario') : 'Bollo, assicurazioni…') + '</span></span></button></div>' +
+    '<button ' + nav$({screen:'dues'}) + '>' + ic('calendar') + '<span class="t"><b>Scadenze</b><span>' + ((S.dues || []).length ? (upcomingDues().length ? '<i style="color:var(--ytext);font-style:normal;font-weight:700">' + upcomingDues().length + ' da decidere</i>' : (S.dues || []).length + ' in calendario') : 'Bollo, assicurazioni…') + '</span></span></button></div>' +
     (TXC && TXBACK ? backBtn((TABS.find(t => t[0] === TXBACK.screen) || [0, TXBACK.screen === 'charts' ? 'Grafici' : TXBACK.screen === 'an' ? 'Analisi' : 'Indietro'])[1], TXBACK) : '') +
     period + catSel +
     (TXC ? '<div class="spread"><span class="chip" style="background:' + catColor(TXC.t, cat) + ';color:#fff">' + ic(cat.i) + esc(cat.n) + (TXC.s ? ' › ' + esc(TXC.s) : TXC.s === '' ? ' › senza sottocategoria' : '') + '</span><button class="textlink" id="tx-clr">Togli il filtro</button></div>'
@@ -2021,7 +2059,7 @@ function pillarEquity(){
   PILLARS.forEach((p, k) => { const lo = acc.slice(); acc = acc.map((a, i) => a + data[i][k]);
     const top = acc.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)), bot = lo.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).reverse();
     areas += '<polygon points="' + top.concat(bot).join(' ') + '" fill="' + p.c + '"><title>' + p.n + '</title></polygon>'; });
-  const line = '<polyline points="' + tot.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ') + '" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>';
+  const line = '<polyline points="' + tot.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ') + '" fill="none" style="stroke:var(--fg)" stroke-width="2" stroke-linejoin="round"/>';
   const lab = months.map((m, i) => (n - i) % step ? '' : '<text x="' + x(i).toFixed(1) + '" y="192" text-anchor="middle" font-size="10" fill="var(--muted)">' + (step > 1 ? ymLabel(m, {month:'short'}).slice(0, 3) + (m.endsWith('-01') ? ' ' + m.slice(2, 4) : '') : ymLabel(m, {month:'narrow'})) + '</text>').join('');
   const d = tot[n] - tot[0];
   return '<div class="seg2 eqseg"><button data-eq="y" aria-pressed="' + (EQ === 'y') + '">Anno in corso</button><button data-eq="all" aria-pressed="' + (EQ === 'all') + '">Tutto</button></div><svg class="eqsvg" viewBox="0 0 320 200" role="img" aria-label="Patrimonio nei pilastri negli ultimi 12 mesi">' + areas + line + '<circle cx="' + x(n) + '" cy="' + y(tot[n]) + '" r="4" fill="#fff"/><text x="' + (x(n) - 4) + '" y="' + (y(tot[n]) - 8) + '" text-anchor="end" font-size="12" font-weight="800" fill="var(--fg)">' + eur(tot[n]) + '</text>' + lab + '</svg>' +
@@ -2445,7 +2483,7 @@ function renderGoalTips(){
     '<div class="intro"><span class="label">Suggerimenti</span><h2>Arrivare prima a ' + esc(g.name) + '</h2>' + (p.left ? '<p class="muted">Ti mancano ' + eur(p.left) + '. Il passo giusto è ' + eur(p.need) + ' al mese' + (sv ? ', oggi accantoni in media ' + eur(Math.round(sv)) : '') + '.</p>' : '') + '</div>' +
     '<button class="readcard" ' + nav$({screen:'sim'}) + '><span class="t"><b>' + ic('chart') + ' Simulatore del futuro</b><span>Guarda quanto pesa ogni euro risparmiato nel tempo</span></span>' + ic('right') + '</button>' +
     '<div class="card"><b>1. Quanto ti avanza</b><p class="small muted">' + autoTip(g) + ' Quello che metti da parte si registra con "Accantona".</p>' + TIP_NOTE + '</div>' +
-    (ideas.length ? '<div class="sec"><span class="label">Le spese che pesano di più</span>' + ideas.map(x => '<div class="card" style="gap:6px;padding:14px 16px"><b>' + x.t + '</b><p class="small muted">' + esc(x.d) + '</p>' + (x.m ? '<span class="chip" style="align-self:flex-start;color:var(--yellow)">Così ci si arriverebbe in circa ' + x.m + ' mesi</span>' : '') + '</div>').join('') + '</div>' : '') +
+    (ideas.length ? '<div class="sec"><span class="label">Le spese che pesano di più</span>' + ideas.map(x => '<div class="card" style="gap:6px;padding:14px 16px"><b>' + x.t + '</b><p class="small muted">' + esc(x.d) + '</p>' + (x.m ? '<span class="chip" style="align-self:flex-start;color:var(--ytext)">Così ci si arriverebbe in circa ' + x.m + ' mesi</span>' : '') + '</div>').join('') + '</div>' : '') +
     '<div class="sec"><span class="label">Entrate in più</span><div class="list">' + extra.map(x => '<button class="item" ' + nav$({screen:'add', type:'in'}) + '>' + catTile('in', catOf('in', x[0])) + '<span class="t"><b>' + x[1] + '</b><span class="sub" style="white-space:normal">' + x[2] + '</span></span>' + ic('right') + '</button>').join('') + '</div></div>' +
     '<div class="sec"><span class="label">Dalla palestra del risparmio</span><p class="small muted">Le letture più utili per le tue spese di questi mesi.</p><div class="list">' + gymIdx.map(i => '<button class="item" ' + nav$({screen:'read', i, back:g.id}) + '><span class="ic">' + ic('book') + '</span><span class="t"><b>' + esc(GYM[i].t) + '</b><span class="sub">Tappa ' + (i + 1) + ' · lettura di 3 minuti' + (S.read.includes(i) ? ' · letta' : '') + '</span></span>' + ic('right') + '</button>').join('') + '</div></div>' +
   '</div>';
@@ -2578,11 +2616,11 @@ function renderSim(){
       (P.preset === 'custom' ? '<div class="field"><label for="sm-r">Rendimento annuo (%)</label><input id="sm-r" inputmode="none" readonly data-pad value="' + String(P.rate).replace('.', ',') + '"></div>' : '<p class="small muted">' + SIM_PRESETS.find(x => x[0] === P.preset)[3] + '. Ipotesi vicina alle medie storiche di lungo periodo, non una promessa: negli anni singoli i rendimenti possono essere anche negativi.</p>') + '</div>' +
       '<label class="check small"><input type="checkbox" id="sm-inf"' + (P.infl ? ' checked' : '') + '> Mostra anche il valore reale, al netto di un\'inflazione del 2% annuo</label></div>' +
     '<div class="card"><span class="label">Tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + '</span><div class="simres"><b class="num">' + eur(Math.round(res.v)) + '</b>' + (P.infl ? '<span class="small muted">circa ' + eur(Math.round(defl(res.v))) + ' in potere d\'acquisto di oggi</span>' : '') + '</div>' +
-      '<div class="io"><div><span class="label">Hai versato</span><b>' + eur(Math.round(res.paid)) + '</b></div><div><span class="label">Crescita</span><b style="color:var(--yellow)">' + eur(Math.round(res.v - res.paid)) + '</b></div></div>' +
+      '<div class="io"><div><span class="label">Hai versato</span><b>' + eur(Math.round(res.paid)) + '</b></div><div><span class="label">Crescita</span><b style="color:var(--ytext)">' + eur(Math.round(res.v - res.paid)) + '</b></div></div>' +
       '<div class="legend small"><span><i class="sw" style="background:#6b6b66"></i>Versato</span><span><i class="sw" style="background:var(--yellow)"></i>Crescita</span></div>' +
       '<div class="simchart" role="img" aria-label="Valore anno per anno">' + res.ys.map(y => '<div title="Anno ' + y.y + ': ' + eur(Math.round(y.v)) + ' (versato ' + eur(Math.round(y.paid)) + ')"><span style="height:' + Math.max(0, (y.v - y.paid) / mx * 150) + 'px;background:var(--yellow)"></span><span style="height:' + (y.paid / mx * 150) + 'px;background:#6b6b66"></span></div>').join('') + '</div>' +
       '<div class="spread small muted"><span>Anno 1</span><span>Anno ' + P.years + '</span></div></div>' +
-    '<div class="card"><span class="label">+100 € al mese in più</span><p>Risparmiando <b>' + eur(P.mon + 100) + '</b> invece di ' + eur(P.mon) + ' al mese, tra ' + P.years + ' anni avresti <b style="color:var(--yellow)">' + eur(Math.round(plus.v - res.v)) + ' in più</b>, di cui ' + eur(Math.round(plus.v - res.v - 100 * 12 * P.years)) + ' di crescita.</p></div>' +
+    '<div class="card"><span class="label">+100 € al mese in più</span><p>Risparmiando <b>' + eur(P.mon + 100) + '</b> invece di ' + eur(P.mon) + ' al mese, tra ' + P.years + ' anni avresti <b style="color:var(--ytext)">' + eur(Math.round(plus.v - res.v)) + ' in più</b>, di cui ' + eur(Math.round(plus.v - res.v - 100 * 12 * P.years)) + ' di crescita.</p></div>' +
     '<div class="card"><span class="label">A 5, 10 e 20 anni</span>' + hbarsHTML(hz.map(h => ({n:h.y + ' anni', v:Math.round(h.r.v), c:'var(--yellow)', tile:'<span class="ic">' + h.y + '</span>', sub:'versati ' + eur(Math.round(h.r.paid))}))) + '</div>' +
     '<div class="card"><span class="label">Con rendimenti diversi, tra ' + P.years + ' anni</span>' + hbarsHTML(sc.map(z => ({n:z.x[1] + ' ' + String(z.x[2]).replace('.', ',') + '%', v:Math.round(z.v), c:P.preset === z.x[0] ? 'var(--yellow)' : '#6b6b66', tile:'<span class="ic">' + ic('chart') + '</span>'}))) + '</div>' +
     '<p class="small muted">Simulazione a scopo educativo, non è una consulenza finanziaria né una previsione. Non include costi, tasse e oscillazioni dei mercati. Il rendimento passato non garantisce quello futuro.</p></div>';
@@ -3075,12 +3113,12 @@ function yogaSVG(kind){
   const body = [['moon', '#9085e9'], ['vita', '#199e70'], ['dumbbell', '#d95926'], ['heart', '#e66767'], ['feet', '#3987e5'], ['coffee', '#c98500'], ['wave', '#5cc2ae'], ['leaf', '#22A45D']];
   const set = kind === 'body' ? body : fin, cx = 160, cy = 150, R0 = 118;
   const icons = set.map((s, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / set.length, x = cx + Math.cos(a) * R0, y = cy + Math.sin(a) * R0;
-    return '<g transform="translate(' + (x - 17).toFixed(1) + ' ' + (y - 17).toFixed(1) + ')"><circle cx="17" cy="17" r="20" fill="' + (kind === 'body' ? s[1] : '#141414') + '" stroke="' + s[1] + '" stroke-width="2"/><svg x="5" y="5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="' + (kind === 'body' ? '#fff' : s[1]) + '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + (IC[s[0]] || '') + '</svg></g>'; }).join('');
+    return '<g transform="translate(' + (x - 17).toFixed(1) + ' ' + (y - 17).toFixed(1) + ')"><circle cx="17" cy="17" r="20" style="fill:' + (kind === 'body' ? s[1] : '#141414') + '" stroke="' + s[1] + '" stroke-width="2"/><svg x="5" y="5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="' + (kind === 'body' ? '#fff' : s[1]) + '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + (IC[s[0]] || '') + '</svg></g>'; }).join('');
   return '<svg class="yoga" viewBox="0 0 320 300" role="img" aria-label="' + (kind === 'body' ? 'Una persona medita, circondata dai simboli di sonno, equilibrio, sport, amore, camminate, pause, respiro e alimentazione' : 'Una persona medita, circondata dai simboli di casa, auto, soldi, viaggi, salute, obiettivi, protezione e investimenti') + '">' +
-    '<circle cx="' + cx + '" cy="' + cy + '" r="' + R0 + '" fill="none" stroke="#2a2a2a" stroke-width="2" stroke-dasharray="3 7"/>' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + R0 + '" fill="none" style="stroke:var(--line)" stroke-width="2" stroke-dasharray="3 7"/>' +
     '<circle cx="' + cx + '" cy="' + cy + '" r="72" fill="none" stroke="#FFC90A" stroke-width="10" stroke-linecap="round" stroke-dasharray="400 52" transform="rotate(-70 ' + cx + ' ' + cy + ')"/>' +
     '<circle cx="' + cx + '" cy="' + cy + '" r="58" fill="rgba(255,201,10,.08)"/>' +
-    '<g transform="translate(0 22)"><circle cx="160" cy="84" r="13" fill="#fff"/><path d="M160 98c-14 0-22 10-22 26v14h44v-14c0-16-8-26-22-26z" fill="#fff"/><path d="M138 112c-10 8-22 14-30 14M182 112c10 8 22 14 30 14" stroke="#fff" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="106" cy="126" r="5" fill="#FFC90A"/><circle cx="214" cy="126" r="5" fill="#FFC90A"/><path d="M112 160c14-14 34-18 48-18s34 4 48 18c-14 10-30 12-48 12s-34-2-48-12z" fill="#fff"/></g>' + icons + '</svg>';
+    '<g transform="translate(0 22)"><circle cx="160" cy="84" r="13" style="fill:var(--fg)"/><path d="M160 98c-14 0-22 10-22 26v14h44v-14c0-16-8-26-22-26z" style="fill:var(--fg)"/><path d="M138 112c-10 8-22 14-30 14M182 112c10 8 22 14 30 14" style="stroke:var(--fg)" stroke-width="7" stroke-linecap="round" fill="none"/><circle cx="106" cy="126" r="5" fill="#FFC90A"/><circle cx="214" cy="126" r="5" fill="#FFC90A"/><path d="M112 160c14-14 34-18 48-18s34 4 48 18c-14 10-30 12-48 12s-34-2-48-12z" style="fill:var(--fg)"/></g>' + icons + '</svg>';
 }
 
 /* ---------- lezioni aggiuntive e libri ---------- */
@@ -3237,7 +3275,7 @@ function renderWhatIf(){
     '<div class="dream">' + scene(d2[2]) + '<div class="dtext"><span class="marker">Immagina</span><b>' + d2[1] + '</b>' + (d2 !== d1 ? '<span class="dchg ' + (by2 > by1 ? 'up' : 'down') + '">' + (by2 > by1 ? '▲ ' : '▼ ') + 'senza cambiare nulla: ' + esc(d1[1]) + '</span>' : '') + '</div></div>' +
     '<div class="wres" style="--rc:' + (ok ? '#22A45D' : '#e3a008') + '"><span class="small">Arrivi a ' + eur(T) + '</span><b>' + ym(eta2) + '</b>' +
       '<span class="wtag">' + (!eta2 ? 'scegli almeno un aiuto qui sotto' : delta > 0 ? delta + (delta === 1 ? ' mese' : ' mesi') + ' prima della scadenza' : delta === 0 ? 'giusto in tempo' : -delta + (delta === -1 ? ' mese' : ' mesi') + ' dopo la scadenza') + '</span>' +
-      '<span class="small">' + (gain > 0 ? '<b>' + gain + (gain === 1 ? ' mese' : ' mesi') + ' prima</b> rispetto a oggi (' + ym(eta1) + '). ' : !eta1 ? 'Senza cambiare nulla, a questo ritmo non ci arrivi. ' : '') + 'Metti da parte <b>' + eur(Math.round(pace2)) + ' al mese</b>.' + (!ok && mLeft > 0 ? ' Per arrivare in tempo mancano circa <b>' + eur(Math.max(0, Math.ceil(left2 / mLeft - pace2))) + ' al mese</b>: prova le opzioni qui sotto o una data più comoda.' : '') + '</span></div>' +
+      '<span class="small">' + (gain > 0 ? '<b>' + gain + (gain === 1 ? ' mese' : ' mesi') + ' prima</b> rispetto a oggi (' + ym(eta1) + '). ' : !eta1 ? 'Senza cambiare nulla, a questo ritmo non ci arrivi. ' : '') + 'Così metteresti da parte <b>' + eur(Math.round(pace2)) + ' al mese</b>.' + (!ok && mLeft > 0 ? ' Per arrivare in tempo mancano circa <b>' + eur(Math.max(0, Math.ceil(left2 / mLeft - pace2))) + ' al mese</b>: con le opzioni qui sotto o una data più comoda puoi provare altre strade.' : '') + '</span></div>' +
     '<div class="card"><span class="label">1 · Metto da parte in più ogni mese</span>' + chips('ex', [0, 25, 50, 100, 200, 300], W.extra, v => v ? '+' + v + ' €' : 'Niente') + cust('w-exc', W.extra, [0, 25, 50, 100, 200, 300], 'Altra cifra al mese') + '</div>' +
     '<div class="card"><span class="label">2 · Taglio qualcosa che si ripete</span>' +
       (levs.length ? '<div class="levs">' + levs.map(l => '<button data-lev="' + l.id + '" aria-pressed="' + W.cuts.includes(l.id) + '"><span class="ck">' + ic('check') + '</span><span class="t"><b>' + esc(l.n) + '</b><span>' + l.d + ' · oggi ' + eur(Math.round(l.avg)) + ' al mese</span></span><b class="num" style="color:' + IN_COL + '">+' + eur(l.cut) + '</b></button>').join('') + '</div>'
@@ -3926,7 +3964,7 @@ function ocrStart(file){
 }
 function ocrResult(o, close, text){
   const p = ocrParse(text), g = ocrGuess(p, text), cat = g.c && catOf('out', g.c);
-  o.querySelector('#ocr-b').innerHTML = (p.total === null ? '<p class="small" style="margin:0;color:var(--yellow)">Non trovo il totale: scrivilo tu.</p>' : '') +
+  o.querySelector('#ocr-b').innerHTML = (p.total === null ? '<p class="small" style="margin:0;color:var(--ytext)">Non trovo il totale: scrivilo tu.</p>' : '') +
     '<div class="grid2"><div class="field"><label for="ocr-a">Importo</label><input id="ocr-a" inputmode="none" readonly data-pad value="' + (p.total === null ? '' : String(p.total.toFixed(2)).replace('.', ',')) + '"></div><div class="field"><label for="ocr-d">Data</label><input id="ocr-d" type="date" value="' + (p.d || today()) + '"></div></div>' +
     (cat ? '<div class="ocrcat"><span class="small muted">' + (g.sure ? 'Come l\'ultima volta in questo negozio' : 'Ti propongo questa categoria') + '</span><div class="row" style="gap:10px;flex-wrap:nowrap">' + catTile('out', cat) + '<b>' + esc(cat.n + (g.s ? ' › ' + g.s : '')) + '</b></div></div>' +
       '<div class="row"><button class="btn" id="ocr-ok">' + ic('check') + 'Conferma</button><button class="btn ghost" id="ocr-other">Un\'altra categoria</button></div>'
@@ -4197,8 +4235,8 @@ function notifCard(){
   return '<div class="card" style="gap:10px"><div class="spread"><b>Notifiche dell\'app</b><span class="chip" style="background:' + (on ? 'var(--green,#22A45D)' : 'var(--soft2)') + ';color:#fff">' + (on ? 'Attive' : 'Spente') + '</span></div>' +
     '<p class="small muted" style="margin:0">Al massimo una al giorno: la domanda del giorno, la tappa della palestra o, la sera, un controllo delle spese. È il telefono a decidere il momento preciso, di giorno.</p>' +
     '<p class="small" style="margin:0">Da sapere: in questa versione gli avvisi automatici <b>possono non arrivare</b>, perché è il telefono a decidere se e quando svegliare l\'app. Arriveranno puntuali con la prossima versione Android. Per un promemoria sicuro, oggi, c\'è il calendario qui sotto.</p>' +
-    (on && S.notif.periodic === false ? '<p class="small" style="margin:0;color:var(--yellow)">Per ora il browser non concede gli avvisi automatici: succede con le app appena installate e di solito si sblocca da solo dopo qualche giorno di uso. L\'app riprova a ogni apertura. Intanto, per non perdere i promemoria, usa il calendario qui sotto.</p>' : '') +
-    (den ? '<p class="small" style="margin:0;color:var(--yellow)">Le notifiche sono bloccate sul telefono: tocca il pulsante qui sotto e ti dico dove sbloccarle.</p>' : '') +
+    (on && S.notif.periodic === false ? '<p class="small" style="margin:0;color:var(--ytext)">Per ora il browser non concede gli avvisi automatici: succede con le app appena installate e di solito si sblocca da solo dopo qualche giorno di uso. L\'app riprova a ogni apertura. Intanto, per non perdere i promemoria, usa il calendario qui sotto.</p>' : '') +
+    (den ? '<p class="small" style="margin:0;color:var(--ytext)">Le notifiche sono bloccate sul telefono: tocca il pulsante qui sotto e ti dico dove sbloccarle.</p>' : '') +
     '<p class="small muted" style="margin:0" id="nt-diag">Dettagli tecnici: permesso ' + Notification.permission + ' · copia offline ' + (navigator.serviceWorker.controller ? 'sì' : 'no') + ' · avvisi automatici ' + (S.notif && S.notif.periodic ? 'sì' : 'no') + ' · ' + (/SamsungBrowser/.test(navigator.userAgent) ? 'Samsung Internet' : 'Chrome') + '</p>' +
     '<div class="row">' + (on ? '<button class="btn sm ghost" id="nt-off">Spegni</button><button class="btn sm" id="nt-try">Notifica di prova</button>' : '<button class="btn sm" id="nt-on">' + (den ? 'Sblocca le notifiche' : 'Attiva le notifiche') + '</button>') + '</div></div>';
 }
@@ -4234,7 +4272,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('mess
 function renderSettings(){
   view.innerHTML = '<div class="sec" style="gap:22px">' + backBtn('Home', {screen:'home'}) + '<div class="intro"><h2>Impostazioni</h2></div>' +
     '<div class="sec"><span class="label">Promemoria</span><div class="list"><button class="item" ' + nav$({screen:'notif'}) + '><span class="ic">' + ic('calendar') + '</span><span class="t"><b>Notifiche e promemoria</b><span class="sub">' + WELL.length + ' promemoria: soldi e benessere, con orari e calendario</span></span>' + ic('right') + '</button></div></div>' +
-    '<div class="sec"><span class="label">Visualizzazione</span><label class="check"><input type="checkbox" id="s-tips"' + (S.showTips ? ' checked' : '') + '> Mostra sempre le spiegazioni sotto i titoli</label><label class="check"><input type="checkbox" id="s-hide"' + (S.hide ? ' checked' : '') + '> Nascondi gli importi (lo stesso dell\'occhio in alto)</label></div>' +
+    '<div class="sec"><span class="label">Visualizzazione</span><div class="row" style="justify-content:space-between;align-items:center"><span>Tema</span><div class="catview" id="s-theme">' + [['dark', 'Scuro'], ['light', 'Chiaro'], ['auto', 'Come il telefono']].map(t => '<button data-th="' + t[0] + '" aria-pressed="' + (themePref() === t[0]) + '">' + t[1] + '</button>').join('') + '</div></div><label class="check"><input type="checkbox" id="s-tips"' + (S.showTips ? ' checked' : '') + '> Mostra sempre le spiegazioni sotto i titoli</label><label class="check"><input type="checkbox" id="s-hide"' + (S.hide ? ' checked' : '') + '> Nascondi gli importi (lo stesso dell\'occhio in alto)</label></div>' +
     '<div class="sec"><span class="label">Condividi con gli amici</span><p class="small muted">Per invitare un amico, condividi l\'app dal menu Condividi di questa pagina, poi mandagli il link. Ognuno vede solo i propri dati.</p><div class="row"><input id="s-link" readonly value="https://claude.ai/artifact/SKGYXcdzEhsYz7Btngm8hq" style="flex:1;width:auto"><button class="btn sm" id="s-copy">Copia</button></div></div>' +
     '<div class="sec"><span class="label">Sicurezza</span><div class="card" id="s-lock" style="gap:10px"></div></div>' +
     '<div class="sec"><span class="label">Controllo salvataggio</span><div class="card" id="s-diag" style="gap:6px"><p class="small muted">Verifico…</p></div></div>' +
@@ -4264,6 +4302,7 @@ function renderSettings(){
   view.querySelector('#s-rs').onchange = e => { const f = e.target.files[0]; if (f) importBackup(f); };
   view.querySelector('#s-snd').onchange = e => { S.sound = e.target.checked; save(); };
   view.querySelector('#s-tips').onchange = e => { S.showTips = e.target.checked; save(); renderSettings(); };
+  view.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { try { localStorage.setItem('b4f-theme', b.dataset.th); } catch(e) {} applyTheme(); const y = window.scrollY; renderSettings(); window.scrollTo({top:y}); });
   view.querySelector('#s-hide').onchange = e => { S.hide = e.target.checked; save(); render(); };
   diagStorage();
   view.querySelector('#s-copy').onclick = () => { const i = view.querySelector('#s-link'); (navigator.clipboard ? navigator.clipboard.writeText(i.value) : Promise.reject()).then(() => toast('Link copiato')).catch(() => { i.select(); toast('Seleziona e copia il link'); }); };

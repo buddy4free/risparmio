@@ -39,7 +39,7 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 
 ## Da fare prima dell'uscita pubblica
 - Copia locale (service worker): tenere caratteri, libreria PDF, icone e motore scontrini in una cache stabile, per non riscaricarli a ogni aggiornamento. Rimandato perché tocca il meccanismo degli aggiornamenti: va provato bene, compreso il passaggio dalla versione precedente.
-- Soluzione Android definitiva, non legata al browser (vedi `store/ANDROID.md`).
+- Soluzione Android definitiva, non legata al browser (vedi `store/ANDROID.md`). DECISO il 28/10/2026: app Android con WebView di sistema che contiene il codice di oggi (niente riscrittura, niente Chrome/Samsung Internet), notifiche native, e aggiornamenti "ibridi": le schermate si aggiornano dal sito come ora ma l'app accetta un aggiornamento solo se firmato da Lorenzo; dal Play Store passano solo le modifiche alla parte nativa. Fasi: 1) pacchetto di prova con nome diverso (convive con l'app dei tester); 2) funzioni native (notifiche, file, fotocamera, barre di sistema, avvio); 3) trasloco guidato dei dati; 4) versione finale con il nome di sempre, solo DOPO la fine del test chiuso e dei suggerimenti dei tester.
 - Notifiche vere (programmate, native) con l'app Android definitiva: deciso il 27/10/2026, niente server di notifiche nel frattempo.
 
 ## Linguaggio dei testi (coach, suggerimenti, obiettivi)

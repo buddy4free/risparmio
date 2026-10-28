@@ -42,6 +42,18 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - Soluzione Android definitiva, non legata al browser (vedi `store/ANDROID.md`). DECISO il 28/10/2026: app Android con WebView di sistema che contiene il codice di oggi (niente riscrittura, niente Chrome/Samsung Internet), notifiche native, e aggiornamenti "ibridi": le schermate si aggiornano dal sito come ora ma l'app accetta un aggiornamento solo se firmato da Lorenzo; dal Play Store passano solo le modifiche alla parte nativa. Fasi: 1) pacchetto di prova con nome diverso (convive con l'app dei tester); 2) funzioni native (notifiche, file, fotocamera, barre di sistema, avvio; passi giornalieri letti da Health Connect, solo lettura e solo sul telefono, con dichiarazione dati salute in Play Console e riga nell'informativa: chiesto il 28/10/2026; verificare se Garmin scrive su Health Connect); 3) trasloco guidato dei dati; 4) versione finale con il nome di sempre, solo DOPO la fine del test chiuso e dei suggerimenti dei tester.
 - Notifiche vere (programmate, native) con l'app Android definitiva: deciso il 27/10/2026, niente server di notifiche nel frattempo.
 
+## Idee future (concordate con Lorenzo il 28/10/2026)
+### Tecniche (costruzione e aggiornamento dell'app)
+- Test automatici dei flussi principali nella pubblicazione (aggiungere movimento, backup/ripristino, import CSV, schermate principali): CONCORDATO, da fare per primo.
+- Protezione dati: data dell'ultimo backup sempre visibile, avviso sullo spazio di memoria del browser; nell'app definitiva backup automatico cifrato su Google Drive.
+- Accessibilità: testo più grande, stati leggibili anche senza colore (daltonismo), etichette per lettore di schermo.
+- Voce "Segnala un problema" con dettagli tecnici senza dati finanziari.
+### Funzionali
+- Etichette/eventi (es. "Vacanza Grecia") che raccolgono spese di categorie diverse: PIACE a Lorenzo.
+- Riepilogo dell'anno "il tuo 2026", condivisibile senza cifre: PIACE.
+- Scorciatoie dall'icona ("Nuova uscita", "Scontrino") e widget nell'app definitiva: interessante.
+- Più conti: solo se lo chiedono i tester (meglio i pilastri).
+
 ## Linguaggio dei testi (coach, suggerimenti, obiettivi)
 - Mai frasi che sembrino consigli finanziari o ordini ("fai questo", "sposta questo", "riduci", "imposta un bonifico"): l'app descrive i dati e le conseguenze ("al ritmo attuale…", "servirebbero…", "con il 30% in meno…"), la scelta resta all'utente.
 - I numeri del mese in corso sono reali a oggi; i movimenti programmati compaiono solo come previsione, dichiarata come tale.

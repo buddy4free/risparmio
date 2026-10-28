@@ -24,6 +24,8 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - FATTO: verifica in due passaggi su Google personale (porta di GitHub, Play Console e Claude), GitHub (Authenticator + codici di recupero + password di riserva) e buddyforfree.
 - FATTO: guardiano `sorgente/guardiano.py` nel workflow `pubblica.yml` (blocca se cambiano la CSP, compaiono indirizzi esterni non previsti o codice eseguito al volo, o se cambiano le librerie in `vendor/` e `fonts/`). Se si aggiorna una libreria di proposito: `python3 sorgente/guardiano.py --aggiorna`. Se si aggiunge un link esterno nuovo, aggiungere il sito a `SITI` nel guardiano.
 - FATTO: avviso (issue) a ogni pubblicazione con l'elenco delle modifiche e, se c'è, il messaggio per i tester.
+- FATTO: protezione del ramo `main` (ruleset "Proteggi main": niente cancellazione né force push), pubblicazione automatica verificata.
+- FATTO: Claude blindato: entra con il Google personale; app GitHub di Claude limitata a `risparmio` e `buddy4free.github.io`; connettori in uso GitHub, Trello, Canva.
 - Guidare Lorenzo a proteggere il ramo `main` su GitHub (niente force push), verificando che la pubblicazione automatica continui a funzionare.
 
 ## In coda: controllo iPhone (chiesto il 28/10/2026)

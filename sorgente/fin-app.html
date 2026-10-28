@@ -2606,17 +2606,14 @@ function simRun(cap, mon, rate, years){
   for (let m = 1; m <= years * 12; m++) { v = v * (1 + r) + mon; paid += mon; if (m % 12 === 0) ys.push({y:m / 12, v, paid}); }
   return {v, paid, ys};
 }
-/* soldi fermi contro investiti, anno per anno, in potere d'acquisto di oggi */
+/* una cifra ferma sul conto: anno dopo anno vale sempre meno in potere d'acquisto di oggi */
 function inflChart(P, res, ir){
-  const W = 320, H = 170, pad = 6, pts = [{y:0, paid:P.cap, v:P.cap}].concat(res.ys), f = y => Math.pow(1 + ir / 100, y);
-  const S3 = [['Versato', '#9a9a93', pts.map(q => q.paid), '5 4'], ['Investito al ' + String(P.rate).replace('.', ',') + '%', 'var(--yellow)', pts.map(q => q.v / f(q.y)), ''], ['Fermo sul conto', 'var(--critical)', pts.map(q => q.paid / f(q.y)), '']];
-  const mx = Math.max(1, ...S3.flatMap(x => x[2])), X = i => pad + i / Math.max(1, pts.length - 1) * (W - 2 * pad), Y = v => H - pad - v / mx * (H - 2 * pad);
-  const line = ([, c, v, d]) => '<polyline fill="none" style="stroke:' + c + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"' + (d ? ' stroke-dasharray="' + d + '"' : '') + ' points="' + v.map((z, i) => X(i).toFixed(1) + ',' + Y(z).toFixed(1)).join(' ') + '"/>';
-  const end = S3.map(([n, c, v]) => '<span><i class="sw" style="background:' + c + '"></i>' + n + ' <b class="num">' + eur(Math.round(v[v.length - 1])) + '</b></span>').join('');
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Valore anno per anno in potere d\'acquisto di oggi">' +
-    '<line x1="' + pad + '" y1="' + (H - pad) + '" x2="' + (W - pad) + '" y2="' + (H - pad) + '" style="stroke:var(--line)"/>' + S3.map(line).join('') + '</svg>' +
-    '<div class="spread small muted"><span>Oggi</span><span>Tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + '</span></div>' +
-    '<div class="legend small" style="flex-direction:column;align-items:flex-start;gap:4px">' + end + '</div><p class="small muted" style="margin:0">Investito e fermo sul conto sono in potere d\'acquisto di oggi; il versato è la cifra che metti da parte, senza inflazione.</p>';
+  const base = P.cap > 0 ? P.cap : 1000, N = P.years, step = Math.max(1, Math.ceil(N / 20)), ys = [];
+  for (let y = 0; y <= N; y += step) ys.push(y); if (ys[ys.length - 1] !== N) ys.push(N);
+  const val = y => base / Math.pow(1 + ir / 100, y), last = val(N);
+  return '<p class="small" style="margin:0"><b>' + eur(Math.round(base)) + '</b> ' + (P.cap > 0 ? 'di capitale' : '') + ' fermi sul conto, anno dopo anno, in potere d\'acquisto di oggi:</p>' +
+    '<div class="simchart" role="img" aria-label="Valore di ' + eur(Math.round(base)) + ' fermi sul conto, anno per anno">' + ys.map(y => '<div title="Anno ' + y + ': ' + eur(Math.round(val(y))) + '"><span style="height:' + (val(y) / base * 150) + 'px;background:' + (y === 0 ? '#9a9a93' : 'var(--critical)') + ';opacity:' + (y === 0 ? 1 : (1 - y / N * .45)).toFixed(2) + '"></span></div>').join('') + '</div>' +
+    '<div class="spread small muted"><span>Oggi ' + eur(Math.round(base)) + '</span><span>Tra ' + N + (N === 1 ? ' anno' : ' anni') + ' <b style="color:var(--critical)">' + eur(Math.round(last)) + '</b></span></div>';
 }
 function renderSim(){
   if (!SIM) SIM = {cap:Math.round(pilBalance('inv')) || 0, mon:Math.max(50, Math.round(Math.max(0, avgSave()) / 10) * 10 || 100), preset:'misto', rate:4.5, years:20, infl:true, ir:2};

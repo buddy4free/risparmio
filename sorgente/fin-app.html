@@ -740,9 +740,9 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 <script>
 const LOGO = document.getElementById('logo-full').src;
 document.querySelector('#logo .lgr').src = LOGO;
-/* tema: è una preferenza di questo telefono (non va nei backup); predefinito scuro */
+/* tema: è una preferenza di questo telefono (non va nei backup); predefinito automatico, segue il telefono */
 const THEME_Q = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
-function themePref(){ try { return localStorage.getItem('b4f-theme') || 'dark'; } catch(e) { return 'dark'; } }
+function themePref(){ try { return localStorage.getItem('b4f-theme') || 'auto'; } catch(e) { return 'auto'; } }
 function applyTheme(){ const p = themePref(), t = p === 'auto' ? (THEME_Q && THEME_Q.matches ? 'light' : 'dark') : p;
   document.documentElement.dataset.theme = t; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === 'light' ? '#F5F4EF' : '#000000';
   const cs = document.querySelector('meta[name="color-scheme"]'); if (cs) cs.content = t === 'light' ? 'light only' : 'dark only'; }
@@ -4278,7 +4278,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('mess
 function renderSettings(){
   view.innerHTML = '<div class="sec" style="gap:22px">' + backBtn('Home', {screen:'home'}) + '<div class="intro"><h2>Impostazioni</h2></div>' +
     '<div class="sec"><span class="label">Promemoria</span><div class="list"><button class="item" ' + nav$({screen:'notif'}) + '><span class="ic">' + ic('calendar') + '</span><span class="t"><b>Notifiche e promemoria</b><span class="sub">' + WELL.length + ' promemoria: soldi e benessere, con orari e calendario</span></span>' + ic('right') + '</button></div></div>' +
-    '<div class="sec"><span class="label">Visualizzazione</span><div class="row" style="justify-content:space-between;align-items:center"><span>Tema</span><div class="catview" id="s-theme">' + [['dark', 'Scuro'], ['light', 'Chiaro'], ['auto', 'Come il telefono']].map(t => '<button data-th="' + t[0] + '" aria-pressed="' + (themePref() === t[0]) + '">' + t[1] + '</button>').join('') + '</div></div><label class="check"><input type="checkbox" id="s-tips"' + (S.showTips ? ' checked' : '') + '> Mostra sempre le spiegazioni sotto i titoli</label><label class="check"><input type="checkbox" id="s-hide"' + (S.hide ? ' checked' : '') + '> Nascondi gli importi (lo stesso dell\'occhio in alto)</label></div>' +
+    '<div class="sec"><span class="label">Visualizzazione</span><div class="row" style="justify-content:space-between;align-items:center"><span>Tema</span><div class="catview" id="s-theme">' + [['dark', 'Scuro'], ['light', 'Chiaro'], ['auto', 'Automatico']].map(t => '<button data-th="' + t[0] + '" aria-pressed="' + (themePref() === t[0]) + '">' + t[1] + '</button>').join('') + '</div></div><label class="check"><input type="checkbox" id="s-tips"' + (S.showTips ? ' checked' : '') + '> Mostra sempre le spiegazioni sotto i titoli</label><label class="check"><input type="checkbox" id="s-hide"' + (S.hide ? ' checked' : '') + '> Nascondi gli importi (lo stesso dell\'occhio in alto)</label></div>' +
     '<div class="sec"><span class="label">Condividi con gli amici</span><p class="small muted">Per invitare un amico, condividi l\'app dal menu Condividi di questa pagina, poi mandagli il link. Ognuno vede solo i propri dati.</p><div class="row"><input id="s-link" readonly value="https://claude.ai/artifact/SKGYXcdzEhsYz7Btngm8hq" style="flex:1;width:auto"><button class="btn sm" id="s-copy">Copia</button></div></div>' +
     '<div class="sec"><span class="label">Sicurezza</span><div class="card" id="s-lock" style="gap:10px"></div></div>' +
     '<div class="sec"><span class="label">Controllo salvataggio</span><div class="card" id="s-diag" style="gap:6px"><p class="small muted">Verifico…</p></div></div>' +

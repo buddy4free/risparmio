@@ -29,7 +29,8 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - Rivedere i punti delicati su Safari/iOS (tastierina, campi data, fotocamera scontrini, schermo intero, area sicura in basso) e aggiungere i meta per la schermata Home di iOS. Un utente iPhone usa la versione web come tester (non conta per il test chiuso di Google).
 
 ## In coda dopo la sicurezza: tema chiaro (scelte di Lorenzo del 27/10/2026)
-- Opzione in Impostazioni → Visualizzazione: Scuro / Chiaro / Come il telefono; predefinito Scuro (per i tester non cambia nulla finché non scelgono).
+- FATTO il 28/10/2026. Tema in cima al menu e in Impostazioni → Visualizzazione: Scuro / Chiaro / Automatico; predefinito Automatico (segue il telefono), deciso da Lorenzo anche per i tester esistenti.
+- Da fare con la prossima versione Android: colore della schermata di avvio chiaro/neutro; immagini della scheda Play Store anche in chiaro.
 - Chiaro: sfondo bianco caldo (#F5F4EF), schede bianche con bordo leggero, testo quasi nero; giallo Buddy4Free per pulsanti, + e bordo della scheda principale; verdi/arancioni/rossi un po' più scuri.
 - Logo nel tondo nero (cerchio giallo + BUDDY + 4 FREE, come sulla maglietta); "Risparmio" in alto in ambra (#9A6A00); icone in alto nere.
 - Barra in basso: voce attiva con icona nera dentro una pillola gialla piena (come il +), scritta nera in grassetto; le altre grigie.

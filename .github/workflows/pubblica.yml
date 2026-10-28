@@ -28,6 +28,7 @@ jobs:
           git fetch origin prossima
           n=$(git rev-list --count main..origin/prossima)
           echo "Commit da pubblicare: $n"
+          echo "base=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "nuove=$([ "$n" -gt 0 ] && echo 1 || echo 0)" >> "$GITHUB_OUTPUT"
       - name: Unisci prossima in main
         if: steps.diff.outputs.nuove == '1'
@@ -52,6 +53,9 @@ jobs:
         run: |
           set -o pipefail
           sh sorgente/test-sicurezza/esegui.sh 2>&1 | tee test.log || { grep -E 'FAIL|Error|error' test.log | head -20 | while read -r l; do echo "::error::$l"; done; exit 1; }
+      - name: Guardiano (blocca se cambiano regole di sicurezza, indirizzi esterni o librerie)
+        if: steps.diff.outputs.nuove == '1'
+        run: python3 sorgente/guardiano.py
       - name: Pubblica
         if: steps.diff.outputs.nuove == '1'
         run: |
@@ -59,14 +63,22 @@ jobs:
           git commit -m "Pubblicazione per i tester $(TZ=Europe/Rome date '+%d/%m/%Y %H:%M')" || true
           git push origin HEAD:main
           git push origin HEAD:prossima || echo "prossima ha commit nuovi: verranno pubblicati la prossima volta"
-      - name: Avvisa Lorenzo con le novità per i tester
+      - name: Avvisa Lorenzo a ogni pubblicazione
         if: steps.diff.outputs.nuove == '1'
         env:
           GH_TOKEN: ${{ github.token }}
+          BASE: ${{ steps.diff.outputs.base }}
         run: |
           f=store/NOVITA.md
+          {
+            echo "Pubblicato sul sito alle $(TZ=Europe/Rome date '+%H:%M del %d/%m/%Y'). Se qui sotto c'è qualcosa che non hai chiesto, scrivilo subito a Claude."
+            echo
+            echo "## Cosa è cambiato"
+            git log --no-merges --format='- %s' "$BASE"..HEAD | grep -v -e 'Pubblicazione per i tester' -e 'Allinea prossima' || echo "- (solo allineamenti)"
+            if [ -f "$f" ] && grep -q '^- ' "$f"; then echo; echo "## Messaggio per i tester"; grep '^- ' "$f"; fi
+          } > avviso.md
+          gh issue create --title "Pubblicato: $(TZ=Europe/Rome date '+%d/%m %H:%M')" --body-file avviso.md
           if [ -f "$f" ] && grep -q '^- ' "$f"; then
-            gh issue create --title "Pubblicato per i tester: $(TZ=Europe/Rome date '+%d/%m %H:%M')" --body-file "$f"
             sed -i '/^- /d' "$f"
             git add "$f" && git commit -m "Novità per i tester inviate" && git push origin HEAD:main && (git push origin HEAD:prossima || true)
           fi

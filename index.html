@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ieRg4vQJPAAx1O+fSZF6HeehWcfIscz3zJUCIrz2/g4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Kqu9e7xF8tio68F9IGuUplm2Hhr5sX2XJts4yUJJfU8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -736,6 +736,10 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 [data-theme="light"] .logo{background:#000;border-radius:50%;width:54px;height:54px;justify-content:center;padding:0}
 [data-theme="light"] .logo img{display:none}
 [data-theme="light"] .logo img.lgr{display:block;height:43px}
+[data-theme="light"] .dhead .logo img.lgr{height:43px}
+.lklogo.lkr{display:none}
+[data-theme="light"] .lklogo.lkw{display:none}
+[data-theme="light"] .lklogo.lkr{display:block;width:96px!important;height:96px!important;object-fit:contain;background:#000;border-radius:50%;padding:12px;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -3515,7 +3519,7 @@ function showLock(){
   document.body.classList.add('locked'); [...document.body.children].forEach(el => el.inert = true); let pin = '';
   const o = document.createElement('div'); o.id = 'lock';
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', S.lock.bio ? 'bio' : '', '0', 'del'];
-  o.innerHTML = '<div class="lk"><img src="' + document.querySelector('#logo img').src + '" alt="Buddy4Free" class="lklogo"><b class="lkt">Inserisci il PIN</b><div class="lkdots">' + Array.from({length:S.lock.len}, () => '<i></i>').join('') + '</div><p class="lkmsg small"></p>' +
+  o.innerHTML = '<div class="lk"><img src="' + document.querySelector('#logo img').src + '" alt="Buddy4Free" class="lklogo lkw"><img src="' + LOGO + '" alt="" class="lklogo lkr"><b class="lkt">Inserisci il PIN</b><div class="lkdots">' + Array.from({length:S.lock.len}, () => '<i></i>').join('') + '</div><p class="lkmsg small"></p>' +
     '<div class="lkpad">' + keys.map(k => k ? '<button data-k="' + k + '" aria-label="' + (k === 'bio' ? 'Usa l\'impronta' : k === 'del' ? 'Cancella' : k) + '">' + (k === 'bio' ? '<span class="lkbio">☝</span>' : k === 'del' ? '⌫' : k) + '</button>' : '<span></span>').join('') + '</div>' +
     '<button class="textlink small" id="lk-forgot">Hai dimenticato il PIN?</button></div>';
   document.body.appendChild(o); o.inert = false;
@@ -3575,7 +3579,7 @@ const MENU = [
 function openDrawer(open){
   const d = document.getElementById('drawer'), bg = document.getElementById('drawer-bg');
   if (!open) { d.classList.remove('on'); bg.hidden = true; setTimeout(() => d.hidden = true, 200); return; }
-  d.innerHTML = '<div class="dhead"><img src="' + document.querySelector('#logo img').src + '" alt="Buddy4Free"><button class="topbtn" id="dclose" aria-label="Chiudi il menù">×</button></div>' +
+  d.innerHTML = '<div class="dhead"><span class="logo"><img src="' + document.querySelector('#logo img').src + '" alt="Buddy4Free"><img class="lgr" src="' + LOGO + '" alt=""></span><button class="topbtn" id="dclose" aria-label="Chiudi il menù">×</button></div>' +
     '<div class="dtheme"><span class="label">Tema</span><div class="catview">' + [['dark', 'Scuro'], ['light', 'Chiaro'], ['auto', 'Automatico']].map(t => '<button data-dth="' + t[0] + '" aria-pressed="' + (themePref() === t[0]) + '">' + t[1] + '</button>').join('') + '</div></div>' +
     MENU.map(g => '<span class="label">' + g[0] + '</span>' + g[1].filter(x => (x[0] !== 'debts' || typeof renderDebts === 'function') && (x[0] !== 'guide' || VIDEO_SHORT || VIDEO_LONG)).map(x => '<button data-go="' + x[0] + '" aria-current="' + (R.screen === x[0]) + '">' + ic(x[2]) + x[1] + '</button>').join('')).join('');
   d.hidden = false; bg.hidden = false; requestAnimationFrame(() => d.classList.add('on'));

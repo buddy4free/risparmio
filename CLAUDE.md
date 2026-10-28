@@ -21,8 +21,9 @@ Prima di qualsiasi modifica sostanziale (dati salvati, calcoli, struttura delle 
 ## Da fare il 28/10/2026 (sicurezza della pubblicazione)
 Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minuti, guidato); 2) tema chiaro (sezione più sotto); 3) guardiano, avviso a ogni pubblicazione e protezione di `main`.
 - Guidare Lorenzo ad attivare la verifica in due passaggi (meglio passkey) su GitHub, account Google (Gmail Buddy4Free e Play Console) e Claude, e a controllare le sessioni attive su GitHub.
-- "Guardiano" nel workflow `pubblica.yml`: blocca la pubblicazione se la CSP viene allentata, se compaiono indirizzi esterni a cui spedire dati o codice eseguito al volo (eval, new Function).
-- Avviso (issue) a ogni pubblicazione, non solo quando ci sono novità per i tester.
+- FATTO: verifica in due passaggi su Google personale (porta di GitHub, Play Console e Claude), GitHub (Authenticator + codici di recupero + password di riserva) e buddyforfree.
+- FATTO: guardiano `sorgente/guardiano.py` nel workflow `pubblica.yml` (blocca se cambiano la CSP, compaiono indirizzi esterni non previsti o codice eseguito al volo, o se cambiano le librerie in `vendor/` e `fonts/`). Se si aggiorna una libreria di proposito: `python3 sorgente/guardiano.py --aggiorna`. Se si aggiunge un link esterno nuovo, aggiungere il sito a `SITI` nel guardiano.
+- FATTO: avviso (issue) a ogni pubblicazione con l'elenco delle modifiche e, se c'è, il messaggio per i tester.
 - Guidare Lorenzo a proteggere il ramo `main` su GitHub (niente force push), verificando che la pubblicazione automatica continui a funzionare.
 
 ## In coda: controllo iPhone (chiesto il 28/10/2026)

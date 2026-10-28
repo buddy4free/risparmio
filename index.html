@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-7qpadGloIBlW0fMqKwpNL8WWVxxdbSGbGvOghoyHTxM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-nWpgVtOuOQUvsJs2ObtUIbipbEI54W8sp0htrRwtsKc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -20,7 +20,7 @@
 /* Layout: phone-first column with a fixed bottom tab bar (Home, Movimenti, Pilastri, Palestra). Single dark look on purpose: the Buddy4Free logo is yellow on black */
 :root{
   --bg:#000000; --soft:#141414; --soft2:#1F1F1F; --fg:#FFFFFF; --muted:#A3A39E; --line:#2A2A2A;
-  --yellow:#FFC90A; --ytext:#FFC90A; --red:#FF453A;
+  --yellow:#FFC90A; --ytext:#FFC90A; --yic:#141414; --yring:#FFC90A; --yrw:2; --yol:transparent; --red:#FF453A;
   --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --critical:#e5484d;
   --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
   --body:"Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -707,8 +707,9 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 
+.dtheme{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 6px}.dtheme .label{margin:0}
 /* ---------- tema chiaro (Impostazioni → Visualizzazione) ---------- */
-:root[data-theme="light"]{--bg:#F5F4EF;--soft:#FFFFFF;--soft2:#ECEAE3;--fg:#17170F;--muted:#6A685F;--line:#E0DDD3;--ytext:#9A6A00;--good:#0B8A0B;--warn:#B77900;--serious:#C9562B;--critical:#D23B40;color-scheme:light}
+:root[data-theme="light"]{--bg:#F5F4EF;--soft:#FFFFFF;--soft2:#ECEAE3;--fg:#17170F;--muted:#6A685F;--line:#E0DDD3;--ytext:#9A6A00;--yic:#FFFFFF;--yring:#9C978A;--yrw:1;--yol:#17170F;--good:#0B8A0B;--warn:#B77900;--serious:#C9562B;--critical:#D23B40;color-scheme:light}
 :root[data-theme="light"],[data-theme="light"] body{background:var(--bg);color:var(--fg)}
 [data-theme="light"] .dream{background:var(--soft)}
 [data-theme="light"] body::before{background:var(--bg)}
@@ -3136,7 +3137,10 @@ function yogaSVG(kind){
   const body = [['moon', '#9085e9'], ['vita', '#199e70'], ['dumbbell', '#d95926'], ['heart', '#e66767'], ['feet', '#3987e5'], ['coffee', '#c98500'], ['wave', '#5cc2ae'], ['leaf', '#22A45D']];
   const set = kind === 'body' ? body : fin, cx = 160, cy = 150, R0 = 118;
   const icons = set.map((s, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / set.length, x = cx + Math.cos(a) * R0, y = cy + Math.sin(a) * R0;
-    return '<g transform="translate(' + (x - 17).toFixed(1) + ' ' + (y - 17).toFixed(1) + ')"><circle cx="17" cy="17" r="20" style="fill:' + (kind === 'body' ? s[1] : '#141414') + '" stroke="' + s[1] + '" stroke-width="2"/><svg x="5" y="5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="' + (kind === 'body' ? '#fff' : s[1]) + '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + (IC[s[0]] || '') + '</svg></g>'; }).join('');
+    return '<g transform="translate(' + (x - 17).toFixed(1) + ' ' + (y - 17).toFixed(1) + ')"><circle cx="17" cy="17" r="20" style="fill:' + (kind === 'body' ? s[1] : 'var(--yic)') + ';stroke:' + (kind === 'body' ? s[1] + ';stroke-width:2' : 'var(--yring);stroke-width:var(--yrw)') + '"/>' +
+      /* nel tema chiaro l'icona gialla ha un contorno scuro, altrimenti sul fondo chiaro si vede poco */
+      (kind === 'body' ? '' : '<svg x="5" y="5" width="24" height="24" viewBox="0 0 24 24" fill="none" style="stroke:var(--yol)" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round">' + (IC[s[0]] || '') + '</svg>') +
+      '<svg x="5" y="5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="' + (kind === 'body' ? '#fff' : s[1]) + '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + (IC[s[0]] || '') + '</svg></g>'; }).join('');
   return '<svg class="yoga" viewBox="0 0 320 300" role="img" aria-label="' + (kind === 'body' ? 'Una persona medita, circondata dai simboli di sonno, equilibrio, sport, amore, camminate, pause, respiro e alimentazione' : 'Una persona medita, circondata dai simboli di casa, auto, soldi, viaggi, salute, obiettivi, protezione e investimenti') + '">' +
     '<circle cx="' + cx + '" cy="' + cy + '" r="' + R0 + '" fill="none" style="stroke:var(--line)" stroke-width="2" stroke-dasharray="3 7"/>' +
     '<circle cx="' + cx + '" cy="' + cy + '" r="72" fill="none" stroke="#FFC90A" stroke-width="10" stroke-linecap="round" stroke-dasharray="400 52" transform="rotate(-70 ' + cx + ' ' + cy + ')"/>' +
@@ -3572,9 +3576,11 @@ function openDrawer(open){
   const d = document.getElementById('drawer'), bg = document.getElementById('drawer-bg');
   if (!open) { d.classList.remove('on'); bg.hidden = true; setTimeout(() => d.hidden = true, 200); return; }
   d.innerHTML = '<div class="dhead"><img src="' + document.querySelector('#logo img').src + '" alt="Buddy4Free"><button class="topbtn" id="dclose" aria-label="Chiudi il menù">×</button></div>' +
+    '<div class="dtheme"><span class="label">Tema</span><div class="catview">' + [['dark', 'Scuro'], ['light', 'Chiaro'], ['auto', 'Automatico']].map(t => '<button data-dth="' + t[0] + '" aria-pressed="' + (themePref() === t[0]) + '">' + t[1] + '</button>').join('') + '</div></div>' +
     MENU.map(g => '<span class="label">' + g[0] + '</span>' + g[1].filter(x => (x[0] !== 'debts' || typeof renderDebts === 'function') && (x[0] !== 'guide' || VIDEO_SHORT || VIDEO_LONG)).map(x => '<button data-go="' + x[0] + '" aria-current="' + (R.screen === x[0]) + '">' + ic(x[2]) + x[1] + '</button>').join('')).join('');
   d.hidden = false; bg.hidden = false; requestAnimationFrame(() => d.classList.add('on'));
   d.querySelector('#dclose').onclick = () => openDrawer(false);
+  d.querySelectorAll('[data-dth]').forEach(b => b.onclick = () => { try { localStorage.setItem('b4f-theme', b.dataset.dth); } catch(e) {} applyTheme(); d.querySelectorAll('[data-dth]').forEach(x => x.setAttribute('aria-pressed', x === b)); if (R.screen === 'settings') renderSettings(); });
   d.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { openDrawer(false); const k = b.dataset.go;
     if (k === 'idea') { location.href = ideaMail(); return; }
     if (k === 'guide') return catPop('<b style="font-size:1.1rem">Video guida</b>' + videoLinks() + '<button class="textlink" data-x style="align-self:flex-start">Chiudi</button>', () => {}, true); nav(k === 'goals' ? (mainGoal() ? {screen:'goal', id:mainGoal().id} : {screen:'goal', id:'new'}) : {screen:k}); });

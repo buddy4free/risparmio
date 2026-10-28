@@ -2606,6 +2606,18 @@ function simRun(cap, mon, rate, years){
   for (let m = 1; m <= years * 12; m++) { v = v * (1 + r) + mon; paid += mon; if (m % 12 === 0) ys.push({y:m / 12, v, paid}); }
   return {v, paid, ys};
 }
+/* soldi fermi contro investiti, anno per anno, in potere d'acquisto di oggi */
+function inflChart(P, res, ir){
+  const W = 320, H = 170, pad = 6, pts = [{y:0, paid:P.cap, v:P.cap}].concat(res.ys), f = y => Math.pow(1 + ir / 100, y);
+  const S3 = [['Versato', '#9a9a93', pts.map(q => q.paid), '5 4'], ['Investito al ' + String(P.rate).replace('.', ',') + '%', 'var(--yellow)', pts.map(q => q.v / f(q.y)), ''], ['Fermo sul conto', 'var(--critical)', pts.map(q => q.paid / f(q.y)), '']];
+  const mx = Math.max(1, ...S3.flatMap(x => x[2])), X = i => pad + i / Math.max(1, pts.length - 1) * (W - 2 * pad), Y = v => H - pad - v / mx * (H - 2 * pad);
+  const line = ([, c, v, d]) => '<polyline fill="none" style="stroke:' + c + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"' + (d ? ' stroke-dasharray="' + d + '"' : '') + ' points="' + v.map((z, i) => X(i).toFixed(1) + ',' + Y(z).toFixed(1)).join(' ') + '"/>';
+  const end = S3.map(([n, c, v]) => '<span><i class="sw" style="background:' + c + '"></i>' + n + ' <b class="num">' + eur(Math.round(v[v.length - 1])) + '</b></span>').join('');
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Valore anno per anno in potere d\'acquisto di oggi">' +
+    '<line x1="' + pad + '" y1="' + (H - pad) + '" x2="' + (W - pad) + '" y2="' + (H - pad) + '" style="stroke:var(--line)"/>' + S3.map(line).join('') + '</svg>' +
+    '<div class="spread small muted"><span>Oggi</span><span>Tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + '</span></div>' +
+    '<div class="legend small" style="flex-direction:column;align-items:flex-start;gap:4px">' + end + '</div><p class="small muted" style="margin:0">Investito e fermo sul conto sono in potere d\'acquisto di oggi; il versato è la cifra che metti da parte, senza inflazione.</p>';
+}
 function renderSim(){
   if (!SIM) SIM = {cap:Math.round(pilBalance('inv')) || 0, mon:Math.max(50, Math.round(Math.max(0, avgSave()) / 10) * 10 || 100), preset:'misto', rate:4.5, years:20, infl:true, ir:2};
   const P = SIM, res = simRun(P.cap, P.mon, P.rate, P.years), plus = simRun(P.cap, P.mon + 100, P.rate, P.years);
@@ -2631,9 +2643,9 @@ function renderSim(){
       '<div class="legend small"><span><i class="sw" style="background:#6b6b66"></i>Versato</span><span><i class="sw" style="background:var(--yellow)"></i>Crescita</span></div>' +
       '<div class="simchart" role="img" aria-label="Valore anno per anno">' + res.ys.map(y => '<div title="Anno ' + y.y + ': ' + eur(Math.round(y.v)) + ' (versato ' + eur(Math.round(y.paid)) + ')"><span style="height:' + Math.max(0, (y.v - y.paid) / mx * 150) + 'px;background:var(--yellow)"></span><span style="height:' + (y.paid / mx * 150) + 'px;background:#6b6b66"></span></div>').join('') + '</div>' +
       '<div class="spread small muted"><span>Anno 1</span><span>Anno ' + P.years + '</span></div></div>' +
-    '<div class="card"><span class="label">E se i soldi restano fermi?</span><p style="margin:0">Gli stessi ' + eur(Math.round(res.paid)) + ' tenuti sul conto senza interessi, tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + ' e con un\'inflazione del ' + irs + ' all\'anno, comprerebbero quanto oggi <b>' + eur(Math.round(still)) + '</b>: <b style="color:var(--critical)">' + eur(Math.round(res.paid - still)) + ' di potere d\'acquisto in meno</b> (−' + Math.round((1 - 1 / fI) * 100) + '%).</p>' +
-      hbarsHTML([{n:'Versato', v:Math.round(res.paid), c:'#6b6b66', tile:'<span class="ic">' + ic('wallet') + '</span>', sub:'la cifra che metti da parte'}, {n:'Fermo sul conto', v:Math.round(still), c:'var(--critical)', tile:'<span class="ic">' + ic('wallet') + '</span>', sub:'in potere d\'acquisto di oggi'}, {n:'Investito al ' + String(P.rate).replace('.', ',') + '%', v:Math.round(invReal), c:'var(--yellow)', tile:'<span class="ic">' + ic('chart') + '</span>', sub:'in potere d\'acquisto di oggi'}]) +
-      '<p class="small muted" style="margin:0">In pratica: 1.000 € di oggi, tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + ', compreranno come ' + eur(Math.round(1000 / fI)) + ' di adesso. Per i soldi che servono a breve conta la disponibilità; l\'inflazione pesa sulle somme ferme per molti anni.</p></div>' +
+    '<div class="card"><span class="label">E se i soldi restano fermi?</span><p style="margin:0">Gli stessi ' + eur(Math.round(res.paid)) + ' tenuti sul conto senza interessi, tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + ' e con un\'inflazione del ' + irs + ' all\'anno, equivarrebbero a <b>' + eur(Math.round(still)) + ' di oggi</b>: <b style="color:var(--critical)">' + eur(Math.round(res.paid - still)) + ' di potere d\'acquisto in meno</b> (−' + Math.round((1 - 1 / fI) * 100) + '%).</p>' +
+      inflChart(P, res, ir) +
+      '<p class="small muted" style="margin:0">In pratica: tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + ', 1.000 € equivarranno a circa ' + eur(Math.round(1000 / fI)) + ' di oggi. Per i soldi che servono a breve conta la disponibilità; l\'inflazione pesa sulle somme ferme per molti anni.</p></div>' +
     '<div class="card"><span class="label">+100 € al mese in più</span><p>Risparmiando <b>' + eur(P.mon + 100) + '</b> invece di ' + eur(P.mon) + ' al mese, tra ' + P.years + ' anni avresti <b style="color:var(--ytext)">' + eur(Math.round(plus.v - res.v)) + ' in più</b>, di cui ' + eur(Math.round(plus.v - res.v - 100 * 12 * P.years)) + ' di crescita.</p></div>' +
     '<div class="card"><span class="label">A 5, 10 e 20 anni</span>' + hbarsHTML(hz.map(h => ({n:h.y + ' anni', v:Math.round(h.r.v), c:'var(--yellow)', tile:'<span class="ic">' + h.y + '</span>', sub:'versati ' + eur(Math.round(h.r.paid))}))) + '</div>' +
     '<div class="card"><span class="label">Con rendimenti diversi, tra ' + P.years + ' anni</span>' + hbarsHTML(sc.map(z => ({n:z.x[1] + ' ' + String(z.x[2]).replace('.', ',') + '%', v:Math.round(z.v), c:P.preset === z.x[0] ? 'var(--yellow)' : '#6b6b66', tile:'<span class="ic">' + ic('chart') + '</span>'}))) + '</div>' +

@@ -53,6 +53,10 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - Riepilogo dell'anno "il tuo 2026", condivisibile senza cifre: PIACE.
 - Scorciatoie dall'icona ("Nuova uscita", "Scontrino") e widget nell'app definitiva: interessante.
 - Più conti: solo se lo chiedono i tester (meglio i pilastri).
+- DA RIPROPORRE A LORENZO (le ritiene innovative, 28/10/2026):
+  - Momenti della vita: guide brevi con elenco di controllo per i grandi passaggi (primo lavoro, convivenza, figlio in arrivo, cambio auto, acquisto casa, pensione): cosa sapere e quali voci prevedere, senza dire cosa scegliere.
+  - Nuovi simulatori nello stile di quelli esistenti: quanto costa davvero l'auto (rata, assicurazione, carburante, manutenzione, svalutazione, all'anno e al mese); affitto o acquisto della casa (confronto di numeri, non consiglio); "numero della libertà" (quanto servirebbe per coprire le proprie spese per un certo numero di anni, come concetto educativo).
+- Altre idee proposte, da valutare: lista dei desideri con pausa; "quante ore di lavoro costa"; umore dell'acquisto; spese annuali spalmate sui mesi dalle Scadenze; educare i figli ai soldi; video del canale collegati alle lezioni; sfida del mese condivisa.
 
 ## Linguaggio dei testi (coach, suggerimenti, obiettivi)
 - Mai frasi che sembrino consigli finanziari o ordini ("fai questo", "sposta questo", "riduci", "imposta un bonifico"): l'app descrive i dati e le conseguenze ("al ritmo attuale…", "servirebbero…", "con il 30% in meno…"), la scelta resta all'utente.

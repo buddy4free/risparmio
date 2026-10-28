@@ -2607,9 +2607,12 @@ function simRun(cap, mon, rate, years){
   return {v, paid, ys};
 }
 function renderSim(){
-  if (!SIM) SIM = {cap:Math.round(pilBalance('inv')) || 0, mon:Math.max(50, Math.round(Math.max(0, avgSave()) / 10) * 10 || 100), preset:'misto', rate:4.5, years:20, infl:true};
+  if (!SIM) SIM = {cap:Math.round(pilBalance('inv')) || 0, mon:Math.max(50, Math.round(Math.max(0, avgSave()) / 10) * 10 || 100), preset:'misto', rate:4.5, years:20, infl:true, ir:2};
   const P = SIM, res = simRun(P.cap, P.mon, P.rate, P.years), plus = simRun(P.cap, P.mon + 100, P.rate, P.years);
-  const defl = v => P.infl ? v / Math.pow(1.02, P.years) : v;
+  P.ir = P.ir === undefined ? 2 : P.ir;
+  const ir = Math.max(0, +P.ir || 0), fI = Math.pow(1 + ir / 100, P.years), defl = v => P.infl ? v / fI : v, irs = String(ir).replace('.', ',') + '%';
+  /* soldi fermi: stessi versamenti, nessun interesse; in potere d'acquisto di oggi perdono il peso dell'inflazione */
+  const still = res.paid / fI, invReal = res.v / fI;
   const mx = Math.max(1, ...res.ys.map(y => y.v));
   const hz = [5, 10, 20].map(y => ({y, r:simRun(P.cap, P.mon, P.rate, y)}));
   const sc = SIM_PRESETS.map(x => ({x, v:simRun(P.cap, P.mon, x[2], P.years).v})), mxs = Math.max(...sc.map(z => z.v));
@@ -2619,18 +2622,26 @@ function renderSim(){
       '<div class="field"><label for="sm-y">Anni: <b style="color:var(--fg)">' + P.years + '</b></label><input id="sm-y" type="range" min="1" max="40" value="' + P.years + '" style="padding:0;border:0;background:none;accent-color:var(--yellow)"></div>' +
       '<div class="sec" style="gap:8px"><span class="label">Rendimento annuo ipotizzato</span><div class="seg">' + SIM_PRESETS.map(x => '<button data-pre="' + x[0] + '" aria-pressed="' + (P.preset === x[0]) + '">' + x[1] + ' ' + String(x[2]).replace('.', ',') + '%</button>').join('') + '<button data-pre="custom" aria-pressed="' + (P.preset === 'custom') + '">Personalizzato</button></div>' +
       (P.preset === 'custom' ? '<div class="field"><label for="sm-r">Rendimento annuo (%)</label><input id="sm-r" inputmode="none" readonly data-pad value="' + String(P.rate).replace('.', ',') + '"></div>' : '<p class="small muted">' + SIM_PRESETS.find(x => x[0] === P.preset)[3] + '. Ipotesi vicina alle medie storiche di lungo periodo, non una promessa: negli anni singoli i rendimenti possono essere anche negativi.</p>') + '</div>' +
-      '<label class="check small"><input type="checkbox" id="sm-inf"' + (P.infl ? ' checked' : '') + '> Mostra anche il valore reale, al netto di un\'inflazione del 2% annuo</label></div>' +
+      '<div class="sec" style="gap:8px"><span class="label">Inflazione annua ipotizzata</span><div class="seg">' + [2, 2.5, 3].map(v => '<button data-ir="' + v + '" aria-pressed="' + (ir === v && !P.irc) + '">' + String(v).replace('.', ',') + '%</button>').join('') + '<button data-ir="c" aria-pressed="' + !!P.irc + '">Altro</button></div>' +
+        (P.irc ? '<div class="field"><label for="sm-i">Inflazione annua (%)</label><input id="sm-i" inputmode="none" readonly data-pad value="' + String(ir).replace('.', ',') + '"></div>' : '') +
+        '<p class="small muted" style="margin:0">La Banca centrale europea punta a un\'inflazione del 2% nel medio periodo, ma negli ultimi anni è stata spesso diversa: in Italia l\'8,1% nel 2022. Scegli tu l\'ipotesi.</p></div>' +
+      '<label class="check small"><input type="checkbox" id="sm-inf"' + (P.infl ? ' checked' : '') + '> Mostra anche il valore reale, al netto dell\'inflazione</label></div>' +
     '<div class="card"><span class="label">Tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + '</span><div class="simres"><b class="num">' + eur(Math.round(res.v)) + '</b>' + (P.infl ? '<span class="small muted">circa ' + eur(Math.round(defl(res.v))) + ' in potere d\'acquisto di oggi</span>' : '') + '</div>' +
       '<div class="io"><div><span class="label">Hai versato</span><b>' + eur(Math.round(res.paid)) + '</b></div><div><span class="label">Crescita</span><b style="color:var(--ytext)">' + eur(Math.round(res.v - res.paid)) + '</b></div></div>' +
       '<div class="legend small"><span><i class="sw" style="background:#6b6b66"></i>Versato</span><span><i class="sw" style="background:var(--yellow)"></i>Crescita</span></div>' +
       '<div class="simchart" role="img" aria-label="Valore anno per anno">' + res.ys.map(y => '<div title="Anno ' + y.y + ': ' + eur(Math.round(y.v)) + ' (versato ' + eur(Math.round(y.paid)) + ')"><span style="height:' + Math.max(0, (y.v - y.paid) / mx * 150) + 'px;background:var(--yellow)"></span><span style="height:' + (y.paid / mx * 150) + 'px;background:#6b6b66"></span></div>').join('') + '</div>' +
       '<div class="spread small muted"><span>Anno 1</span><span>Anno ' + P.years + '</span></div></div>' +
+    '<div class="card"><span class="label">E se i soldi restano fermi?</span><p style="margin:0">Gli stessi ' + eur(Math.round(res.paid)) + ' tenuti sul conto senza interessi, tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + ' e con un\'inflazione del ' + irs + ' all\'anno, comprerebbero quanto oggi <b>' + eur(Math.round(still)) + '</b>: <b style="color:var(--critical)">' + eur(Math.round(res.paid - still)) + ' di potere d\'acquisto in meno</b> (−' + Math.round((1 - 1 / fI) * 100) + '%).</p>' +
+      hbarsHTML([{n:'Versato', v:Math.round(res.paid), c:'#6b6b66', tile:'<span class="ic">' + ic('wallet') + '</span>', sub:'la cifra che metti da parte'}, {n:'Fermo sul conto', v:Math.round(still), c:'var(--critical)', tile:'<span class="ic">' + ic('wallet') + '</span>', sub:'in potere d\'acquisto di oggi'}, {n:'Investito al ' + String(P.rate).replace('.', ',') + '%', v:Math.round(invReal), c:'var(--yellow)', tile:'<span class="ic">' + ic('chart') + '</span>', sub:'in potere d\'acquisto di oggi'}]) +
+      '<p class="small muted" style="margin:0">In pratica: 1.000 € di oggi, tra ' + P.years + (P.years === 1 ? ' anno' : ' anni') + ', compreranno come ' + eur(Math.round(1000 / fI)) + ' di adesso. Per i soldi che servono a breve conta la disponibilità; l\'inflazione pesa sulle somme ferme per molti anni.</p></div>' +
     '<div class="card"><span class="label">+100 € al mese in più</span><p>Risparmiando <b>' + eur(P.mon + 100) + '</b> invece di ' + eur(P.mon) + ' al mese, tra ' + P.years + ' anni avresti <b style="color:var(--ytext)">' + eur(Math.round(plus.v - res.v)) + ' in più</b>, di cui ' + eur(Math.round(plus.v - res.v - 100 * 12 * P.years)) + ' di crescita.</p></div>' +
     '<div class="card"><span class="label">A 5, 10 e 20 anni</span>' + hbarsHTML(hz.map(h => ({n:h.y + ' anni', v:Math.round(h.r.v), c:'var(--yellow)', tile:'<span class="ic">' + h.y + '</span>', sub:'versati ' + eur(Math.round(h.r.paid))}))) + '</div>' +
     '<div class="card"><span class="label">Con rendimenti diversi, tra ' + P.years + ' anni</span>' + hbarsHTML(sc.map(z => ({n:z.x[1] + ' ' + String(z.x[2]).replace('.', ',') + '%', v:Math.round(z.v), c:P.preset === z.x[0] ? 'var(--yellow)' : '#6b6b66', tile:'<span class="ic">' + ic('chart') + '</span>'}))) + '</div>' +
     '<p class="small muted">Simulazione a scopo educativo, non è una consulenza finanziaria né una previsione. Non include costi, tasse e oscillazioni dei mercati. Il rendimento passato non garantisce quello futuro.</p></div>';
   const upd = () => { P.cap = parseAmt(val('sm-cap')); P.mon = parseAmt(val('sm-mon')); P.years = +val('sm-y'); if (P.preset === 'custom') P.rate = parseAmt(val('sm-r')); const y = window.scrollY; renderSim(); window.scrollTo({top:y}); };
   ['sm-cap', 'sm-mon', 'sm-r'].forEach(id => { const e = document.getElementById(id); if (e) e.onchange = upd; });
+  const si = document.getElementById('sm-i'); if (si) si.onchange = () => { P.ir = Math.min(30, Math.max(0, parseAmt(si.value) || 0)); upd(); };
+  view.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => { if (b.dataset.ir === 'c') P.irc = true; else { P.irc = false; P.ir = +b.dataset.ir; } upd(); });
   document.getElementById('sm-y').oninput = upd;
   document.getElementById('sm-inf').onchange = e => { P.infl = e.target.checked; upd(); };
   view.querySelectorAll('[data-pre]').forEach(b => b.onclick = () => { P.preset = b.dataset.pre; const x = SIM_PRESETS.find(z => z[0] === P.preset); if (x) P.rate = x[2]; upd(); });
@@ -2640,10 +2651,10 @@ function renderSim(){
 const FREQ = {y:['all\'anno', 12], m:['al mese', 1], q:['ogni 3 mesi', 3], o:['una volta', 0]};
 const dueDays = d => daysBetween(today(), d.date);
 const dueYear = d => d.freq === 'o' ? d.a : d.a * 12 / FREQ[d.freq][1];
-function dueState(d){ const n = dueDays(d); if (n < 0) return {c:'#E5484D', l:'Scaduta da ' + (-n) + (n === -1 ? ' giorno' : ' giorni')}; if (n <= 30) return {c:'#e3a008', l:'Tra ' + n + (n === 1 ? ' giorno' : ' giorni') + ': decidi ora'}; return {c:'#22A45D', l:'Tra ' + n + ' giorni'}; }
+function dueState(d){ const n = dueDays(d); if (n < 0) return {c:'#E5484D', l:'Scaduta da ' + (-n) + (n === -1 ? ' giorno' : ' giorni')}; if (n <= 30) return {c:'#e3a008', l:'Tra ' + n + (n === 1 ? ' giorno' : ' giorni')}; return {c:'#22A45D', l:'Tra ' + n + ' giorni'}; }
 const upcomingDues = () => (S.dues || []).filter(d => dueDays(d) <= 30).sort((a, b) => a.date.localeCompare(b.date));
 function dueCal(d){ const r = dayOffset(d.date, -30) < today() ? dayOffset(today(), 1) : dayOffset(d.date, -30), x = r.replace(/-/g, '');
-  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Buddy4Free: scade ' + d.n) + '&details=' + encodeURIComponent('Il ' + dshort(d.date) + ' scade ' + d.n + ' (' + eur2(d.a) + '). Rinnovi, rinegozi, riduci o disdici? Apri Buddy4Free Risparmio.') + '&dates=' + x + '/' + dayOffset(r, 1).replace(/-/g, ''); }
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Buddy4Free: scade ' + d.n) + '&details=' + encodeURIComponent('Il ' + dshort(d.date) + ' scade ' + d.n + ' (' + eur2(d.a) + '). In Buddy4Free Risparmio trovi quanto costa all\'anno.') + '&dates=' + x + '/' + dayOffset(r, 1).replace(/-/g, ''); }
 /* ---------- ricorrenti: tutte le entrate e uscite che si ripetono, in un posto solo ---------- */
 function recNext(r){ const t = today(); for (let k = 0, ym = r.from > curYM() ? r.from : curYM(); k < 60; k++, ym = addMonths(ym, 1)) { const d = recDates(r, ym).find(x => x >= t); if (d) return d; } return null; }
 function recLast(r){ const t = today(); for (let k = 0, ym = curYM(); k < 600 && ym >= r.from; k++, ym = addMonths(ym, -1)) { const d = recDates(r, ym).filter(x => x <= t).pop(); if (d) return d; } return null; }
@@ -2939,7 +2950,9 @@ const EXTRA_Q = {
 const LORDER = () => ['risp', 'fin', 'debt'].flatMap(c => LESSONS.filter(l => l.cat === c).map(l => l.id));
 const lessonDone = id => (S.learn || {})[id] && S.learn[id].quiz !== undefined;
 const lessonPerfect = id => { const st = (S.learn || {})[id], l = LESSONS.find(x => x.id === id); return !!st && (!!st.p || st.quiz === 2 || (!!l && st.quiz >= l.q.length)); };
-function lessonOpen(id){ const L = LORDER(), k = L.indexOf(id); if (k <= 0 || lessonDone(id)) return true; const prev = S.learn[L[k - 1]]; return !!prev && prev.quiz !== undefined && (prev.f || prev.d) < today(); }
+/* nell'anteprima per Lorenzo (artifact) tutte le lezioni sono aperte, per rileggerle; nell'app vera si aprono una al giorno */
+const PREVIEW = false;
+function lessonOpen(id){ const L = LORDER(), k = L.indexOf(id); if (PREVIEW || k <= 0 || lessonDone(id)) return true; const prev = S.learn[L[k - 1]]; return !!prev && prev.quiz !== undefined && (prev.f || prev.d) < today(); }
 function lessonNext(){ const L = LORDER(), k = L.findIndex(id => !lessonOpen(id)); return k > 0 && lessonDone(L[k - 1]) ? L[k] : null; }
 function bookCard(){ const k = bookOfWeek(), b = BOOKS[k], nx = BOOKS[(k + 1) % BOOKS.length];
   return '<div class="card bweek"><span class="label">Il libro della settimana</span><div class="row" style="gap:14px;align-items:flex-start;flex-wrap:nowrap"><span class="bcover">' + ic('book') + '</span><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b class="btitle">' + esc(b[0]) + '</b><span class="small y">' + esc(b[1]) + '</span><span class="small muted">' + [b[3], b[4]].filter(Boolean).join(' · ') + '</span></div></div>' +

@@ -71,7 +71,7 @@ files=['./','index.html','manifest.webmanifest','fonts/fonts.css','fonts/archivo
 open(D+'sw.js','w').write('''/* Buddy4Free Risparmio: copia locale dell'app per l'uso senza connessione */
 const CACHE = 'b4f-%s';
 const FILES = %s;
-self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
+self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, {cache:'reload'})))).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== CACHE && x !== 'b4f-rem').map(x => caches.delete(x)))).then(() => self.clients.claim())); });
 /* promemoria: al massimo una notifica al giorno, quando il telefono risveglia l'app (senza server) */
 self.addEventListener('periodicsync', e => { if (e.tag === 'b4f-daily') e.waitUntil(daily()); });
@@ -89,16 +89,19 @@ async function daily(){
 }
 self.addEventListener('notificationclick', e => { e.notification.close(); const go = (e.notification.data || {}).go || 'home';
   e.waitUntil(clients.matchAll({type:'window', includeUncontrolled:true}).then(L => { for (const w of L) { w.postMessage({go}); return w.focus(); } return clients.openWindow('./?go=' + go); })); });
+/* tra un aggiornamento e l'altro possono esserci più copie salvate della pagina: si usa sempre la più recente */
+async function newestIndex(){ let best = null, bv = ''; for (const k of await caches.keys()) { const r = await (await caches.open(k)).match('index.html'); if (!r) continue;
+  const v = ((await r.clone().text()).match(/name="b4f-build" content="(\\d+)"/) || [])[1] || '0'; if (!best || v > bv) { best = r; bv = v; } } return best; }
 self.addEventListener('fetch', e => {
   const r = e.request; if (r.method !== 'GET' || new URL(r.url).origin !== location.origin) return;
-  /* la pagina dell'app: prima la versione più recente dalla rete; se la rete non risponde entro 3 secondi (campo debole,
+  /* la pagina dell'app: prima la versione più recente dalla rete; se la rete non risponde entro 6 secondi (campo debole,
      Wi-Fi che si sta collegando) o manca, quella salvata. La versione nuova intanto finisce di scaricarsi per la prossima apertura. */
   if (r.mode === 'navigate') {
-    const net = fetch(r).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put('index.html', copy)); } return res; });
+    const net = fetch(r.url, {cache:'no-cache', credentials:'same-origin'}).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put('index.html', copy)); } return res; });
     e.waitUntil(net.catch(() => {}));
     e.respondWith(new Promise(ok => { let done = false; const give = res => { if (!done && res) { done = true; clearTimeout(t); ok(res); } };
-      const t = setTimeout(() => caches.match('index.html').then(give), 3000);
-      net.then(give, () => caches.match('index.html').then(h => give(h || Response.error()))); }));
+      const t = setTimeout(() => newestIndex().then(give), 6000);
+      net.then(give, () => newestIndex().then(h => give(h || Response.error()))); }));
     return; }
   e.respondWith(caches.match(r, {ignoreSearch:true}).then(hit => {
     const net = fetch(r).then(res => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(r, copy)); } return res; }).catch(() => hit || caches.match('index.html'));

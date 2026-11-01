@@ -696,6 +696,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 
 .dtheme{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 6px}.dtheme .label{margin:0}
 .planhead{display:flex;flex-direction:column;gap:2px;margin:22px 0 2px;padding-top:14px;border-top:2px dashed var(--line)}
+.updbar{position:fixed;left:12px;right:12px;top:calc(68px + env(safe-area-inset-top, 0px));z-index:70;display:flex;align-items:center;gap:10px;background:var(--soft);border:2px solid var(--yellow);border-radius:14px;padding:10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:.9rem}.updbar span{flex:1}.updbar .updx{background:none;border:0;color:var(--muted);font-size:1.4rem;line-height:1;padding:4px 6px;cursor:pointer}
 /* ---------- tema chiaro (Impostazioni → Visualizzazione) ---------- */
 :root[data-theme="light"]{--bg:#F5F4EF;--soft:#FFFFFF;--soft2:#ECEAE3;--fg:#17170F;--muted:#6A685F;--line:#E0DDD3;--ytext:#9A6A00;--yic:#FFFFFF;--yring:#9C978A;--yrw:1;--yol:#17170F;--good:#0B8A0B;--warn:#B77900;--serious:#C9562B;--critical:#D23B40;color-scheme:light}
 :root[data-theme="light"],[data-theme="light"] body{background:var(--bg);color:var(--fg)}
@@ -4360,6 +4361,15 @@ async function notifRetry(){ if (!S.notif || !S.notif.on || S.notif.periodic || 
   try { const reg = await navigator.serviceWorker.ready; if (!reg.periodicSync) return; const st = await navigator.permissions.query({name:'periodic-background-sync'}); if (st.state !== 'granted') return;
     await reg.periodicSync.register('b4f-daily', {minInterval:12 * 3600e3}); S.notif.periodic = true; save(); if (R.screen === 'notif') renderNotif(); } catch(e) {} }
 setTimeout(notifRetry, 2500);
+/* se all'apertura la rete era lenta, l'app parte dalla copia salvata e intanto scarica la versione nuova:
+   quando è arrivata lo dice, e un tocco la carica (prima si salva tutto) */
+function checkNewer(){ try { if (!('caches' in window) || document.getElementById('upd')) return; const mine = (document.querySelector('meta[name="b4f-build"]') || {}).content; if (!mine) return;
+  caches.keys().then(ks => Promise.all(ks.map(k => caches.open(k).then(c => c.match('index.html')).then(r => r ? r.text() : '')))).then(L => { const v = L.map(t => (t.match(/name="b4f-build" content="(\d+)"/) || [])[1] || '0').sort().pop(); if (v > mine) showUpd(); }).catch(() => {}); } catch(e) {} }
+function showUpd(){ const u = document.createElement('div'); u.id = 'upd'; u.className = 'updbar';
+  u.innerHTML = '<span><b>È pronta una nuova versione</b> dell\'app</span><button class="btn sm" id="upd-go">Aggiorna</button><button class="updx" id="upd-x" aria-label="Più tardi">×</button>';
+  document.body.appendChild(u); u.querySelector('#upd-go').onclick = () => { saveNow(); location.reload(); }; u.querySelector('#upd-x').onclick = () => u.remove(); }
+setTimeout(checkNewer, 5000); setTimeout(checkNewer, 15000); setTimeout(checkNewer, 40000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewer(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { const g = e.data && e.data.go; if (GO_OK.includes(g)) nav({screen:g}); });
 /* dettagli tecnici per capire un problema: versione, telefono, quanti dati (non quali), rallentamenti ed errori.
    Ogni riga si calcola da sola: se una non riesce, le altre si vedono lo stesso. */

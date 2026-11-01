@@ -1140,7 +1140,8 @@ try { const raw = localStorage.getItem(LS_KEY); if (raw) { S = Object.assign(fre
 let R = S.setup ? {screen:'home'} : {screen:'welcome'};
 try { if (!localStorage.getItem('b4f-first')) localStorage.setItem('b4f-first', new Date().toISOString()); localStorage.setItem('b4f-opens', String(+(localStorage.getItem('b4f-opens') || 0) + 1)); } catch(e) {}
 /* riaprendo l'app torni dove eri (entro 2 ore) */
-try { const L = JSON.parse(localStorage.getItem('b4f-last') || 'null'); if (S.setup && L && Date.now() - L.t < 72e5 && L.r && !['welcome', 'setup', 'add', 'import', 'breath'].includes(L.r.screen)) R = L.r; } catch(e) {}
+/* si riparte dalla Home; l'ultima schermata si riapre solo se l'app è stata ricaricata dal telefono pochi secondi fa (foto, scelta di un file) */
+try { const L = JSON.parse(localStorage.getItem('b4f-last') || 'null'); if (S.setup && L && Date.now() - L.t < 9e4 && L.r && !['welcome', 'setup', 'add', 'import', 'breath'].includes(L.r.screen)) R = L.r; } catch(e) {}
 const GO_OK = ['learn', 'gym', 'tx', 'home'];
 try { const g = new URLSearchParams(location.search).get('go'); if (S.setup && GO_OK.includes(g)) { R = {screen:g}; history.replaceState(history.state, '', location.pathname); } } catch(e) {}
 let viewYM = curYM();

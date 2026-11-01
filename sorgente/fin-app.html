@@ -89,6 +89,13 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .scale span:first-child{border-radius:99px 3px 3px 99px}
 .scale span:last-child{border-radius:3px 99px 99px 3px}
 .scale i{position:absolute;top:-5px;width:4px;height:20px;border-radius:3px;background:var(--fg);box-shadow:0 0 0 2px var(--bg);transform:translateX(-2px)}
+.scale i.fc{background:var(--bg);border:2px dashed var(--fg);width:12px;height:20px;transform:translateX(-6px);box-shadow:none}
+.status.fcst{background:transparent;border:2px dashed var(--good);color:var(--fg)}.status.fcst::before{background:var(--good);opacity:1}
+.hbar .fctrack{position:relative;overflow:hidden}.hbar .fctrack i{position:absolute;left:0;top:0;bottom:0}
+.fcf{background:repeating-linear-gradient(45deg,var(--c) 0 4px,transparent 4px 8px)!important;opacity:.75}
+i.lg{display:inline-block;width:12px;height:10px;border-radius:3px;background:var(--muted);vertical-align:middle;margin:0 2px}i.lgt{display:inline-block;width:3px;height:12px;background:var(--fg);vertical-align:middle;margin:0 2px}
+.payrow{display:grid;grid-template-columns:34px 1fr 76px;gap:8px;align-items:center}.paytrack{position:relative;height:14px;background:var(--soft2);border-radius:7px}
+.paytrack i{position:absolute;left:0;top:0;bottom:0;border-radius:7px}.paytrack b{position:absolute;top:-3px;bottom:-3px;width:3px;margin-left:-1.5px;background:var(--fg);border-radius:2px}
 .scale-lbl{position:relative;height:1.1em;font-size:.7rem;color:var(--muted)}
 .scale-lbl span{position:absolute;transform:translateX(-50%)}
 .scale-lbl span:first-child{transform:none}
@@ -1115,7 +1122,7 @@ function freshState(){
 let S = freshState();
 /* i dati letti (memoria del telefono, backup, file importati) passano da qui: dove l'app si aspetta codici, date o numeri non restano caratteri che possano diventare codice */
 const FREE = new Set(['n', 'name', 's', 'subs', 'note', 'src', 'ext', 'impMap', 'catDel', 'subDel']);
-const NUMK = new Set(['a', 'target', 'saved', 'day', 'found', 'rata', 'months', 'taeg', 'balloon', 'tan', 'res', 'every', 'count', 'len', 'after', 'emergMonths', 'liqMonths', 'liq', 'emerg', 'inv', 'down']);
+const NUMK = new Set(['a', 'target', 'saved', 'day', 'found', 'rata', 'months', 'taeg', 'balloon', 'tan', 'res', 'every', 'count', 'len', 'after', 'emergMonths', 'liqMonths', 'liq', 'emerg', 'inv', 'down', 'net', 'x13', 'mens', 'm14']);
 function clean(o, k, free){
   if (Array.isArray(o)) return o.map(x => clean(x, k, free));
   if (o && typeof o === 'object') { const r = {}; Object.keys(o).forEach(kk => { if (kk === '__proto__' || kk === 'constructor' || kk === 'prototype') return; const f = free || FREE.has(kk); if (!f && /[<>"'`&\;]/.test(kk)) return; r[kk] = clean(o[kk], kk, f); }); return r; }
@@ -1136,6 +1143,9 @@ function migrate(){
   if (!S.pilFrom) { const f = S.moves.filter(m => m.n === 'Saldo iniziale').map(m => m.d).sort()[0]; S.pilFrom = f || today(); }
   S.times = Object.assign(Object.fromEntries(WELL.map(w => [w.id, w.time])), S.times || {});
   S.tgt = S.tgt || {liq:null, emerg:null};
+  if (S.pay && !(+S.pay.net > 0)) S.pay = null;
+  if (S.pay) { const P = S.pay; P.net = +P.net; P.day = Math.min(31, Math.max(1, +P.day || 27)); P.mens = [12, 13, 14].includes(+P.mens) ? +P.mens : 12; P.m14 = +P.m14 === 6 ? 6 : 7; P.x13 = +P.x13 > 0 ? +P.x13 : 0;
+    if (!/^\d{4}-\d{2}$/.test(P.from || '')) P.from = curYM(); P.hist = (Array.isArray(P.hist) ? P.hist : []).filter(h => h && /^\d{4}-\d{2}$/.test(h.from || '') && +h.net > 0).map(h => ({from:h.from, net:+h.net})); if (!P.hist.length) P.hist = [{from:P.from, net:P.net}]; }
 }
 try { const raw = localStorage.getItem(LS_KEY); if (raw) { S = Object.assign(freshState(), clean(JSON.parse(raw))); migrate(); } } catch(e) {}
 let R = S.setup ? {screen:'home'} : {screen:'welcome'};
@@ -1237,6 +1247,137 @@ function prevMonthsWithData(n){ const m = []; for (let i = 1; i <= 6 && m.length
 function avgOut(){ const m = prevMonthsWithData(3); if (m.length) return m.reduce((t, ym) => t + stats(ym).out, 0) / m.length; return Math.max(stats(curYM()).out, (S.est || {}).out || 0); }
 function avgEssential(){ const m = prevMonthsWithData(3); if (m.length) return m.reduce((t, ym) => { const s = stats(ym); return t + s.out - s.disc; }, 0) / m.length; const s = stats(curYM()); return Math.max(s.out - s.disc, ((S.est || {}).out || 0) * .8); }
 /* media robusta: tutti i mesi disponibili (al massimo 24); da 6 mesi in su si tolgono il più alto e il più basso, così un mese eccezionale non sposta la media */
+/* ---------- il mio stipendio (o pensione) ----------
+   Solo per chi lo inserisce: per gli altri l'app resta com'è. Non è un movimento: finché non arriva è una previsione,
+   dichiarata come tale; quando arriva si conferma con un tocco e diventa un'entrata vera (la stima non si somma mai). */
+const payOn = () => !!(S.pay && S.pay.net > 0);
+const dayIt = d => ([1, 8, 11].includes(+d) ? 'l\'' : 'il ') + (+d);
+const payWord = (art) => S.pay && S.pay.kind === 'pens' ? (art ? 'la pensione' : 'pensione') : (art ? 'lo stipendio' : 'stipendio');
+function payDate(ym){ const [y, m] = ym.split('-').map(Number), last = new Date(y, m, 0).getDate(); return ym + '-' + pad(Math.min(Math.max(1, S.pay.day || 27), last)); }
+function payNet(ym){ const H = S.pay.hist || []; let n = H.length ? H[0].net : S.pay.net; H.forEach(h => { if (h.from <= ym) n = h.net; }); return n; }
+function payExp(ym){
+  if (!payOn() || ym < (S.pay.from || '0')) return [];
+  const P = S.pay, m = +ym.slice(5), net = payNet(ym), x = P.x13 > 0 ? P.x13 : net, d = payDate(ym), L = [{c:'stipendio', a:net, d, k:''}];
+  if (P.mens >= 13 && m === 12) L.push({c:'tredicesima', a:x, d, k:'13ª'});
+  if (P.mens >= 14 && m === (P.m14 || 7)) L.push({c:'tredicesima', a:x, d, k:'14ª'});
+  return L;
+}
+/* quanto è arrivato nel mese da stipendio e 13ª/14ª: real = solo i movimenti già avvenuti */
+function payGot(ym, real){ const L = monthTx(ym).filter(x => x.t === 'in' && (!real || !x.plan)), sum = c => L.filter(x => x.c === c).reduce((t, x) => t + x.a, 0); return {st:sum('stipendio'), tr:sum('tredicesima')}; }
+/* le voci ancora attese nel mese (solo dal mese in corso in avanti); se un ricorrente le prevede già, non si contano due volte */
+function payPending(ym){
+  if (!payOn() || ym < curYM()) return [];
+  const E = payExp(ym); if (!E.length) return [];
+  const g = payGot(ym), all = E.reduce((t, e) => t + e.a, 0);
+  return E.filter(e => e.c === 'stipendio' ? g.st <= 0 : !(g.tr > 0 || g.st >= all * 0.9)).map(e => ({t:'in', c:e.c, a:e.a, d:e.d, k:e.k, plan:true, pay:true}));
+}
+/* previsione del mese: i movimenti programmati più, per chi l'ha inserito, lo stipendio atteso. Senza stipendio è identica a stats(ym, true) */
+function fcStats(ym){
+  const s = stats(ym, true), P = payPending(ym); if (!P.length) return s;
+  const inc = s.inc + P.reduce((t, x) => t + x.a, 0), save = inc - s.out;
+  return Object.assign({}, s, {inc, save, rate:inc > 0 ? save / inc * 100 : null, n:s.n + P.length, payP:P});
+}
+function payDueLine(P){
+  const st = P.find(x => x.c === 'stipendio') || P[0], tot = P.reduce((t, x) => t + x.a, 0), dd = Math.round((new Date(st.d + 'T12:00:00') - new Date(today() + 'T12:00:00')) / 864e5);
+  const what = (st.c === 'stipendio' ? payWord().replace(/^./, c => c.toUpperCase()) : st.k) + (P.length > 1 ? ' e ' + P.filter(x => x !== st).map(x => x.k).join(' e ') : '');
+  return what + ' previst' + (S.pay.kind === 'pens' && st.c === 'stipendio' ? 'a' : 'o') + ' ' + dayIt(st.d.slice(8)) + ': ' + eur(tot) + (dd > 1 ? ' (tra ' + dd + ' giorni)' : dd === 1 ? ' (domani)' : dd === 0 ? ' (oggi)' : ' (non ancora registrat' + (S.pay.kind === 'pens' && st.c === 'stipendio' ? 'a' : 'o') + ')');
+}
+function mkPay(P, old){
+  const ym = curYM(), net = Math.round(P.net * 100) / 100, o = {kind:P.kind === 'pens' ? 'pens' : 'stip', net, day:Math.min(31, Math.max(1, +P.day || 27)), mens:[12, 13, 14].includes(+P.mens) ? +P.mens : 12, m14:+P.m14 === 6 ? 6 : 7, x13:P.x13 > 0 ? Math.round(P.x13 * 100) / 100 : 0};
+  if (old) { o.from = old.from; o.hist = (old.hist || []).filter(h => h.from < ym); if (old.snooze) o.snooze = old.snooze; }
+  else { o.from = ym; o.hist = []; }
+  if (!o.hist.length || o.hist[o.hist.length - 1].net !== net) o.hist.push({from:o.from > ym ? o.from : ym, net});
+  return o;
+}
+/* chi aveva lo stipendio come ricorrente: il ricorrente si chiude (i mesi passati restano com'erano) e da lì vale l'impostazione */
+function payRecs(){ return S.rec.filter(r => r.t === 'in' && r.c === 'stipendio' && (!r.to || r.to >= curYM()) && !(r.until && r.until < today())); }
+function payTakeOverRecs(){
+  const ym = curYM(); let from = ym;
+  payRecs().forEach(r => { const dThis = recDates(r, ym)[0], happened = dThis && dThis <= today();
+    if (happened) { r.to = ym; from = addMonths(ym, 1); } else if (r.from >= ym) S.rec = S.rec.filter(x => x !== r); else r.to = addMonths(ym, -1); });
+  return from;
+}
+function payFormHTML(P){
+  const ch = (a, v, cur, l) => '<button type="button" data-' + a + '="' + v + '" aria-pressed="' + (String(cur) === String(v)) + '">' + l + '</button>';
+  const fmt = v => v ? String(v).replace('.', ',') : '';
+  return '<div class="row" style="justify-content:space-between;align-items:center"><span>Tipo</span><div class="catview">' + ch('pk', 'stip', P.kind || 'stip', 'Stipendio') + ch('pk', 'pens', P.kind || 'stip', 'Pensione') + '</div></div>' +
+    '<div class="field"><label for="pf-net">Netto mensile</label><div class="eur"><input id="pf-net" inputmode="none" readonly data-pad placeholder="0" value="' + fmt(P.net) + '"></div><span class="small muted">Se cambia di mese in mese, basta un importo indicativo: resta una stima finché non arriva quello vero.</span></div>' +
+    '<div class="field"><label for="pf-day">Giorno di accredito</label><select id="pf-day">' + Array.from({length:31}, (_, i) => '<option value="' + (i + 1) + '"' + ((P.day || 27) === i + 1 ? ' selected' : '') + '>' + dayIt(i + 1) + ' di ogni mese</option>').join('') + '</select><span class="small muted">Nei mesi più corti vale l\'ultimo giorno del mese.</span></div>' +
+    '<div class="row" style="justify-content:space-between;align-items:center"><span>Mensilità</span><div class="catview">' + [12, 13, 14].map(n => ch('pm', n, P.mens || 12, n)).join('') + '</div></div>' +
+    '<div class="row" id="pf-14row" style="justify-content:space-between;align-items:center"' + ((P.mens || 12) < 14 ? ' hidden' : '') + '><span>La 14ª arriva a</span><div class="catview">' + ch('p14', 6, P.m14 || 7, 'Giugno') + ch('p14', 7, P.m14 || 7, 'Luglio') + '</div></div>' +
+    '<div class="field" id="pf-x13row"' + ((P.mens || 12) < 13 ? ' hidden' : '') + '><label for="pf-x13">Importo di 13ª' + ((P.mens || 12) > 13 ? ' e 14ª' : '') + ' (se diverso)</label><div class="eur"><input id="pf-x13" inputmode="none" readonly data-pad placeholder="come il netto mensile" value="' + fmt(P.x13) + '"></div><span class="small muted">La 13ª è prevista a dicembre.</span></div>';
+}
+function payFormBind(root, P){
+  root.querySelectorAll('[data-pk]').forEach(b => b.onclick = () => { P.kind = b.dataset.pk; root.querySelectorAll('[data-pk]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+  root.querySelectorAll('[data-pm]').forEach(b => b.onclick = () => { P.mens = +b.dataset.pm; root.querySelectorAll('[data-pm]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    root.querySelector('#pf-14row').hidden = P.mens < 14; root.querySelector('#pf-x13row').hidden = P.mens < 13; root.querySelector('label[for="pf-x13"]').textContent = 'Importo di 13ª' + (P.mens > 13 ? ' e 14ª' : '') + ' (se diverso)'; });
+  root.querySelectorAll('[data-p14]').forEach(b => b.onclick = () => { P.m14 = +b.dataset.p14; root.querySelectorAll('[data-p14]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+}
+function payFormRead(root, P){ P.net = parseAmt(root.querySelector('#pf-net').value); P.day = +root.querySelector('#pf-day').value || 27; P.x13 = P.mens >= 13 ? parseAmt(root.querySelector('#pf-x13').value) : 0; P.mens = P.mens || 12; P.m14 = P.m14 || 7; return P; }
+let PF = null;
+function renderPay(){
+  PF = S.pay ? {...S.pay} : (r => r ? {kind:'stip', net:r.a, day:r.day || 27, mens:12, m14:7} : {kind:'stip', mens:12, m14:7})(payRecs()[0]);
+  const recs = payRecs();
+  view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn('Impostazioni', {screen:'settings'}) + '<div class="intro"><h2>Il mio stipendio</h2><p class="muted">Serve a mostrare una previsione del mese prima che ' + (PF.kind === 'pens' ? 'la pensione arrivi' : 'lo stipendio arrivi') + ': in Home e nel riepilogo delle Statistiche. Non viene registrato come entrata: quando arriva, l\'app chiede conferma con un tocco.</p></div>' +
+    payFormHTML(PF) +
+    (recs.length ? '<div class="note">Hai già lo stipendio come movimento ricorrente (' + eur(recs[0].a) + ' ' + dayIt(recs[0].day || 1) + '). Salvando, il ricorrente si ferma e vale questa impostazione: i mesi passati restano come sono, nessun doppione. Da quel momento lo stipendio si conferma con un tocco quando arriva.</div>' : '') +
+    '<button class="btn wide" id="pf-save">Salva</button>' + (S.pay ? '<button class="textlink" id="pf-del" style="align-self:center">Togli lo stipendio: l\'app torna senza previsione</button>' : '') + '</div>';
+  payFormBind(view, PF);
+  view.querySelector('#pf-save').onclick = () => { payFormRead(view, PF); if (!(PF.net > 0)) return toast('Inserisci il netto mensile');
+    const had = !!S.pay; let from = null; if (payRecs().length) from = payTakeOverRecs();
+    S.pay = mkPay(PF, S.pay); if (from && !had) { S.pay.from = from; S.pay.hist = [{from, net:S.pay.net}]; }
+    PF = null; save(); toast(had ? 'Stipendio aggiornato' : 'Fatto: in Home trovi la previsione del mese'); nav({screen:'settings'}); };
+  const dl = view.querySelector('#pf-del'); if (dl) dl.onclick = () => { S.pay = null; PF = null; save(); toast('Stipendio tolto: le entrate già registrate restano'); nav({screen:'settings'}); };
+}
+/* il giorno dell'accredito (e i giorni dopo, finché non arriva): conferma con un tocco */
+function payAsk(){
+  if (!payOn() || S.demo || R.screen !== 'home' || S.pay.snooze === today() || document.querySelector('.psheet') || document.getElementById('lock')) return false;
+  const P = payPending(curYM()).filter(x => x.d <= today()); if (!P.length) return false;
+  const e = P[0], w = e.c === 'stipendio' ? payWord(true) : 'la ' + e.k, nome = e.c === 'stipendio' ? payWord() : e.k;
+  catPop('<b style="font-size:1.1rem">È arrivat' + (e.c === 'stipendio' && S.pay.kind !== 'pens' ? 'o ' : 'a ') + w + '?</b><p class="small muted" style="margin:0">' + (e.d === today() ? 'Oggi è ' + dayIt(e.d.slice(8)) : 'Era previst' + (e.c === 'stipendio' && S.pay.kind !== 'pens' ? 'o' : 'a') + ' ' + dayIt(e.d.slice(8))) + ': ' + nome + ' di ' + ymLabel(curYM(), {month:'long'}) + ', ' + eur(e.a) + '.</p>' +
+    '<button class="btn wide" id="py-ok">Sì, ' + eur(e.a) + '</button><button class="btn ghost wide" id="py-dif">Sì, con un importo diverso</button>' +
+    '<div class="field" id="py-row" hidden><label for="py-a">Importo arrivato</label><div class="eur"><input id="py-a" inputmode="decimal" placeholder="0"></div><button class="btn wide" id="py-ok2" style="margin-top:8px">Registra</button></div>' +
+    '<button class="textlink" id="py-no" style="align-self:center">Non ancora</button>', (o, close) => {
+    const add = a => { S.tx.push({id:uid(), t:'in', c:e.c, s:'', a, d:today(), n:e.k || ''}); close(); save(); toast('Registrato: ' + eur(a)); render();
+      if (e.c === 'stipendio' && Math.abs(a - S.pay.net) >= 1) setTimeout(() => catPop('<b style="font-size:1.1rem">Il netto è cambiato?</b><p class="small muted" style="margin:0">Questo mese sono arrivati ' + eur(a) + ' invece di ' + eur(S.pay.net) + '. Da ora la previsione può usare il nuovo importo.</p><button class="btn wide" id="py-new">Sì, da ora ' + eur(a) + '</button><button class="textlink" data-x style="align-self:center">No, è stato solo questo mese</button>', (o2, c2) => {
+        o2.querySelector('#py-new').onclick = () => { S.pay = mkPay(Object.assign({}, S.pay, {net:a}), S.pay); c2(); save(); toast('Previsione aggiornata'); render(); }; }, true), 400); };
+    o.querySelector('#py-ok').onclick = () => add(e.a);
+    o.querySelector('#py-dif').onclick = () => { o.querySelector('#py-row').hidden = false; o.querySelector('#py-a').focus(); };
+    o.querySelector('#py-ok2').onclick = () => { const a = parseAmt(o.querySelector('#py-a').value); if (!(a > 0)) return toast('Inserisci l\'importo'); add(a); };
+    o.querySelector('#py-no').onclick = () => { S.pay.snooze = today(); save(); close(); };
+  }, true);
+  return true;
+}
+/* una volta sola, per chi ha già lo stipendio come ricorrente */
+function payOffer(){
+  if (payOn() || S.demo || !S.setup || S.payAsk || R.screen !== 'home' || document.querySelector('.psheet') || document.getElementById('lock')) return;
+  const r = payRecs()[0]; if (!r) return;
+  S.payAsk = today(); save();
+  catPop('<b style="font-size:1.1rem">Novità: il tuo stipendio</b><p class="small muted" style="margin:0">Hai già lo stipendio come movimento ricorrente: <b style="color:var(--fg)">' + eur(r.a) + ' ' + dayIt(r.day) + '</b>. Indicandolo come stipendio, l\'app mostra la previsione del mese prima che arrivi e chiede conferma il giorno dell\'accredito. Il ricorrente diventa questo, senza doppioni.</p>' +
+    '<button class="btn wide" id="po-go">Completa i dati</button><button class="textlink" data-x style="align-self:center">Più tardi</button><span class="small muted" style="text-align:center">Lo ritrovi in Impostazioni → Il mio stipendio.</span>', (o, close) => {
+    o.querySelector('#po-go').onclick = () => { close(); PF = null; nav({screen:'pay'}); }; }, true);
+}
+/* barre del riepilogo con la previsione: pieno = reale a oggi, a righe = previsto a fine mese */
+function fcBarsHTML(rows, mx){
+  return '<div class="hbars">' + rows.map(r => '<div class="hbar" title="' + esc(r.n) + ': ' + eur2(r.v) + '">' + r.tile + '<span class="t"><span>' + esc(r.n) + '</span><span class="track fctrack"><i class="fcf" style="width:' + (Math.max(0, r.f) / mx * 100) + '%;--c:' + r.fc + '"></i><i style="width:' + (Math.max(0, r.v) / mx * 100) + '%;background:' + r.c + '"></i></span><span class="small muted">previsto a fine mese: ' + eur(r.f) + (r.fs || '') + '</span></span><span class="v">' + eur(r.v) + (r.sub ? '<small>' + r.sub + '</small>' : '') + '</span></div>').join('') + '</div>' +
+    '<p class="small muted fclegend" style="margin:0"><i class="lg"></i> reale a oggi <i class="lg fcf" style="--c:var(--muted)"></i> previsto a fine mese, con ' + payWord(true) + ' e i movimenti programmati</p>';
+}
+/* Analisi, anno: quanto era previsto e quanto è arrivato, mese per mese */
+function payYearHTML(y){
+  if (!payOn()) return '';
+  const ms = Array.from({length:12}, (_, i) => y + '-' + pad(i + 1));
+  const D = ms.map(ym => { const e = payExp(ym).reduce((t, x) => t + x.a, 0), g = ym <= curYM() ? payGot(ym, true) : {st:0, tr:0}; return {ym, e, r:g.st + g.tr}; });
+  if (!D.some(d => d.e > 0 || d.r > 0)) return '';
+  const D2 = D.filter(d => d.e > 0 || d.r > 0); D.length = 0; D.push(...D2);
+  const mx = Math.max(1, ...D.map(d => Math.max(d.e, d.r))), done = D.filter(d => d.e > 0 && (d.ym < curYM() || (d.ym === curYM() && d.r > 0)));
+  const E = done.reduce((t, d) => t + d.e, 0), Rr = done.reduce((t, d) => t + d.r, 0), df = Rr - E;
+  const H = S.pay.hist || [], h0 = H[0], h1 = H[H.length - 1];
+  const sum = done.length ? 'Da ' + ymLabel(done[0].ym, {month:'long'}) + ' a ' + ymLabel(done[done.length - 1].ym, {month:'long'}) + ': arrivati <b>' + eur(Rr) + '</b> su <b>' + eur(E) + '</b> previsti' + (Math.abs(df) >= 1 ? ', <b style="color:' + (df > 0 ? 'var(--good)' : 'var(--critical)') + '">' + (df > 0 ? '+' : '−') + eur(Math.abs(df)) + ' (' + (df > 0 ? '+' : '−') + (Math.abs(df) / E * 100).toLocaleString('it-IT', {maximumFractionDigits:1}) + '%)</b>' : ', in linea con la previsione') + '.' : 'Il confronto si completa mese per mese, man mano che ' + payWord(true) + ' arriva.';
+  const chg = h0 && h1 && h1.net !== h0.net ? ' Da ' + ymLabel(h1.from, {month:'long', year:'numeric'}) + ' il netto mensile è passato da ' + eur(h0.net) + ' a ' + eur(h1.net) + ' (' + (h1.net > h0.net ? '+' : '−') + (Math.abs(h1.net - h0.net) / h0.net * 100).toLocaleString('it-IT', {maximumFractionDigits:1}) + '%).' : '';
+  return '<div class="card" style="gap:10px"><span class="label">' + (S.pay.kind === 'pens' ? 'Pensione' : 'Stipendio') + ': previsto e arrivato</span><div class="row small" style="gap:14px"><span><i class="lg" style="background:' + IN_COL + '"></i> arrivato</span><span><i class="lgt"></i> previsto</span></div>' +
+    D.map(d => '<div class="payrow"><span class="small muted">' + ymLabel(d.ym, {month:'short'}) + '</span><div class="paytrack"><i style="width:' + (d.r / mx * 100) + '%;background:' + IN_COL + '"></i>' + (d.e > 0 ? '<b style="left:' + (d.e / mx * 100) + '%"></b>' : '') + '</div><span class="small" style="text-align:right">' + (d.r > 0 ? eur(d.r) : d.ym >= curYM() && d.e > 0 ? '<span class="muted">attesa</span>' : '<span class="muted">–</span>') + '</span></div>').join('') +
+    '<p class="small" style="margin:4px 0 0">' + sum + chg + '</p></div>';
+}
 function robustAvg(vals){ if (!vals.length) return 0; const v = vals.slice(); if (v.length >= 6) { v.sort((a, b) => a - b); v.shift(); v.pop(); } return v.reduce((t, x) => t + x, 0) / v.length; }
 function saveMonths(){ const ms = []; for (let i = 1; i <= 24; i++) { const ym = addMonths(curYM(), -i); if (monthTx(ym).length) ms.push(stats(ym).save); } return ms; }
 const avgSave = () => { const ms = saveMonths(); return ms.length ? robustAvg(ms) : stats(curYM(), true).save; };
@@ -1391,7 +1532,7 @@ function render(){
   document.getElementById('topbar').hidden = R.screen === 'welcome' || R.screen === 'add';
   document.getElementById('gear').hidden = true; document.getElementById('help').hidden = true;
   ({welcome:renderWelcome, setup:renderSetup, home:renderHome, tx:renderTx, charts:renderStats, stats:renderStats, add:renderAdd, pillars:renderPillars, pillar:renderPillar, goal:renderGoal,
-    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, import:renderImport, cats:renderCats, an:renderAn, notif:renderNotif, legend:renderLegend, howto:renderHowto, sim:renderSim, dues:renderDues, rec:renderRec, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
+    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, pay:renderPay, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, import:renderImport, cats:renderCats, an:renderAn, notif:renderNotif, legend:renderLegend, howto:renderHowto, sim:renderSim, dues:renderDues, rec:renderRec, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
   postRender(); bindCarousels();
 }
 function demoBar(){ return S.demo ? '<div class="demo"><span>Stai guardando dati di esempio.</span><button id="demo-end">Inizia con i tuoi dati</button></div>' : ''; }
@@ -1453,7 +1594,7 @@ function renderWelcome(){
   view.querySelector('#demo').onclick = gate(() => { loadDemo(); acceptTerms(); nav({screen:'home'}); });
 }
 let SU = {};
-const SETUP_STEPS = 3;
+const SETUP_STEPS = 4;
 /* guida: un giro a schede con le immagini vere dell'app. Si resta nella guida finché non la chiudi:
    avanti e indietro (anche col dito o col tasto indietro del telefono), più un indice per saltare a un argomento. */
 const GUIDE = [
@@ -1550,16 +1691,21 @@ function renderSetup(){
       '<div class="note">Non viene registrata come uscita. Entrate e spese le inserisci tu, quando arrivano, con il tasto +. Dopo il primo mese l\'app usa le tue spese reali.</div>';
     next = () => { SU.est = parseAmt(val('su-est')); return true; };
   } else if (i === 2) {
+    SU.pay = SU.pay || {kind:'stip', mens:12, m14:7};
+    body = '<div class="intro"><h2>Il tuo stipendio</h2><p class="muted">Serve a mostrare una previsione del mese prima che arrivi. Non viene registrato come entrata: quando arriva, l\'app chiede conferma con un tocco. Se preferisci, salta: lo inserisci quando vuoi da Impostazioni.</p></div>' + payFormHTML(SU.pay);
+    next = () => { payFormRead(view, SU.pay); return true; };
+  } else if (i === 3) {
     const pl = id => { const p = PILLARS.find(x => x.id === id); return '<i class="dot" style="background:' + p.c + '"></i>' + p.n; };
     body = '<div class="intro"><h2>Da dove parti</h2><p class="muted">I tuoi soldi stanno in 4 contenitori, i pilastri. Scrivi quanto hai oggi in ognuno: una stima basta.</p></div>' +
       money('su-liq', pl('liq'), SU.liq, 'Quanto hai sul conto corrente per le spese di tutti i giorni.') + money('su-em', pl('emerg'), SU.em, 'Quanto hai già messo da parte solo per gli imprevisti.') +
       (!['emergenza', 'patrimonio'].includes(SU.kind) && !SU.noGoal ? money('su-gs', pl('goal'), SU.gs, 'Quanto hai già messo da parte per il tuo obiettivo: ' + esc(SU.gname || '') + '.') : '') + money('su-inv', pl('inv'), SU.inv, 'Fondo pensione, ETF, altri investimenti a lungo termine.');
     next = () => { SU.liq = parseAmt(val('su-liq')); SU.em = parseAmt(val('su-em')); SU.gs = parseAmt(val('su-gs')); SU.inv = parseAmt(val('su-inv')); finishSetup(); return false; };
   } else return nav({screen:'setup', i:SETUP_STEPS - 1}); /* i promemoria si scelgono dalle Impostazioni */
-  view.innerHTML = '<div class="sec" style="gap:22px">' + top + body + '<button class="btn wide" id="next">' + (i === SETUP_STEPS - 1 ? 'Inizia' : 'Avanti') + '</button>' + (i === 1 || i === 2 ? '<button class="textlink" style="align-self:center" id="skip">Salta</button>' : '') + (i === 0 ? '<button class="textlink" style="align-self:center" id="nogoal">Non ho ancora un obiettivo: lo scelgo dopo</button>' : '') + '</div>';
+  view.innerHTML = '<div class="sec" style="gap:22px">' + top + body + '<button class="btn wide" id="next">' + (i === SETUP_STEPS - 1 ? 'Inizia' : 'Avanti') + '</button>' + (i >= 1 ? '<button class="textlink" style="align-self:center" id="skip">Salta</button>' : '') + (i === 0 ? '<button class="textlink" style="align-self:center" id="nogoal">Non ho ancora un obiettivo: lo scelgo dopo</button>' : '') + '</div>';
   view.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { SU.gname = val('su-gn'); SU.gt = val('su-gt'); SU.date = val('su-gd'); SU.kind = b.dataset.k; renderSetup(); });
   view.querySelector('#next').onclick = () => { if (i === 0) SU.noGoal = false; if (next()) nav({screen:'setup', i:i + 1}); };
-  const sk = view.querySelector('#skip'); if (sk) sk.onclick = () => i === SETUP_STEPS - 1 ? finishSetup() : nav({screen:'setup', i:i + 1});
+  if (i === 2) payFormBind(view, SU.pay);
+  const sk = view.querySelector('#skip'); if (sk) sk.onclick = () => (i === 2 && (SU.pay = null), 0) || i === SETUP_STEPS - 1 ? finishSetup() : nav({screen:'setup', i:i + 1});
   const ng = view.querySelector('#nogoal'); if (ng) ng.onclick = () => { SU.noGoal = true; nav({screen:'setup', i:1}); };
 }
 const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
@@ -1570,6 +1716,7 @@ function finishSetup(){
   const g = SU.noGoal ? null : {id:uid(), kind:SU.kind, name:SU.gname, target:SU.gt || 0, date:SU.date, saved:['emergenza', 'patrimonio'].includes(SU.kind) ? 0 : (SU.gs || 0)};
   S.goals = g ? [g] : []; S.mainGoal = g ? g.id : null;
   addMove('liq', S.pil.liq, 'Saldo iniziale'); addMove('emerg', S.pil.emerg, 'Saldo iniziale'); addMove('inv', S.pil.inv, 'Saldo iniziale'); if (g && g.saved) addMove('g:' + g.id, g.saved, 'Saldo iniziale');
+  if (SU.pay && SU.pay.net > 0) S.pay = mkPay(SU.pay);
   S.setup = true; S.gym.start = today();
   save(); toast('Fatto. Registra entrate e spese con il tasto +'); nav({screen:'home'});
 }
@@ -1615,15 +1762,19 @@ function loadDemo(){
 /* ---------- home ---------- */
 function rateHero(s){
   const b = band(s.rate), pos = s.rate === null ? 0 : Math.max(0, Math.min(100, s.rate));
+  /* con lo stipendio inserito: accanto al dato reale, la previsione (etichetta tratteggiata e tacca sulla barra) */
+  const f = payOn() && viewYM === curYM() ? fcStats(curYM()) : null, fc = f && f.payP && f.rate !== null ? f : null, fpos = fc ? Math.max(0, Math.min(100, fc.rate)) : 0;
   return '<div class="hero"><span class="label">' + (viewYM === curYM() ? 'Questo mese risparmi' : viewYM > curYM() ? 'Previsto per ' + ymLabel(viewYM, {month:'long'}) : 'Risparmio di ' + ymLabel(viewYM, {month:'long'})) + '</span>' +
-    '<div class="rate"><span class="big num">' + (s.rate === null ? '–' : Math.round(s.rate) + '%') + '</span><span class="status" style="background:' + b.c + '">' + b.l + '</span></div>' +
+    '<div class="rate"><span class="big num">' + (s.rate === null ? '–' : Math.round(s.rate) + '%') + '</span><span class="status" style="background:' + b.c + '">' + b.l + (fc ? ' oggi' : '') + '</span>' + (fc ? '<span class="status fcst">previsto ' + Math.round(fc.rate) + '%</span>' : '') + '</div>' +
     '<p class="num" style="font-size:1.05rem"><b>' + eur(s.save) + '</b> <span class="muted">' + (s.save >= 0 ? 'rimasti' : 'oltre le entrate') + ' su ' + eur(s.inc) + ' di entrate</span></p>' +
-    '<div class="sec" style="gap:5px"><div class="scale" role="img" aria-label="Scala: rosso fino a 10%, arancio fino a 25%, giallo fino a 39%, verde da 40%"><span style="background:var(--critical)"></span><span style="background:var(--serious)"></span><span style="background:var(--warn)"></span><span style="background:var(--good)"></span>' + (s.rate === null ? '' : '<i style="left:' + pos + '%"></i>') + '</div>' +
+    '<div class="sec" style="gap:5px"><div class="scale" role="img" aria-label="Scala: rosso fino a 10%, arancio fino a 25%, giallo fino a 39%, verde da 40%"><span style="background:var(--critical)"></span><span style="background:var(--serious)"></span><span style="background:var(--warn)"></span><span style="background:var(--good)"></span>' + (s.rate === null ? '' : '<i style="left:' + pos + '%"></i>') + (fc ? '<i class="fc" style="left:' + fpos + '%" title="Previsione di fine mese"></i>' : '') + '</div>' +
     '<div class="scale-lbl"><span style="left:0">0</span><span style="left:10%">10</span><span style="left:25%">25</span><span style="left:40%">40</span><span style="left:100%">100%</span></div></div>' +
     '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur(s.inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur(s.out) + '</b></div></div>' + planLine(s) + '</div>';
 }
 /* previsione di fine mese: i numeri sopra sono reali a oggi, qui si aggiungono i movimenti programmati */
-function planLine(s){ if (viewYM !== curYM()) return ''; const f = stats(curYM(), true), k = f.n - s.n; if (k < 1) return '';
+function planLine(s){ if (viewYM !== curYM()) return ''; const f = fcStats(curYM()), k = f.n - s.n; if (k < 1) return '';
+  if (f.payP) { const o = k - f.payP.length, cl = f.rate === null ? 'a ' + eur(f.save) : 'al <b style="color:var(--fg)">' + Math.round(f.rate) + '%</b> (' + eur(f.save) + ')';
+    return '<p class="small muted" style="margin:0"><b style="color:var(--fg)">' + payDueLine(f.payP) + '</b>.<br>Con ' + payWord(true) + (o > 0 ? ' e ' + (o === 1 ? 'un altro movimento programmato' : 'gli altri ' + o + ' movimenti programmati') : '') + ', il mese chiuderebbe ' + cl + '. È una previsione: i numeri sopra sono quelli reali a oggi.</p>'; }
   return '<p class="small muted" style="margin:0">Con ' + k + (k === 1 ? ' movimento programmato' : ' movimenti programmati') + ' fino a fine mese, il mese chiuderebbe ' + (f.rate === null ? 'a ' + eur(f.save) : 'al <b style="color:var(--fg)">' + Math.round(f.rate) + '%</b> (' + eur(f.save) + ')') + '.</p>'; }
 function oldSetupRecs(){ return S.rec.filter(r => /\(stima\)$/.test(r.n) || r.n === 'Affitto o mutuo' || (r.n === '' && ['stipendio','affitto_in'].includes(r.c))); }
 /* promemoria backup: una volta al mese, rimandabile */
@@ -1696,7 +1847,7 @@ function reviewTop(){ const pm = addMonths(curYM(), -1); if (viewYM !== curYM() 
   return '<div class="sec" style="gap:6px"><button class="readcard" ' + nav$({screen:'review'}) + '><span class="t"><b>' + ic('calendar') + ' Revisione mensile di ' + ymLabel(pm, {month:'long'}) + '</b><span>Il mese è chiuso: 15 minuti per tenere la rotta</span></span>' + ic('right') + '</button><button class="textlink small" id="rv-later" style="align-self:flex-end">Più tardi</button></div>'; }
 function renderHome(){
   if (!S.setup) return nav({screen:'welcome'});
-  const s = stats(viewYM, viewYM > curYM()), mv = nextMove(), ins = insights(viewYM);
+  const s = viewYM > curYM() ? fcStats(viewYM) : stats(viewYM), mv = nextMove(), ins = insights(viewYM);
   const sp = viewYM === curYM() ? splitPlan() : [];
   const nCat = Object.keys(s.byCat).length;
   view.innerHTML = '<div class="sec" style="gap:24px">' + demoBar() + monthNav() + reviewTop() + rateHero(s) + oldRecNotice() + backupNotice() +
@@ -1708,6 +1859,7 @@ function renderHome(){
     '<div class="sec"><span class="label">Oggi</span>' + todayList() + '</div>' +
   '</div>';
   bindMonth(); bindDemo(); bindOldRec(); bindBackupNotice();
+  if (viewYM === curYM()) setTimeout(() => { if (R.screen === 'home' && !payAsk()) payOffer(); }, 900);
   const rl = document.getElementById('rv-later'); if (rl) rl.onclick = () => { S.reviewLater = addMonths(curYM(), -1); save(); renderHome(); };
   view.querySelectorAll('.catscroll .hbar, [data-allout]').forEach(b => { b.removeAttribute('data-nav'); b.onclick = () => { txFilter = 'out'; nav({screen:'tx'}); }; });
   guidePopup(); supportPopup();
@@ -1762,7 +1914,7 @@ function renderAn(){
   const crumbs = '<div class="ancrumbs"><button data-crumb="0"' + (cat ? '' : ' aria-current="true"') + '>' + (AN.t === 'in' ? 'Entrate' : 'Uscite') + '</button>' + (cat ? '<span>›</span><button data-crumb="1"' + (AN.s === null ? ' aria-current="true"' : '') + '>' + esc(cat.n) + '</button>' : '') + (cat && AN.s !== null ? '<span>›</span><button aria-current="true">' + esc(AN.s || 'Senza sottocategoria') + '</button>' : '') + '</div>';
   view.innerHTML = '<div class="sec" style="gap:18px">' + demoBar() + '<div class="intro"><h2>Statistiche</h2></div>' + statViews('an') + stPeriodHTML() +
     '<div class="io3"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur(inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur(out) + '</b></div><div><span class="label">Risparmio</span><b style="color:' + (sv >= 0 ? 'var(--fg)' : '#E5484D') + '">' + (sv < 0 ? '−' : '') + eur(Math.abs(sv)) + '</b></div></div>' +
-    '<div class="seg3" style="grid-template-columns:1fr 1fr">' + [['out', 'Uscite'], ['in', 'Entrate']].map(f => '<button data-t="' + f[0] + '" data-ant="' + f[0] + '" aria-pressed="' + (AN.t === f[0]) + '">' + f[1] + '</button>').join('') + '</div>' +
+    (ST.mode === 'y' ? payYearHTML(ST.y) : '') + '<div class="seg3" style="grid-template-columns:1fr 1fr">' + [['out', 'Uscite'], ['in', 'Entrate']].map(f => '<button data-t="' + f[0] + '" data-ant="' + f[0] + '" aria-pressed="' + (AN.t === f[0]) + '">' + f[1] + '</button>').join('') + '</div>' +
     crumbs +
     '<div class="card"><div class="spread"><span class="label">' + esc(title) + '</span><b class="num" style="color:' + col + '">' + eur2(tot) + '</b></div>' + (nm > 1 ? '<span class="small muted">' + movN(inSub.length) + ' in ' + nm + ' mesi · media ' + eur(tot / nm) + ' al mese</span>' : '<span class="small muted">' + movN(inSub.length) + '</span>') +
       (cat && AN.s === null ? '' : !cat ? '<span class="small muted">Tocca una categoria per vedere le sottocategorie.</span>' : '') + body +
@@ -2434,10 +2586,13 @@ function renderStats(){
   const prevLabel = ST.mode === 'm' ? ymLabel(prevM[0], {month:'long'}) : ST.mode === 'y' ? 'gli stessi mesi del ' + (ST.y - 1) : 'i ' + months.length + ' mesi prima';
   const outRows = Object.entries(byCat).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('out', c); return {id:c, disc:!!k.disc, n:k.n, v:a, c:catColor('out', k), tile:catTile('out', k), go:ST.mode === 'm' ? {screen:'tx', cat:c} : null}; });
   const inRows = Object.entries(byIn).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('in', c); return {id:c, n:k.n, v:a, c:catColor('in', k), tile:catTile('in', k), go:ST.mode === 'm' ? {screen:'tx', cat:c, ct:'in'} : null}; });
+  const fcR = payOn() && ST.mode === 'm' && months[0] === curYM() ? (f => f.payP ? f : null)(fcStats(curYM())) : null;
   view.innerHTML = '<div class="sec" style="gap:20px">' + demoBar() + '<div class="intro"><h2>Statistiche</h2></div>' +
     statViews('stats') + stPeriodHTML() +
-    '<div class="card"><div class="spread"><span class="label">Riepilogo · ' + label + '</span><span class="status" style="background:' + b.c + '">' + (rate === null ? 'Nessuna entrata' : Math.round(rate) + '% · ' + b.l) + '</span></div>' +
-      '<div class="carousel"><div class="slide">' + hbarsHTML([{n:'Entrate totali', v:inc, c:IN_COL, tile:'<span class="ic" style="background:' + IN_COL + '">' + ic('plus') + '</span>'}, {n:'Uscite totali', v:out, c:OUT_COL, tile:'<span class="ic" style="background:' + OUT_COL + '">' + ic('cart') + '</span>'}, {n:'Risparmio', v:sv, c:b.c, tile:'<span class="ic" style="background:' + b.c + '">' + ic('coins') + '</span>', sub:rate === null ? '–' : Math.round(rate) + '%'}]) + '</div><div class="slide">' + (inc > 0 || out > 0 ? donutHTML(sv >= 0 ? [{n:'Uscite', v:out, c:OUT_COL}, {n:'Risparmio', v:sv, c:b.c}] : [{n:'Entrate', v:inc, c:IN_COL}, {n:'Uscite oltre le entrate', v:-sv, c:'#E5484D'}], sv >= 0 ? inc : inc - sv) : '<p class="small muted">Nessun movimento nel periodo.</p>') + '</div></div><div class="dots"><i class="on"></i><i></i></div></div>' +
+    '<div class="card"><div class="spread"><span class="label">Riepilogo · ' + label + '</span>' + (fcR ? '' : '<span class="status" style="background:' + b.c + '">' + (rate === null ? 'Nessuna entrata' : Math.round(rate) + '% · ' + b.l) + '</span>') + '</div>' +
+      (fcR ? '<div class="row" style="justify-content:space-between;gap:8px"><span class="status" style="background:' + b.c + '">' + (rate === null ? 'Nessuna entrata' : Math.round(rate) + '% · ' + b.l + ' oggi') + '</span>' + (fcR.rate !== null ? '<span class="status fcst">previsto ' + Math.round(fcR.rate) + '%</span>' : '') + '</div>' : '') +
+      '<div class="carousel"><div class="slide">' + (fcR ? fcBarsHTML([{n:'Entrate totali', v:inc, f:fcR.inc, c:IN_COL, fc:IN_COL, tile:'<span class="ic" style="background:' + IN_COL + '">' + ic('plus') + '</span>', fs:' (con ' + payWord(true) + ' ' + dayIt(S.pay.day).replace(/^il /, 'del ').replace(/^l'/, 'dell\'') + ')'}, {n:'Uscite totali', v:out, f:fcR.out, c:OUT_COL, fc:OUT_COL, tile:'<span class="ic" style="background:' + OUT_COL + '">' + ic('cart') + '</span>'}, {n:'Risparmio', v:sv, f:fcR.save, c:b.c, fc:band(fcR.rate).c, tile:'<span class="ic" style="background:' + b.c + '">' + ic('coins') + '</span>', sub:rate === null ? '–' : Math.round(rate) + '%', fs:fcR.rate === null ? '' : ' · ' + Math.round(fcR.rate) + '%'}], Math.max(1, fcR.inc, fcR.out, inc, out)) : hbarsHTML([{n:'Entrate totali', v:inc, c:IN_COL, tile:'<span class="ic" style="background:' + IN_COL + '">' + ic('plus') + '</span>'}, {n:'Uscite totali', v:out, c:OUT_COL, tile:'<span class="ic" style="background:' + OUT_COL + '">' + ic('cart') + '</span>'}, {n:'Risparmio', v:sv, c:b.c, tile:'<span class="ic" style="background:' + b.c + '">' + ic('coins') + '</span>', sub:rate === null ? '–' : Math.round(rate) + '%'}])) + '</div><div class="slide">' + (inc > 0 || out > 0 ? donutHTML(sv >= 0 ? [{n:'Uscite', v:out, c:OUT_COL}, {n:'Risparmio', v:sv, c:b.c}] : [{n:'Entrate', v:inc, c:IN_COL}, {n:'Uscite oltre le entrate', v:-sv, c:'#E5484D'}], sv >= 0 ? inc : inc - sv) : '<p class="small muted">Nessun movimento nel periodo.</p>') + '</div></div><div class="dots"><i class="on"></i><i></i></div>' +
+      (!payOn() && !S.demo && !S.payInv && ST.mode === 'm' && months[0] === curYM() ? '<p class="small muted" style="margin:0" id="pay-inv"><button class="textlink small" ' + nav$({screen:'pay'}) + '>Aggiungi il tuo stipendio</button> per vedere la previsione del mese · <button class="textlink small" id="pay-inv-x">non mi interessa</button></p>' : '') + '</div>' +
     '<div class="card"><div class="spread"><span class="label">Patrimonio nei 4 pilastri</span><b class="num" style="font-family:var(--display);font-size:1.3rem">' + eur(totP) + '</b></div>' +
       '<div class="carousel"><div class="slide">' + hbarsHTML(pil.map(x => ({n:x.p.n, v:x.v, c:x.p.c, tile:'<span class="ic" style="background:' + x.p.c + '">' + ic(x.p.i) + '</span>', sub:(x.v - x.v0 >= 0 ? '+' : '−') + eur(Math.abs(x.v - x.v0)), go:{screen:'pillar', id:x.p.id}}))) + '</div><div class="slide">' + (totP > 0 ? donutHTML(pil.filter(x => x.v > 0).map(x => ({n:x.p.short || x.p.n, v:x.v, c:x.p.c})), pil.reduce((t, x) => t + Math.max(0, x.v), 0)) : '<p class="small muted">Ancora nessun saldo nei pilastri.</p>') + '</div></div><div class="dots"><i class="on"></i><i></i></div>' +
       (d => { const endD = ym => { const [y, m] = ym.split('-').map(Number); return new Date(y, m, 0).toLocaleDateString('it-IT', {day:'numeric', month:'long', year:'numeric'}); },
@@ -2450,6 +2605,7 @@ function renderStats(){
     (!S.reviews[addMonths(curYM(), -1)] ? '<button class="readcard" ' + nav$({screen:'review'}) + '><span class="t"><b>' + ic('calendar') + ' Revisione mensile di ' + ymLabel(addMonths(curYM(), -1), {month:'long'}) + '</b><span>15 minuti per tenere la rotta</span></span>' + ic('right') + '</button>' : '') +
   '</div>';
   bindDemo();
+  const px = view.querySelector('#pay-inv-x'); if (px) px.onclick = () => { S.payInv = today(); save(); view.querySelector('#pay-inv').remove(); };
   bindStPeriod(); const pi = view.querySelector('#pat-i'); if (pi) pi.onclick = () => { const d = view.querySelector('#pat-d'), on = d.hidden; d.hidden = !on; pi.classList.toggle('on', on); pi.setAttribute('aria-expanded', on); };
     bindCarousels();
 }
@@ -2636,8 +2792,8 @@ function coachMsgs(){
   const ess = avgEssential(); if (ess > 0) { const mo = pilBalance('emerg') / ess; if (mo < 3) out.push({i:'shield', c:'#d95926', t:'Il fondo di emergenza copre ' + mo.toFixed(1).replace('.', ',') + ' mesi di spese essenziali. L\'indicazione più diffusa è di avere da 3 a 6 mesi.', b:'Fondo di emergenza ÷ spese essenziali medie (' + eur(Math.round(ess)) + ' al mese)'}); }
   const prev = stats(addMonths(curYM(), -1));
   if (s.rate !== null && prev.rate !== null && Math.abs(s.rate - prev.rate) >= 5) out.push({i:'chart', c:s.rate > prev.rate ? '#22A45D' : '#d95926', t:'Il tasso di risparmio è ' + Math.round(s.rate) + '%, ' + (s.rate > prev.rate ? 'in crescita' : 'in calo') + ' di ' + Math.round(Math.abs(s.rate - prev.rate)) + ' punti rispetto al mese scorso.', b:'Entrate e uscite registrate'});
-  const fc = stats(curYM(), true); if (fc.n > s.n && fc.save < 0) out.push({i:'calendar', c:'#d95926', t:'Con i movimenti programmati fino a fine mese, le uscite supererebbero le entrate di ' + eur(-fc.save) + '.', b:'Movimenti registrati più ricorrenti e programmati del mese'});
-  const nx = stats(addMonths(curYM(), 1), true); if (nx.inc > 0) out.push({i:'repeat', c:'#3987e5', t:'Per ' + ymLabel(addMonths(curYM(), 1), {month:'long'}) + ' sono già previsti ' + eur(nx.inc) + ' di entrate e ' + eur(nx.out) + ' di uscite tra ricorrenti e programmati: restano ' + eur(nx.save) + ' per tutto il resto.', b:'Ricorrenti e movimenti programmati'});
+  const fc = fcStats(curYM()); if (fc.n > s.n && fc.save < 0) out.push({i:'calendar', c:'#d95926', t:'Con i movimenti programmati fino a fine mese, le uscite supererebbero le entrate di ' + eur(-fc.save) + '.', b:'Movimenti registrati più ricorrenti e programmati del mese'});
+  const nx = fcStats(addMonths(curYM(), 1)); if (nx.inc > 0) out.push({i:'repeat', c:'#3987e5', t:'Per ' + ymLabel(addMonths(curYM(), 1), {month:'long'}) + ' sono già previsti ' + eur(nx.inc) + ' di entrate e ' + eur(nx.out) + ' di uscite tra ricorrenti e programmati: restano ' + eur(nx.save) + ' per tutto il resto.', b:'Ricorrenti e movimenti programmati'});
   upcomingDues().slice(0, 1).forEach(d => out.unshift({i:'calendar', c:'#e3a008', t:(dueDays(d) < 0 ? esc(d.n) + ' è scaduto' : 'Tra ' + dueDays(d) + ' giorni scade ' + esc(d.n)) + ' (' + eur2(d.a) + ' ' + FREQ[d.freq][0] + ').', b:'Il tuo calendario delle scadenze', go:{screen:'dues', open:d.id}}));
   const last = S.tx.map(x => x.d).filter(d => d <= today()).sort().pop();
   if (last && daysBetween(last, today()) >= 3) out.push({i:'list', c:'#3987e5', t:'Nessun movimento registrato da ' + daysBetween(last, today()) + ' giorni: se nel frattempo hai speso qualcosa, puoi aggiungerlo ora.', b:'Data dell\'ultimo movimento'});
@@ -4402,6 +4558,7 @@ function diagPop(){ let t; try { t = diagText(); } catch(e) { t = 'Dettagli non 
     o.querySelector('#dg-copy').onclick = async () => { try { await navigator.clipboard.writeText(t); toast('Dettagli copiati'); } catch(e) { toast('Non riesco a copiare: fai uno screenshot'); } }; }); }
 function renderSettings(){
   view.innerHTML = '<div class="sec" style="gap:22px">' + backBtn('Home', {screen:'home'}) + '<div class="intro"><h2>Impostazioni</h2></div>' +
+    '<div class="sec"><span class="label">Entrate</span><div class="list"><button class="item" ' + nav$({screen:'pay'}) + '><span class="ic">' + ic('briefcase') + '</span><span class="t"><b>Il mio stipendio</b><span class="sub">' + (payOn() ? eur(S.pay.net) + ' netti ' + dayIt(S.pay.day) + ' · ' + S.pay.mens + ' mensilità' : 'Per vedere la previsione del mese prima che arrivi') + '</span></span>' + ic('right') + '</button></div></div>' +
     '<div class="sec"><span class="label">Promemoria</span><div class="list"><button class="item" ' + nav$({screen:'notif'}) + '><span class="ic">' + ic('calendar') + '</span><span class="t"><b>Notifiche e promemoria</b><span class="sub">' + WELL.length + ' promemoria: soldi e benessere, con orari e calendario</span></span>' + ic('right') + '</button></div></div>' +
     '<div class="sec"><span class="label">Visualizzazione</span><div class="row" style="justify-content:space-between;align-items:center"><span>Tema</span><div class="catview" id="s-theme">' + [['dark', 'Scuro'], ['light', 'Chiaro'], ['auto', 'Automatico']].map(t => '<button data-th="' + t[0] + '" aria-pressed="' + (themePref() === t[0]) + '">' + t[1] + '</button>').join('') + '</div></div><label class="check"><input type="checkbox" id="s-tips"' + (S.showTips ? ' checked' : '') + '> Mostra sempre le spiegazioni sotto i titoli</label><label class="check"><input type="checkbox" id="s-hide"' + (S.hide ? ' checked' : '') + '> Nascondi gli importi (lo stesso dell\'occhio in alto)</label></div>' +
     '<div class="sec"><span class="label">Condividi con gli amici</span><p class="small muted">Per invitare un amico, condividi l\'app dal menu Condividi di questa pagina, poi mandagli il link. Ognuno vede solo i propri dati.</p><div class="row"><input id="s-link" readonly value="https://claude.ai/artifact/SKGYXcdzEhsYz7Btngm8hq" style="flex:1;width:auto"><button class="btn sm" id="s-copy">Copia</button></div></div>' +

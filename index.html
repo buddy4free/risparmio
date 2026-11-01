@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-U39rR62153BvzhILdFc7RMdQ1s9ClP03knkEi8L2vc0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+OXqV43N7OiE7d4ITX4kV0EINHcA6reGO0ys1WhU8dI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1920,12 +1920,19 @@ function padPress(k){ const fa = document.getElementById('f-a'); if (!fa) return
   else if (k === 'ok') { const n = padEval(s); if (!(n > 0)) { toast(n === null || !s ? 'Scrivi un importo' : 'Il totale deve essere più di zero'); return; } fa.value = padFmt(n); padShow(); F.kp = false; F.a = fa.value; renderAdd(); return; }
   fa.value = s.replace(/-/g, '−'); padShow(); }
 function padShow(){ const fa = document.getElementById('f-a'), x = document.getElementById('f-x'); if (!fa || !x) return; const s = fa.value, n = /[+−-]./.test(s) ? padEval(s) : null; x.textContent = n === null ? '' : '= ' + eur2(n); }
+/* i tasti della tastierina rispondono appena il dito tocca, non quando si alza: con le pressioni rapide non si perde niente.
+   Il clic resta solo per chi usa la tastiera del computer o un lettore di schermo. */
+let tapAt = 0, tapX = 0, tapY = 0;
+function keyTap(b, f){ const go = () => { f(); if (navigator.vibrate) try { navigator.vibrate(6); } catch(e) {} };
+  b.onpointerdown = e => { if (e.button > 0) return; e.preventDefault(); tapAt = Date.now(); tapX = e.clientX; tapY = e.clientY; go(); }; b.onclick = e => { if (e.detail === 0) go(); }; }
+/* il clic che segue un tocco già gestito non deve finire su quello che c'è sotto (per esempio quando OK chiude la tastiera) */
+document.addEventListener('click', e => { if (Date.now() - tapAt < 600 && e.detail !== 0 && Math.abs(e.clientX - tapX) < 12 && Math.abs(e.clientY - tapY) < 12) { e.preventDefault(); e.stopPropagation(); tapAt = 0; } }, true);
 function bindPad(){ const fa = document.getElementById('f-a'); if (!fa) return;
   if (F.kp === undefined) F.kp = !R.edit;
   document.body.classList.toggle('kpon', !!F.kp); document.body.classList.toggle('kpsave', !F.kp);
   const open = () => { if (F.kp) return; F.kp = true; F.d = val('f-d') || F.d; F.n = val('f-n'); renderAdd(); };
   fa.onclick = open; const lab = fa.closest('.amount'); if (lab) lab.onclick = open;
-  view.querySelectorAll('[data-k2]').forEach(b => { b.onclick = () => { padPress(b.dataset.k2); if (navigator.vibrate) try { navigator.vibrate(6); } catch(e) {} }; });
+  view.querySelectorAll('[data-k2]').forEach(b => keyTap(b, () => padPress(b.dataset.k2)));
   padShow(); }
 /* anche da tastiera fisica (computer) */
 document.addEventListener('keydown', e => { if (!document.getElementById('kpad') || !F || !F.kp || /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '') && document.activeElement.id !== 'f-a') return;
@@ -1939,7 +1946,7 @@ function padSheet(inp){ if (document.getElementById('kpsheet')) return; const ne
   o.innerHTML = '<div class="kpsbg" data-ps="x"></div><div class="kpsbox"><div class="kpshead"><span class="small muted">' + esc(title) + '</span><b class="num" id="ps-v"></b><em id="ps-x" class="amtx" style="position:static"></em></div>' + padHTML().replace('id="kpad"', 'id="kpad2"').replace(/data-k2=/g, 'data-k3=') + '</div>';
   document.body.appendChild(o); histPush(); psShow(); if (PS.int) { const c = o.querySelector('[data-k3=","]'); if (c) { c.disabled = true; c.style.opacity = '.25'; } }
   o.querySelector('[data-ps="x"]').onclick = psClose;
-  o.querySelectorAll('[data-k3]').forEach(b => b.onclick = () => { psPress(b.dataset.k3); if (navigator.vibrate) try { navigator.vibrate(6); } catch(e) {} }); }
+  o.querySelectorAll('[data-k3]').forEach(b => keyTap(b, () => psPress(b.dataset.k3))); }
 function psEval(s){ s = s.replace(/−/g, '-'); if (!s || s === '-') return null; const lead = s[0] === '-' ? -1 : 1, body = s.replace(/^-/, ''); const n = padEval(body); return n === null ? null : (lead < 0 ? -(padEval(body.split(/[+-]/)[0]) || 0) * 2 + n : n); }
 function psShow(){ if (!PS) return; const v = document.getElementById('ps-v'), x = document.getElementById('ps-x'); v.textContent = (PS.s || '0') + ' €'; const n = /[+−-]./.test(PS.s.replace(/^−/, '')) ? psEval(PS.s) : null; x.textContent = n === null ? '' : '= ' + eur2(n); }
 function psPress(k){ if (!PS) return; if (PS.fresh) { PS.fresh = false; if (/^[\d,]$/.test(k)) PS.s = ''; } let s = PS.s.replace(/−/g, '-'); const cur = padNums(s.replace(/^-/, '')).pop();

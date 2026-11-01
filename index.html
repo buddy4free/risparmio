@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611011627">
+<meta name="b4f-build" content="202611011633">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-aqOkL4TOGOWSrMCZRyJm2Rs2PiN7yIiYIj98sBeVVko='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-0bMD6uDWIcc7fLFvEThyKHY2jM1lar+dpepTxH55xIE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1161,9 +1161,8 @@ function migrate(){
   if (!S.pilFrom) { const f = S.moves.filter(m => m.n === 'Saldo iniziale').map(m => m.d).sort()[0]; S.pilFrom = f || today(); }
   S.times = Object.assign(Object.fromEntries(WELL.map(w => [w.id, w.time])), S.times || {});
   S.tgt = S.tgt || {liq:null, emerg:null};
-  if (S.pay && !(+S.pay.net > 0)) S.pay = null;
-  if (S.pay) { const P = S.pay; P.net = +P.net; P.day = Math.min(31, Math.max(1, +P.day || 27)); P.mens = [12, 13, 14].includes(+P.mens) ? +P.mens : 12; P.m14 = +P.m14 === 6 ? 6 : 7; P.x13 = +P.x13 > 0 ? +P.x13 : 0;
-    if (!/^\d{4}-\d{2}$/.test(P.from || '')) P.from = curYM(); P.hist = (Array.isArray(P.hist) ? P.hist : []).filter(h => h && /^\d{4}-\d{2}$/.test(h.from || '') && +h.net > 0).map(h => ({from:h.from, net:+h.net})); if (!P.hist.length) P.hist = [{from:P.from, net:P.net}]; }
+  try { if (S.pay && !S.pays) S.pays = [S.pay]; delete S.pay;
+    S.pays = (Array.isArray(S.pays) ? S.pays : []).filter(P => P && typeof P === 'object' && +P.net > 0).slice(0, 2).map(payNorm); } catch(e) { S.pays = []; }
 }
 try { const raw = localStorage.getItem(LS_KEY); if (raw) { S = Object.assign(freshState(), clean(JSON.parse(raw))); migrate(); } } catch(e) {}
 let R = S.setup ? {screen:'home'} : {screen:'welcome'};
@@ -1271,55 +1270,77 @@ function prevMonthsWithData(n){ const m = []; for (let i = 1; i <= 6 && m.length
 function avgOut(){ const m = prevMonthsWithData(3); if (m.length) return m.reduce((t, ym) => t + stats(ym).out, 0) / m.length; return Math.max(stats(curYM()).out, (S.est || {}).out || 0); }
 function avgEssential(){ const m = prevMonthsWithData(3); if (m.length) return m.reduce((t, ym) => { const s = stats(ym); return t + s.out - s.disc; }, 0) / m.length; const s = stats(curYM()); return Math.max(s.out - s.disc, ((S.est || {}).out || 0) * .8); }
 /* media robusta: tutti i mesi disponibili (al massimo 24); da 6 mesi in su si tolgono il più alto e il più basso, così un mese eccezionale non sposta la media */
-/* ---------- il mio stipendio (o pensione) ----------
+/* ---------- il mio stipendio (o pensione), fino a due: per esempio i due stipendi di una coppia ----------
    Solo per chi lo inserisce: per gli altri l'app resta com'è. Non è un movimento: finché non arriva è una previsione,
    dichiarata come tale; quando arriva si conferma con un tocco e diventa un'entrata vera (la stima non si somma mai). */
-const payOn = () => !!(S.pay && S.pay.net > 0);
+const pays = () => (S.pays || []).filter(p => p.net > 0);
+const payOn = () => pays().length > 0;
 const dayIt = d => ([1, 8, 11].includes(+d) ? 'l\'' : 'il ') + (+d);
-const payWord = (art) => S.pay && S.pay.kind === 'pens' ? (art ? 'la pensione' : 'pensione') : (art ? 'lo stipendio' : 'stipendio');
-function payDate(ym){ const [y, m] = ym.split('-').map(Number), last = new Date(y, m, 0).getDate(); return ym + '-' + pad(Math.min(Math.max(1, S.pay.day || 27), last)); }
-function payNet(ym){ const H = S.pay.hist || []; let n = H.length ? H[0].net : S.pay.net; H.forEach(h => { if (h.from <= ym) n = h.net; }); return n; }
-function payExp(ym){
-  if (!payOn() || ym < (S.pay.from || '0')) return [];
-  const P = S.pay, m = +ym.slice(5), net = payNet(ym), x = P.x13 > 0 ? P.x13 : net, d = payDate(ym), L = [{c:'stipendio', a:net, d, k:''}];
-  if (P.mens >= 13 && m === 12) L.push({c:'tredicesima', a:x, d, k:'13ª'});
-  if (P.mens >= 14 && m === (P.m14 || 7)) L.push({c:'tredicesima', a:x, d, k:'14ª'});
+const payCat = p => p.kind === 'pens' ? 'pensione' : 'stipendio';
+const payF = p => p.kind === 'pens';
+/* "lo stipendio di Giulia", "la pensione": testo già sicuro per l'HTML */
+const payName = (p, art) => (art ? (payF(p) ? 'la ' : 'lo ') : '') + payCat(p) + (p.name ? ' di ' + esc(p.name) : '');
+const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+function payWords(){ const P = pays(); if (P.length === 1) return payName(P[0], true); return P.every(payF) ? 'le pensioni' : P.some(payF) ? 'stipendio e pensione' : 'gli stipendi'; }
+function payDate(p, ym){ const [y, m] = ym.split('-').map(Number), last = new Date(y, m, 0).getDate(); return ym + '-' + pad(Math.min(Math.max(1, p.day || 27), last)); }
+function payNet(p, ym){ const H = p.hist || []; let n = H.length ? H[0].net : p.net; H.forEach(h => { if (h.from <= ym) n = h.net; }); return n; }
+function payExp(p, ym){
+  if (ym < (p.from || '0')) return [];
+  const mo = +ym.slice(5), net = payNet(p, ym), x = p.x13 > 0 ? p.x13 : net, d = payDate(p, ym), L = [{p, c:payCat(p), a:net, d, k:''}];
+  if (p.mens >= 13 && mo === 12) L.push({p, c:'tredicesima', a:x, d, k:'13ª'});
+  if (p.mens >= 14 && mo === (p.m14 || 7)) L.push({p, c:'tredicesima', a:x, d, k:'14ª'});
   return L;
 }
-/* quanto è arrivato nel mese da stipendio e 13ª/14ª: real = solo i movimenti già avvenuti */
-function payGot(ym, real){ const L = monthTx(ym).filter(x => x.t === 'in' && (!real || !x.plan)), sum = c => L.filter(x => x.c === c).reduce((t, x) => t + x.a, 0); return {st:sum('stipendio'), tr:sum('tredicesima')}; }
-/* le voci ancora attese nel mese (solo dal mese in corso in avanti); se un ricorrente le prevede già, non si contano due volte */
+/* quali voci attese del mese risultano già coperte: prima le entrate confermate dall'app (legate alla voce),
+   poi quelle inserite a mano o dai ricorrenti, abbinate per categoria e importo più vicino */
+function payMatch(ym, real){
+  const E = pays().flatMap(p => payExp(p, ym)), got = new Set(); if (!E.length) return {E, got};
+  const L = monthTx(ym).filter(x => x.t === 'in' && (!real || !x.plan));
+  L.forEach(x => { if (!x.pay) return; const e = E.find(e => !got.has(e) && e.p.id === x.pay && e.c === x.c); if (e) got.add(e); });
+  L.filter(x => !x.pay).sort((a, b) => b.a - a.a).forEach(x => { const C = E.filter(e => !got.has(e) && e.c === x.c).sort((a, b) => Math.abs(a.a - x.a) - Math.abs(b.a - x.a)); if (!C.length) return;
+    got.add(C[0]); if (C[0].k === '') { const ex = E.find(e => e.p === C[0].p && e.k && !got.has(e)); if (ex && x.a >= (C[0].a + ex.a) * 0.9) got.add(ex); } });
+  return {E, got};
+}
+/* le voci ancora attese nel mese (solo dal mese in corso in avanti) */
 function payPending(ym){
   if (!payOn() || ym < curYM()) return [];
-  const E = payExp(ym); if (!E.length) return [];
-  const g = payGot(ym), all = E.reduce((t, e) => t + e.a, 0);
-  return E.filter(e => e.c === 'stipendio' ? g.st <= 0 : !(g.tr > 0 || g.st >= all * 0.9)).map(e => ({t:'in', c:e.c, a:e.a, d:e.d, k:e.k, plan:true, pay:true}));
+  const {E, got} = payMatch(ym);
+  return E.filter(e => !got.has(e)).map(e => ({t:'in', c:e.c, a:e.a, d:e.d, k:e.k, pid:e.p.id, plan:true, pay:true}));
 }
-/* previsione del mese: i movimenti programmati più, per chi l'ha inserito, lo stipendio atteso. Senza stipendio è identica a stats(ym, true) */
+/* previsione del mese: i movimenti programmati più gli stipendi attesi. Senza stipendio è identica a stats(ym, true) */
 function fcStats(ym){
   const s = stats(ym, true), P = payPending(ym); if (!P.length) return s;
   const inc = s.inc + P.reduce((t, x) => t + x.a, 0), save = inc - s.out;
   return Object.assign({}, s, {inc, save, rate:inc > 0 ? save / inc * 100 : null, n:s.n + P.length, payP:P});
 }
+function payWhen(d){ const dd = Math.round((new Date(d + 'T12:00:00') - new Date(today() + 'T12:00:00')) / 864e5); return dd > 1 ? ' (tra ' + dd + ' giorni)' : dd === 1 ? ' (domani)' : dd === 0 ? ' (oggi)' : ''; }
 function payDueLine(P){
-  const st = P.find(x => x.c === 'stipendio') || P[0], tot = P.reduce((t, x) => t + x.a, 0), dd = Math.round((new Date(st.d + 'T12:00:00') - new Date(today() + 'T12:00:00')) / 864e5);
-  const what = (st.c === 'stipendio' ? payWord().replace(/^./, c => c.toUpperCase()) : st.k) + (P.length > 1 ? ' e ' + P.filter(x => x !== st).map(x => x.k).join(' e ') : '');
-  return what + ' previst' + (S.pay.kind === 'pens' && st.c === 'stipendio' ? 'a' : 'o') + ' ' + dayIt(st.d.slice(8)) + ': ' + eur(tot) + (dd > 1 ? ' (tra ' + dd + ' giorni)' : dd === 1 ? ' (domani)' : dd === 0 ? ' (oggi)' : ' (non ancora registrat' + (S.pay.kind === 'pens' && st.c === 'stipendio' ? 'a' : 'o') + ')');
+  return pays().map(p => { const Q = P.filter(x => x.pid === p.id); if (!Q.length) return '';
+    const main = Q.find(x => !x.k), tot = Q.reduce((t, x) => t + x.a, 0), extra = Q.filter(x => x.k).map(x => x.k).join(' e ');
+    const what = main ? cap(payName(p)) + (extra ? ' e ' + extra : '') : extra + ' (' + payName(p) + ')', f = main ? payF(p) : true, d = Q[0].d, late = d < today();
+    return what + (late ? ' attes' + (f ? 'a ' : 'o ') + dayIt(d.slice(8)) + ', non ancora registrat' + (f ? 'a' : 'o') : ' previst' + (f ? 'a ' : 'o ') + dayIt(d.slice(8))) + ': ' + eur(tot) + payWhen(d); }).filter(Boolean).join('<br>');
 }
 function mkPay(P, old){
-  const ym = curYM(), net = Math.round(P.net * 100) / 100, o = {kind:P.kind === 'pens' ? 'pens' : 'stip', net, day:Math.min(31, Math.max(1, +P.day || 27)), mens:[12, 13, 14].includes(+P.mens) ? +P.mens : 12, m14:+P.m14 === 6 ? 6 : 7, x13:P.x13 > 0 ? Math.round(P.x13 * 100) / 100 : 0};
+  const ym = curYM(), net = Math.round(P.net * 100) / 100, o = {id:old ? old.id : uid(), kind:P.kind === 'pens' ? 'pens' : 'stip', name:String(P.name || '').trim().slice(0, 30), net, day:Math.min(31, Math.max(1, +P.day || 27)), mens:[12, 13, 14].includes(+P.mens) ? +P.mens : 12, m14:+P.m14 === 6 ? 6 : 7, x13:P.x13 > 0 ? Math.round(P.x13 * 100) / 100 : 0};
   if (old) { o.from = old.from; o.hist = (old.hist || []).filter(h => h.from < ym); if (old.snooze) o.snooze = old.snooze; }
-  else { o.from = ym; o.hist = []; }
+  else { o.from = P.from || ym; o.hist = []; }
   if (!o.hist.length || o.hist[o.hist.length - 1].net !== net) o.hist.push({from:o.from > ym ? o.from : ym, net});
   return o;
 }
-/* chi aveva lo stipendio come ricorrente: il ricorrente si chiude (i mesi passati restano com'erano) e da lì vale l'impostazione */
-function payRecs(){ return S.rec.filter(r => r.t === 'in' && r.c === 'stipendio' && (!r.to || r.to >= curYM()) && !(r.until && r.until < today())); }
-function payTakeOverRecs(){
-  const ym = curYM(); let from = ym;
-  payRecs().forEach(r => { const dThis = recDates(r, ym)[0], happened = dThis && dThis <= today();
-    if (happened) { r.to = ym; from = addMonths(ym, 1); } else if (r.from >= ym) S.rec = S.rec.filter(x => x !== r); else r.to = addMonths(ym, -1); });
-  return from;
+function payNorm(P){
+  const p = {id:/^[a-z0-9]{4,}$/i.test(P.id || '') ? P.id : uid(), kind:P.kind === 'pens' ? 'pens' : 'stip', name:String(P.name || '').slice(0, 30), net:+P.net, day:Math.min(31, Math.max(1, +P.day || 27)), mens:[12, 13, 14].includes(+P.mens) ? +P.mens : 12, m14:+P.m14 === 6 ? 6 : 7, x13:+P.x13 > 0 ? +P.x13 : 0, from:/^\d{4}-\d{2}$/.test(P.from || '') ? P.from : curYM()};
+  p.hist = (Array.isArray(P.hist) ? P.hist : []).filter(h => h && /^\d{4}-\d{2}$/.test(h.from || '') && +h.net > 0).map(h => ({from:h.from, net:+h.net})); if (!p.hist.length) p.hist = [{from:p.from, net:p.net}];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(P.snooze || '')) p.snooze = P.snooze;
+  return p;
+}
+/* stipendi e pensioni già inseriti come ricorrenti, ancora attivi e non ancora collegati */
+function payRecs(){ return S.rec.filter(r => r.t === 'in' && ['stipendio', 'pensione'].includes(r.c) && (!r.to || r.to >= curYM()) && !(r.until && r.until < today())); }
+/* il ricorrente si chiude (i mesi passati restano com'erano) e da lì vale l'impostazione: restituisce il mese da cui parte */
+function payTakeOverRec(r){
+  const ym = curYM(), dThis = recDates(r, ym)[0];
+  if (dThis && dThis <= today()) { r.to = ym; return addMonths(ym, 1); }
+  if (r.from >= ym) S.rec = S.rec.filter(x => x !== r); else r.to = addMonths(ym, -1);
+  return ym;
 }
 function payFormHTML(P){
   const ch = (a, v, cur, l) => '<button type="button" data-' + a + '="' + v + '" aria-pressed="' + (String(cur) === String(v)) + '">' + l + '</button>';
@@ -1329,7 +1350,8 @@ function payFormHTML(P){
     '<div class="field"><label for="pf-day">Giorno di accredito</label><select id="pf-day">' + Array.from({length:31}, (_, i) => '<option value="' + (i + 1) + '"' + ((P.day || 27) === i + 1 ? ' selected' : '') + '>' + dayIt(i + 1) + ' di ogni mese</option>').join('') + '</select><span class="small muted">Nei mesi più corti vale l\'ultimo giorno del mese.</span></div>' +
     '<div class="row" style="justify-content:space-between;align-items:center"><span>Mensilità</span><div class="catview">' + [12, 13, 14].map(n => ch('pm', n, P.mens || 12, n)).join('') + '</div></div>' +
     '<div class="row" id="pf-14row" style="justify-content:space-between;align-items:center"' + ((P.mens || 12) < 14 ? ' hidden' : '') + '><span>La 14ª arriva a</span><div class="catview">' + ch('p14', 6, P.m14 || 7, 'Giugno') + ch('p14', 7, P.m14 || 7, 'Luglio') + '</div></div>' +
-    '<div class="field" id="pf-x13row"' + ((P.mens || 12) < 13 ? ' hidden' : '') + '><label for="pf-x13">Importo di 13ª' + ((P.mens || 12) > 13 ? ' e 14ª' : '') + ' (se diverso)</label><div class="eur"><input id="pf-x13" inputmode="none" readonly data-pad placeholder="come il netto mensile" value="' + fmt(P.x13) + '"></div><span class="small muted">La 13ª è prevista a dicembre.</span></div>';
+    '<div class="field" id="pf-x13row"' + ((P.mens || 12) < 13 ? ' hidden' : '') + '><label for="pf-x13">Importo di 13ª' + ((P.mens || 12) > 13 ? ' e 14ª' : '') + ' (se diverso)</label><div class="eur"><input id="pf-x13" inputmode="none" readonly data-pad placeholder="come il netto mensile" value="' + fmt(P.x13) + '"></div><span class="small muted">La 13ª è prevista a dicembre.</span></div>' +
+    '<div class="field"><label for="pf-name">Di chi (facoltativo)</label><input id="pf-name" maxlength="30" placeholder="Es. Giulia" value="' + esc(P.name || '') + '"><span class="small muted">Utile se in casa ci sono due stipendi o una pensione.</span></div>';
 }
 function payFormBind(root, P){
   root.querySelectorAll('[data-pk]').forEach(b => b.onclick = () => { P.kind = b.dataset.pk; root.querySelectorAll('[data-pk]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
@@ -1337,38 +1359,47 @@ function payFormBind(root, P){
     root.querySelector('#pf-14row').hidden = P.mens < 14; root.querySelector('#pf-x13row').hidden = P.mens < 13; root.querySelector('label[for="pf-x13"]').textContent = 'Importo di 13ª' + (P.mens > 13 ? ' e 14ª' : '') + ' (se diverso)'; });
   root.querySelectorAll('[data-p14]').forEach(b => b.onclick = () => { P.m14 = +b.dataset.p14; root.querySelectorAll('[data-p14]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
 }
-function payFormRead(root, P){ P.net = parseAmt(root.querySelector('#pf-net').value); P.day = +root.querySelector('#pf-day').value || 27; P.x13 = P.mens >= 13 ? parseAmt(root.querySelector('#pf-x13').value) : 0; P.mens = P.mens || 12; P.m14 = P.m14 || 7; return P; }
+function payFormRead(root, P){ P.net = parseAmt(root.querySelector('#pf-net').value); P.day = +root.querySelector('#pf-day').value || 27; P.x13 = P.mens >= 13 ? parseAmt(root.querySelector('#pf-x13').value) : 0; P.mens = P.mens || 12; P.m14 = P.m14 || 7; P.name = root.querySelector('#pf-name').value.trim().slice(0, 30); return P; }
 let PF = null;
+const payShort = p => eur(p.net) + ' netti ' + dayIt(p.day) + ' · ' + p.mens + ' mensilità' + (p.mens === 14 ? ' (14ª a ' + (p.m14 === 6 ? 'giugno' : 'luglio') + ')' : '');
 function renderPay(){
-  PF = S.pay ? {...S.pay} : (r => r ? {kind:'stip', net:r.a, day:r.day || 27, mens:12, m14:7} : {kind:'stip', mens:12, m14:7})(payRecs()[0]);
-  const recs = payRecs();
-  view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn('Impostazioni', {screen:'settings'}) + '<div class="intro"><h2>Il mio stipendio</h2><p class="muted">Serve a mostrare una previsione del mese prima che ' + (PF.kind === 'pens' ? 'la pensione arrivi' : 'lo stipendio arrivi') + ': in Home e nel riepilogo delle Statistiche. Non viene registrato come entrata: quando arriva, l\'app chiede conferma con un tocco.</p></div>' +
+  const P = pays(), id = R.pid || (P.length ? '' : 'new');
+  if (!id) {
+    view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn('Impostazioni', {screen:'settings'}) + '<div class="intro"><h2>Il mio stipendio</h2><p class="muted">Servono a mostrare la previsione del mese prima che arrivino: in Home e nel riepilogo delle Statistiche.</p></div>' +
+      '<div class="list">' + P.map(p => '<button class="item" ' + nav$({screen:'pay', pid:p.id}) + '><span class="ic">' + ic('briefcase') + '</span><span class="t"><b>' + cap(payName(p)) + '</b><span class="sub">' + payShort(p) + '</span></span>' + ic('right') + '</button>').join('') + '</div>' +
+      (P.length < 2 ? '<button class="btn ghost wide" ' + nav$({screen:'pay', pid:'new'}) + '>' + ic('plus') + ' Aggiungi un secondo stipendio o una pensione</button>' : '') + '</div>';
+    return;
+  }
+  const old = id === 'new' ? null : P.find(p => p.id === id); if (id !== 'new' && !old) return nav({screen:'pay'});
+  const recs = old ? [] : payRecs(), rec = recs.find(r => r.id === R.rec) || recs[0];
+  PF = old ? {...old} : rec ? {kind:rec.c === 'pensione' ? 'pens' : 'stip', net:rec.a, day:rec.day || 27, mens:12, m14:7} : {kind:'stip', mens:12, m14:7};
+  view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn(P.length ? 'Il mio stipendio' : 'Impostazioni', P.length ? {screen:'pay'} : {screen:'settings'}) + '<div class="intro"><h2>' + (old ? cap(payName(old)) : P.length ? 'Secondo stipendio o pensione' : 'Il mio stipendio') + '</h2><p class="muted">Serve a mostrare una previsione del mese prima che arrivi. Non viene registrato come entrata: quando arriva, l\'app chiede conferma con un tocco.</p></div>' +
     payFormHTML(PF) +
-    (recs.length ? '<div class="note">Hai già lo stipendio come movimento ricorrente (' + eur(recs[0].a) + ' ' + dayIt(recs[0].day || 1) + '). Salvando, il ricorrente si ferma e vale questa impostazione: i mesi passati restano come sono, nessun doppione. Da quel momento lo stipendio si conferma con un tocco quando arriva.</div>' : '') +
-    '<button class="btn wide" id="pf-save">Salva</button>' + (S.pay ? '<button class="textlink" id="pf-del" style="align-self:center">Togli lo stipendio: l\'app torna senza previsione</button>' : '') + '</div>';
+    (rec ? '<label class="check"><input type="checkbox" id="pf-rec" checked> Sostituisce il ricorrente già inserito (' + eur(rec.a) + ' ' + dayIt(rec.day || 1) + '): i mesi passati restano come sono, nessun doppione. Da quel momento si conferma con un tocco quando arriva.</label>' : '') +
+    '<button class="btn wide" id="pf-save">Salva</button>' + (old ? '<button class="textlink" id="pf-del" style="align-self:center">Togli: per questa entrata l\'app torna senza previsione</button>' : '') + '</div>';
   payFormBind(view, PF);
   view.querySelector('#pf-save').onclick = () => { payFormRead(view, PF); if (!(PF.net > 0)) return toast('Inserisci il netto mensile');
-    const had = !!S.pay; let from = null; if (payRecs().length) from = payTakeOverRecs();
-    S.pay = mkPay(PF, S.pay); if (from && !had) { S.pay.from = from; S.pay.hist = [{from, net:S.pay.net}]; }
-    PF = null; save(); toast(had ? 'Stipendio aggiornato' : 'Fatto: in Home trovi la previsione del mese'); nav({screen:'settings'}); };
-  const dl = view.querySelector('#pf-del'); if (dl) dl.onclick = () => { S.pay = null; PF = null; save(); toast('Stipendio tolto: le entrate già registrate restano'); nav({screen:'settings'}); };
+    if (!old && rec && view.querySelector('#pf-rec').checked) PF.from = payTakeOverRec(rec);
+    const n = mkPay(PF, old); S.pays = old ? pays().map(p => p.id === old.id ? n : p) : pays().concat(n).slice(0, 2);
+    save(); toast(old ? 'Aggiornato' : 'Fatto: in Home trovi la previsione del mese'); nav({screen:'pay'}); };
+  const dl = view.querySelector('#pf-del'); if (dl) dl.onclick = () => { S.pays = pays().filter(p => p.id !== old.id); save(); toast('Tolto: le entrate già registrate restano'); nav({screen:'pay'}); };
 }
 /* il giorno dell'accredito (e i giorni dopo, finché non arriva): conferma con un tocco */
 function payAsk(){
-  if (!payOn() || S.demo || R.screen !== 'home' || S.pay.snooze === today() || document.querySelector('.psheet') || document.getElementById('lock')) return false;
-  const P = payPending(curYM()).filter(x => x.d <= today()); if (!P.length) return false;
-  const e = P[0], w = e.c === 'stipendio' ? payWord(true) : 'la ' + e.k, nome = e.c === 'stipendio' ? payWord() : e.k;
-  catPop('<b style="font-size:1.1rem">È arrivat' + (e.c === 'stipendio' && S.pay.kind !== 'pens' ? 'o ' : 'a ') + w + '?</b><p class="small muted" style="margin:0">' + (e.d === today() ? 'Oggi è ' + dayIt(e.d.slice(8)) : 'Era previst' + (e.c === 'stipendio' && S.pay.kind !== 'pens' ? 'o' : 'a') + ' ' + dayIt(e.d.slice(8))) + ': ' + nome + ' di ' + ymLabel(curYM(), {month:'long'}) + ', ' + eur(e.a) + '.</p>' +
+  if (!payOn() || S.demo || R.screen !== 'home' || document.querySelector('.psheet') || document.getElementById('lock')) return false;
+  const e = payPending(curYM()).find(x => x.d <= today() && (pays().find(p => p.id === x.pid) || {}).snooze !== today()); if (!e) return false;
+  const p = pays().find(q => q.id === e.pid), f = e.k ? true : payF(p), w = e.k ? 'la ' + e.k + (p.name ? ' di ' + esc(p.name) : '') : payName(p, true);
+  catPop('<b style="font-size:1.1rem">È arrivat' + (f ? 'a ' : 'o ') + w + '?</b><p class="small muted" style="margin:0">' + (e.d === today() ? 'Oggi è ' + dayIt(e.d.slice(8)) : 'Era previst' + (f ? 'a ' : 'o ') + dayIt(e.d.slice(8))) + ': ' + (e.k ? e.k : payCat(p)) + ' di ' + ymLabel(curYM(), {month:'long'}) + ', ' + eur(e.a) + '.</p>' +
     '<button class="btn wide" id="py-ok">Sì, ' + eur(e.a) + '</button><button class="btn ghost wide" id="py-dif">Sì, con un importo diverso</button>' +
     '<div class="field" id="py-row" hidden><label for="py-a">Importo arrivato</label><div class="eur"><input id="py-a" inputmode="decimal" placeholder="0"></div><button class="btn wide" id="py-ok2" style="margin-top:8px">Registra</button></div>' +
     '<button class="textlink" id="py-no" style="align-self:center">Non ancora</button>', (o, close) => {
-    const add = a => { S.tx.push({id:uid(), t:'in', c:e.c, s:'', a, d:today(), n:e.k || ''}); close(); save(); toast('Registrato: ' + eur(a)); render();
-      if (e.c === 'stipendio' && Math.abs(a - S.pay.net) >= 1) setTimeout(() => catPop('<b style="font-size:1.1rem">Il netto è cambiato?</b><p class="small muted" style="margin:0">Questo mese sono arrivati ' + eur(a) + ' invece di ' + eur(S.pay.net) + '. Da ora la previsione può usare il nuovo importo.</p><button class="btn wide" id="py-new">Sì, da ora ' + eur(a) + '</button><button class="textlink" data-x style="align-self:center">No, è stato solo questo mese</button>', (o2, c2) => {
-        o2.querySelector('#py-new').onclick = () => { S.pay = mkPay(Object.assign({}, S.pay, {net:a}), S.pay); c2(); save(); toast('Previsione aggiornata'); render(); }; }, true), 400); };
+    const add = a => { S.tx.push({id:uid(), t:'in', c:e.c, s:'', a, d:today(), n:(e.k ? e.k + ' ' : '') + (p.name || ''), pay:p.id}); close(); save(); toast('Registrato: ' + eur(a)); render();
+      if (!e.k && Math.abs(a - p.net) >= 1) setTimeout(() => catPop('<b style="font-size:1.1rem">Il netto è cambiato?</b><p class="small muted" style="margin:0">Questo mese sono arrivati ' + eur(a) + ' invece di ' + eur(p.net) + '. Da ora la previsione può usare il nuovo importo.</p><button class="btn wide" id="py-new">Sì, da ora ' + eur(a) + '</button><button class="textlink" data-x style="align-self:center">No, è stato solo questo mese</button>', (o2, c2) => {
+        o2.querySelector('#py-new').onclick = () => { S.pays = pays().map(q => q.id === p.id ? mkPay(Object.assign({}, q, {net:a}), q) : q); c2(); save(); toast('Previsione aggiornata'); render(); }; }, true), 400); };
     o.querySelector('#py-ok').onclick = () => add(e.a);
     o.querySelector('#py-dif').onclick = () => { o.querySelector('#py-row').hidden = false; o.querySelector('#py-a').focus(); };
     o.querySelector('#py-ok2').onclick = () => { const a = parseAmt(o.querySelector('#py-a').value); if (!(a > 0)) return toast('Inserisci l\'importo'); add(a); };
-    o.querySelector('#py-no').onclick = () => { S.pay.snooze = today(); save(); close(); };
+    o.querySelector('#py-no').onclick = () => { p.snooze = today(); save(); close(); };
   }, true);
   return true;
 }
@@ -1377,28 +1408,27 @@ function payOffer(){
   if (payOn() || S.demo || !S.setup || S.payAsk || R.screen !== 'home' || document.querySelector('.psheet') || document.getElementById('lock')) return;
   const r = payRecs()[0]; if (!r) return;
   S.payAsk = today(); save();
-  catPop('<b style="font-size:1.1rem">Novità: il tuo stipendio</b><p class="small muted" style="margin:0">Hai già lo stipendio come movimento ricorrente: <b style="color:var(--fg)">' + eur(r.a) + ' ' + dayIt(r.day) + '</b>. Indicandolo come stipendio, l\'app mostra la previsione del mese prima che arrivi e chiede conferma il giorno dell\'accredito. Il ricorrente diventa questo, senza doppioni.</p>' +
+  catPop('<b style="font-size:1.1rem">Novità: il tuo stipendio</b><p class="small muted" style="margin:0">Hai già ' + (r.c === 'pensione' ? 'la pensione' : 'lo stipendio') + ' come movimento ricorrente: <b style="color:var(--fg)">' + eur(r.a) + ' ' + dayIt(r.day) + '</b>. Indicandolo qui, l\'app mostra la previsione del mese prima che arrivi e chiede conferma il giorno dell\'accredito. Il ricorrente diventa questo, senza doppioni.</p>' +
     '<button class="btn wide" id="po-go">Completa i dati</button><button class="textlink" data-x style="align-self:center">Più tardi</button><span class="small muted" style="text-align:center">Lo ritrovi in Impostazioni → Il mio stipendio.</span>', (o, close) => {
-    o.querySelector('#po-go').onclick = () => { close(); PF = null; nav({screen:'pay'}); }; }, true);
+    o.querySelector('#po-go').onclick = () => { close(); nav({screen:'pay', pid:'new', rec:r.id}); }; }, true);
 }
 /* barre del riepilogo con la previsione: pieno = reale a oggi, a righe = previsto a fine mese */
 function fcBarsHTML(rows, mx){
   return '<div class="hbars">' + rows.map(r => '<div class="hbar" title="' + esc(r.n) + ': ' + eur2(r.v) + '">' + r.tile + '<span class="t"><span>' + esc(r.n) + '</span><span class="track fctrack"><i class="fcf" style="width:' + (Math.max(0, r.f) / mx * 100) + '%;--c:' + r.fc + '"></i><i style="width:' + (Math.max(0, r.v) / mx * 100) + '%;background:' + r.c + '"></i></span><span class="small muted">previsto a fine mese: ' + eur(r.f) + (r.fs || '') + '</span></span><span class="v">' + eur(r.v) + (r.sub ? '<small>' + r.sub + '</small>' : '') + '</span></div>').join('') + '</div>' +
-    '<p class="small muted fclegend" style="margin:0"><i class="lg"></i> reale a oggi <i class="lg fcf" style="--c:var(--muted)"></i> previsto a fine mese, con ' + payWord(true) + ' e i movimenti programmati</p>';
+    '<p class="small muted fclegend" style="margin:0"><i class="lg"></i> reale a oggi <i class="lg fcf" style="--c:var(--muted)"></i> previsto a fine mese, con ' + payWords() + ' più i movimenti programmati</p>';
 }
-/* Analisi, anno: quanto era previsto e quanto è arrivato, mese per mese */
+/* Analisi, anno: quanto era previsto e quanto è arrivato, mese per mese (tutti gli stipendi insieme) */
 function payYearHTML(y){
   if (!payOn()) return '';
-  const ms = Array.from({length:12}, (_, i) => y + '-' + pad(i + 1));
-  const D = ms.map(ym => { const e = payExp(ym).reduce((t, x) => t + x.a, 0), g = ym <= curYM() ? payGot(ym, true) : {st:0, tr:0}; return {ym, e, r:g.st + g.tr}; });
-  if (!D.some(d => d.e > 0 || d.r > 0)) return '';
-  const D2 = D.filter(d => d.e > 0 || d.r > 0); D.length = 0; D.push(...D2);
+  const cats = new Set(pays().map(payCat).concat('tredicesima'));
+  const D = Array.from({length:12}, (_, i) => y + '-' + pad(i + 1)).map(ym => { const e = pays().reduce((t, p) => t + payExp(p, ym).reduce((u, x) => u + x.a, 0), 0), r = ym <= curYM() ? monthTx(ym).filter(x => x.t === 'in' && !x.plan && cats.has(x.c)).reduce((t, x) => t + x.a, 0) : 0; return {ym, e, r}; }).filter(d => d.e > 0 || d.r > 0);
+  if (!D.length) return '';
   const mx = Math.max(1, ...D.map(d => Math.max(d.e, d.r))), done = D.filter(d => d.e > 0 && (d.ym < curYM() || (d.ym === curYM() && d.r > 0)));
-  const E = done.reduce((t, d) => t + d.e, 0), Rr = done.reduce((t, d) => t + d.r, 0), df = Rr - E;
-  const H = S.pay.hist || [], h0 = H[0], h1 = H[H.length - 1];
-  const sum = done.length ? 'Da ' + ymLabel(done[0].ym, {month:'long'}) + ' a ' + ymLabel(done[done.length - 1].ym, {month:'long'}) + ': arrivati <b>' + eur(Rr) + '</b> su <b>' + eur(E) + '</b> previsti' + (Math.abs(df) >= 1 ? ', <b style="color:' + (df > 0 ? 'var(--good)' : 'var(--critical)') + '">' + (df > 0 ? '+' : '−') + eur(Math.abs(df)) + ' (' + (df > 0 ? '+' : '−') + (Math.abs(df) / E * 100).toLocaleString('it-IT', {maximumFractionDigits:1}) + '%)</b>' : ', in linea con la previsione') + '.' : 'Il confronto si completa mese per mese, man mano che ' + payWord(true) + ' arriva.';
-  const chg = h0 && h1 && h1.net !== h0.net ? ' Da ' + ymLabel(h1.from, {month:'long', year:'numeric'}) + ' il netto mensile è passato da ' + eur(h0.net) + ' a ' + eur(h1.net) + ' (' + (h1.net > h0.net ? '+' : '−') + (Math.abs(h1.net - h0.net) / h0.net * 100).toLocaleString('it-IT', {maximumFractionDigits:1}) + '%).' : '';
-  return '<div class="card" style="gap:10px"><span class="label">' + (S.pay.kind === 'pens' ? 'Pensione' : 'Stipendio') + ': previsto e arrivato</span><div class="row small" style="gap:14px"><span><i class="lg" style="background:' + IN_COL + '"></i> arrivato</span><span><i class="lgt"></i> previsto</span></div>' +
+  const E = done.reduce((t, d) => t + d.e, 0), Rr = done.reduce((t, d) => t + d.r, 0), df = Rr - E, pct = v => v.toLocaleString('it-IT', {maximumFractionDigits:1});
+  const sum = done.length ? 'Da ' + ymLabel(done[0].ym, {month:'long'}) + ' a ' + ymLabel(done[done.length - 1].ym, {month:'long'}) + ': arrivati <b>' + eur(Rr) + '</b> su <b>' + eur(E) + '</b> previsti' + (Math.abs(df) >= 1 ? ', <b style="color:' + (df > 0 ? 'var(--good)' : 'var(--critical)') + '">' + (df > 0 ? '+' : '−') + eur(Math.abs(df)) + ' (' + (df > 0 ? '+' : '−') + pct(Math.abs(df) / E * 100) + '%)</b>' : ', in linea con la previsione') + '.' : 'Il confronto si completa mese per mese, man mano che ' + payWords() + (pays().length > 1 ? ' arrivano.' : ' arriva.');
+  const chg = pays().map(p => { const H = p.hist || [], h0 = H[0], h1 = H[H.length - 1]; return h0 && h1 && h1.net !== h0.net ? ' Da ' + ymLabel(h1.from, {month:'long', year:'numeric'}) + ' il netto mensile ' + (pays().length > 1 ? 'di ' + payName(p, false).replace(/^stipendio di |^pensione di /, '') + ' ' : '') + 'è passato da ' + eur(h0.net) + ' a ' + eur(h1.net) + ' (' + (h1.net > h0.net ? '+' : '−') + pct(Math.abs(h1.net - h0.net) / h0.net * 100) + '%).' : ''; }).join('');
+  const ttl = pays().length > 1 ? (pays().every(payF) ? 'Pensioni' : pays().some(payF) ? 'Stipendio e pensione' : 'Stipendi') : cap(payCat(pays()[0]));
+  return '<div class="card" style="gap:10px"><span class="label">' + ttl + ': previsto e arrivato</span><div class="row small" style="gap:14px"><span><i class="lg" style="background:' + IN_COL + '"></i> arrivato</span><span><i class="lgt"></i> previsto</span></div>' +
     D.map(d => '<div class="payrow"><span class="small muted">' + ymLabel(d.ym, {month:'short'}) + '</span><div class="paytrack"><i style="width:' + (d.r / mx * 100) + '%;background:' + IN_COL + '"></i>' + (d.e > 0 ? '<b style="left:' + (d.e / mx * 100) + '%"></b>' : '') + '</div><span class="small" style="text-align:right">' + (d.r > 0 ? eur(d.r) : d.ym >= curYM() && d.e > 0 ? '<span class="muted">attesa</span>' : '<span class="muted">–</span>') + '</span></div>').join('') +
     '<p class="small" style="margin:4px 0 0">' + sum + chg + '</p></div>';
 }
@@ -1740,7 +1770,7 @@ function finishSetup(){
   const g = SU.noGoal ? null : {id:uid(), kind:SU.kind, name:SU.gname, target:SU.gt || 0, date:SU.date, saved:['emergenza', 'patrimonio'].includes(SU.kind) ? 0 : (SU.gs || 0)};
   S.goals = g ? [g] : []; S.mainGoal = g ? g.id : null;
   addMove('liq', S.pil.liq, 'Saldo iniziale'); addMove('emerg', S.pil.emerg, 'Saldo iniziale'); addMove('inv', S.pil.inv, 'Saldo iniziale'); if (g && g.saved) addMove('g:' + g.id, g.saved, 'Saldo iniziale');
-  if (SU.pay && SU.pay.net > 0) S.pay = mkPay(SU.pay);
+  S.pays = SU.pay && SU.pay.net > 0 ? [mkPay(SU.pay)] : [];
   S.setup = true; S.gym.start = today();
   save(); toast('Fatto. Registra entrate e spese con il tasto +'); nav({screen:'home'});
 }
@@ -1798,7 +1828,7 @@ function rateHero(s){
 /* previsione di fine mese: i numeri sopra sono reali a oggi, qui si aggiungono i movimenti programmati */
 function planLine(s){ if (viewYM !== curYM()) return ''; const f = fcStats(curYM()), k = f.n - s.n; if (k < 1) return '';
   if (f.payP) { const o = k - f.payP.length, cl = f.rate === null ? 'a ' + eur(f.save) : 'al <b style="color:var(--fg)">' + Math.round(f.rate) + '%</b> (' + eur(f.save) + ')';
-    return '<p class="small muted" style="margin:0"><b style="color:var(--fg)">' + payDueLine(f.payP) + '</b>.<br>Con ' + payWord(true) + (o > 0 ? ' e ' + (o === 1 ? 'un altro movimento programmato' : 'gli altri ' + o + ' movimenti programmati') : '') + ', il mese chiuderebbe ' + cl + '. È una previsione: i numeri sopra sono quelli reali a oggi.</p>'; }
+    return '<p class="small muted" style="margin:0"><b style="color:var(--fg)">' + payDueLine(f.payP) + '</b>.<br>Con ' + payWords() + (o > 0 ? ' e ' + (o === 1 ? 'un altro movimento programmato' : 'gli altri ' + o + ' movimenti programmati') : '') + ', il mese chiuderebbe ' + cl + '. È una previsione: i numeri sopra sono quelli reali a oggi.</p>'; }
   return '<p class="small muted" style="margin:0">Con ' + k + (k === 1 ? ' movimento programmato' : ' movimenti programmati') + ' fino a fine mese, il mese chiuderebbe ' + (f.rate === null ? 'a ' + eur(f.save) : 'al <b style="color:var(--fg)">' + Math.round(f.rate) + '%</b> (' + eur(f.save) + ')') + '.</p>'; }
 function oldSetupRecs(){ return S.rec.filter(r => /\(stima\)$/.test(r.n) || r.n === 'Affitto o mutuo' || (r.n === '' && ['stipendio','affitto_in'].includes(r.c))); }
 /* promemoria backup: una volta al mese, rimandabile */
@@ -2615,7 +2645,7 @@ function renderStats(){
     statViews('stats') + stPeriodHTML() +
     '<div class="card"><div class="spread"><span class="label">Riepilogo · ' + label + '</span>' + (fcR ? '' : '<span class="status" style="background:' + b.c + '">' + (rate === null ? 'Nessuna entrata' : Math.round(rate) + '% · ' + b.l) + '</span>') + '</div>' +
       (fcR ? '<div class="row" style="justify-content:space-between;gap:8px"><span class="status" style="background:' + b.c + '">' + (rate === null ? 'Nessuna entrata' : Math.round(rate) + '% · ' + b.l + ' oggi') + '</span>' + (fcR.rate !== null ? '<span class="status fcst">previsto ' + Math.round(fcR.rate) + '%</span>' : '') + '</div>' : '') +
-      '<div class="carousel"><div class="slide">' + (fcR ? fcBarsHTML([{n:'Entrate totali', v:inc, f:fcR.inc, c:IN_COL, fc:IN_COL, tile:'<span class="ic" style="background:' + IN_COL + '">' + ic('plus') + '</span>', fs:' (con ' + payWord(true) + ' ' + dayIt(S.pay.day).replace(/^il /, 'del ').replace(/^l'/, 'dell\'') + ')'}, {n:'Uscite totali', v:out, f:fcR.out, c:OUT_COL, fc:OUT_COL, tile:'<span class="ic" style="background:' + OUT_COL + '">' + ic('cart') + '</span>'}, {n:'Risparmio', v:sv, f:fcR.save, c:b.c, fc:band(fcR.rate).c, tile:'<span class="ic" style="background:' + b.c + '">' + ic('coins') + '</span>', sub:rate === null ? '–' : Math.round(rate) + '%', fs:fcR.rate === null ? '' : ' · ' + Math.round(fcR.rate) + '%'}], Math.max(1, fcR.inc, fcR.out, inc, out)) : hbarsHTML([{n:'Entrate totali', v:inc, c:IN_COL, tile:'<span class="ic" style="background:' + IN_COL + '">' + ic('plus') + '</span>'}, {n:'Uscite totali', v:out, c:OUT_COL, tile:'<span class="ic" style="background:' + OUT_COL + '">' + ic('cart') + '</span>'}, {n:'Risparmio', v:sv, c:b.c, tile:'<span class="ic" style="background:' + b.c + '">' + ic('coins') + '</span>', sub:rate === null ? '–' : Math.round(rate) + '%'}])) + '</div><div class="slide">' + (inc > 0 || out > 0 ? donutHTML(sv >= 0 ? [{n:'Uscite', v:out, c:OUT_COL}, {n:'Risparmio', v:sv, c:b.c}] : [{n:'Entrate', v:inc, c:IN_COL}, {n:'Uscite oltre le entrate', v:-sv, c:'#E5484D'}], sv >= 0 ? inc : inc - sv) : '<p class="small muted">Nessun movimento nel periodo.</p>') + '</div></div><div class="dots"><i class="on"></i><i></i></div>' +
+      '<div class="carousel"><div class="slide">' + (fcR ? fcBarsHTML([{n:'Entrate totali', v:inc, f:fcR.inc, c:IN_COL, fc:IN_COL, tile:'<span class="ic" style="background:' + IN_COL + '">' + ic('plus') + '</span>', fs:' (con ' + payWords() + ')'}, {n:'Uscite totali', v:out, f:fcR.out, c:OUT_COL, fc:OUT_COL, tile:'<span class="ic" style="background:' + OUT_COL + '">' + ic('cart') + '</span>'}, {n:'Risparmio', v:sv, f:fcR.save, c:b.c, fc:band(fcR.rate).c, tile:'<span class="ic" style="background:' + b.c + '">' + ic('coins') + '</span>', sub:rate === null ? '–' : Math.round(rate) + '%', fs:fcR.rate === null ? '' : ' · ' + Math.round(fcR.rate) + '%'}], Math.max(1, fcR.inc, fcR.out, inc, out)) : hbarsHTML([{n:'Entrate totali', v:inc, c:IN_COL, tile:'<span class="ic" style="background:' + IN_COL + '">' + ic('plus') + '</span>'}, {n:'Uscite totali', v:out, c:OUT_COL, tile:'<span class="ic" style="background:' + OUT_COL + '">' + ic('cart') + '</span>'}, {n:'Risparmio', v:sv, c:b.c, tile:'<span class="ic" style="background:' + b.c + '">' + ic('coins') + '</span>', sub:rate === null ? '–' : Math.round(rate) + '%'}])) + '</div><div class="slide">' + (inc > 0 || out > 0 ? donutHTML(sv >= 0 ? [{n:'Uscite', v:out, c:OUT_COL}, {n:'Risparmio', v:sv, c:b.c}] : [{n:'Entrate', v:inc, c:IN_COL}, {n:'Uscite oltre le entrate', v:-sv, c:'#E5484D'}], sv >= 0 ? inc : inc - sv) : '<p class="small muted">Nessun movimento nel periodo.</p>') + '</div></div><div class="dots"><i class="on"></i><i></i></div>' +
       (!payOn() && !S.demo && !S.payInv && ST.mode === 'm' && months[0] === curYM() ? '<p class="small muted" style="margin:0" id="pay-inv"><button class="textlink small" ' + nav$({screen:'pay'}) + '>Aggiungi il tuo stipendio</button> per vedere la previsione del mese · <button class="textlink small" id="pay-inv-x">non mi interessa</button></p>' : '') + '</div>' +
     '<div class="card"><div class="spread"><span class="label">Patrimonio nei 4 pilastri</span><b class="num" style="font-family:var(--display);font-size:1.3rem">' + eur(totP) + '</b></div>' +
       '<div class="carousel"><div class="slide">' + hbarsHTML(pil.map(x => ({n:x.p.n, v:x.v, c:x.p.c, tile:'<span class="ic" style="background:' + x.p.c + '">' + ic(x.p.i) + '</span>', sub:(x.v - x.v0 >= 0 ? '+' : '−') + eur(Math.abs(x.v - x.v0)), go:{screen:'pillar', id:x.p.id}}))) + '</div><div class="slide">' + (totP > 0 ? donutHTML(pil.filter(x => x.v > 0).map(x => ({n:x.p.short || x.p.n, v:x.v, c:x.p.c})), pil.reduce((t, x) => t + Math.max(0, x.v), 0)) : '<p class="small muted">Ancora nessun saldo nei pilastri.</p>') + '</div></div><div class="dots"><i class="on"></i><i></i></div>' +
@@ -4582,7 +4612,7 @@ function diagPop(){ let t; try { t = diagText(); } catch(e) { t = 'Dettagli non 
     o.querySelector('#dg-copy').onclick = async () => { try { await navigator.clipboard.writeText(t); toast('Dettagli copiati'); } catch(e) { toast('Non riesco a copiare: fai uno screenshot'); } }; }); }
 function renderSettings(){
   view.innerHTML = '<div class="sec" style="gap:22px">' + backBtn('Home', {screen:'home'}) + '<div class="intro"><h2>Impostazioni</h2></div>' +
-    '<div class="sec"><span class="label">Entrate</span><div class="list"><button class="item" ' + nav$({screen:'pay'}) + '><span class="ic">' + ic('briefcase') + '</span><span class="t"><b>Il mio stipendio</b><span class="sub">' + (payOn() ? eur(S.pay.net) + ' netti ' + dayIt(S.pay.day) + ' · ' + S.pay.mens + ' mensilità' : 'Per vedere la previsione del mese prima che arrivi') + '</span></span>' + ic('right') + '</button></div></div>' +
+    '<div class="sec"><span class="label">Entrate</span><div class="list"><button class="item" ' + nav$({screen:'pay'}) + '><span class="ic">' + ic('briefcase') + '</span><span class="t"><b>Il mio stipendio</b><span class="sub">' + (pays().length === 1 ? payShort(pays()[0]) : pays().length ? pays().map(p => cap(payName(p)) + ': ' + eur(p.net)).join(' · ') : 'Per vedere la previsione del mese prima che arrivi') + '</span></span>' + ic('right') + '</button></div></div>' +
     '<div class="sec"><span class="label">Promemoria</span><div class="list"><button class="item" ' + nav$({screen:'notif'}) + '><span class="ic">' + ic('calendar') + '</span><span class="t"><b>Notifiche e promemoria</b><span class="sub">' + WELL.length + ' promemoria: soldi e benessere, con orari e calendario</span></span>' + ic('right') + '</button></div></div>' +
     '<div class="sec"><span class="label">Visualizzazione</span><div class="row" style="justify-content:space-between;align-items:center"><span>Tema</span><div class="catview" id="s-theme">' + [['dark', 'Scuro'], ['light', 'Chiaro'], ['auto', 'Automatico']].map(t => '<button data-th="' + t[0] + '" aria-pressed="' + (themePref() === t[0]) + '">' + t[1] + '</button>').join('') + '</div></div><label class="check"><input type="checkbox" id="s-tips"' + (S.showTips ? ' checked' : '') + '> Mostra sempre le spiegazioni sotto i titoli</label><label class="check"><input type="checkbox" id="s-hide"' + (S.hide ? ' checked' : '') + '> Nascondi gli importi (lo stesso dell\'occhio in alto)</label></div>' +
     '<div class="sec"><span class="label">Condividi con gli amici</span><p class="small muted">Per invitare un amico mandagli questo link. Ognuno vede solo i propri dati, salvati sul proprio telefono.</p><div class="row"><input id="s-link" readonly value="' + APP_URL + '" style="flex:1;width:auto"><button class="btn sm" id="s-copy">Copia</button></div></div>' +

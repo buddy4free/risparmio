@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611012018">
+<meta name="b4f-build" content="202611012020">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-7+K/zUdDoYX2+fSL5VyIlsSr3oQ46XqtEWm05jU5zyo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-QFOYbz1z8iI2TLSoSR526MFqDDmwdn5w+8xcW6jTguE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -988,7 +988,7 @@ function reviewCatHTML(ym, c, a, out){
   const f = [];
   if (top.length) f.push('Soprattutto ' + top.map(e => esc(e[0]) + ' (' + eur(e[1]) + ')').join(' e ') + '.');
   if (out > 0) f.push('È il ' + Math.round(a / out * 100) + '% delle uscite del mese.');
-  if (prevA.some(v => v > 0)) { const d = (a - avg) / avg * 100; f.push(Math.abs(d) < 10 ? 'In linea con ' + (pm.length === 1 ? 'il mese prima' : 'la media dei ' + pm.length + ' mesi prima') + ' (' + eur(avg) + ').' : (d > 0 ? '+' : '−') + Math.round(Math.abs(d)) + '% rispetto alla media dei 3 mesi prima (' + eur(avg) + ').'); }
+  if (prevA.some(v => v > 0)) { const d = (a - avg) / avg * 100; f.push(Math.abs(d) < 10 ? 'In linea con ' + (pm.length === 1 ? 'il mese prima' : 'la media dei ' + pm.length + ' mesi prima') + ' (' + eur(avg) + ').' : (d > 0 ? '+' : '−') + Math.round(Math.abs(d)) + '% rispetto ' + (pm.length === 1 ? 'al mese prima' : 'alla media dei ' + pm.length + ' mesi prima') + ' (' + eur(avg) + ').'); }
   else if (pm.length) f.push('Nei mesi prima non c\'erano spese in questa categoria.');
   if (a > 0 && recA >= a * 0.5) f.push('Per il ' + Math.round(recA / a * 100) + '% sono spese fisse ricorrenti.');
   const sub = Object.keys(subs).find(k => SUB_INFO[k]), note = sub ? SUB_INFO[sub] : (SAVE_TIPS[c] || '');

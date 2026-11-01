@@ -970,7 +970,7 @@ function reviewCatHTML(ym, c, a, out){
   const f = [];
   if (top.length) f.push('Soprattutto ' + top.map(e => esc(e[0]) + ' (' + eur(e[1]) + ')').join(' e ') + '.');
   if (out > 0) f.push('È il ' + Math.round(a / out * 100) + '% delle uscite del mese.');
-  if (prevA.some(v => v > 0)) { const d = (a - avg) / avg * 100; f.push(Math.abs(d) < 10 ? 'In linea con ' + (pm.length === 1 ? 'il mese prima' : 'la media dei ' + pm.length + ' mesi prima') + ' (' + eur(avg) + ').' : (d > 0 ? '+' : '−') + Math.round(Math.abs(d)) + '% rispetto alla media dei 3 mesi prima (' + eur(avg) + ').'); }
+  if (prevA.some(v => v > 0)) { const d = (a - avg) / avg * 100; f.push(Math.abs(d) < 10 ? 'In linea con ' + (pm.length === 1 ? 'il mese prima' : 'la media dei ' + pm.length + ' mesi prima') + ' (' + eur(avg) + ').' : (d > 0 ? '+' : '−') + Math.round(Math.abs(d)) + '% rispetto ' + (pm.length === 1 ? 'al mese prima' : 'alla media dei ' + pm.length + ' mesi prima') + ' (' + eur(avg) + ').'); }
   else if (pm.length) f.push('Nei mesi prima non c\'erano spese in questa categoria.');
   if (a > 0 && recA >= a * 0.5) f.push('Per il ' + Math.round(recA / a * 100) + '% sono spese fisse ricorrenti.');
   const sub = Object.keys(subs).find(k => SUB_INFO[k]), note = sub ? SUB_INFO[sub] : (SAVE_TIPS[c] || '');

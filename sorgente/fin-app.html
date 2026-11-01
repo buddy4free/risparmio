@@ -960,8 +960,15 @@ const SUB_INFO = {
   'Streaming':'Gli streaming si possono alternare, uno alla volta, invece di tenerli tutti attivi.',
   'Rate':'Il costo reale di un finanziamento (interessi, TAEG, quanto manca) si vede in Pilastri → Finanziamenti e debiti.', 'Prestiti':'Il costo reale di un finanziamento (interessi, TAEG, quanto manca) si vede in Pilastri → Finanziamenti e debiti.',
   'Delivery':'Il delivery costa in genere più dello stesso piatto al ristorante, tra consegna e prezzi più alti.',
-  'Bar e caffè':'Un caffè al giorno al bar sono circa 30 € al mese.'
+  'Bar e caffè':'Un caffè al giorno al bar sono circa 30 € al mese, 360 € in un anno.'
 };
+/* mesi precedenti con almeno un movimento registrato: le medie non contano i mesi in cui l'app non si usava ancora */
+function prevDataMonths(ym, n){ return Array.from({length:n || 3}, (_, i) => addMonths(ym, -i - 1)).filter(m => monthTx(m).some(x => !x.plan)); }
+function catAvgPrev(ym, c, n){ const pm = prevDataMonths(ym, n); return pm.length ? pm.reduce((t, m) => t + (stats(m).byCat[c] || 0), 0) / pm.length : 0; }
+/* una nota pertinente per una categoria: legata alle sottocategorie davvero presenti nelle spese recenti, altrimenti quella della categoria */
+function catNote(c, ym){ const ms = [ym || curYM()].concat(prevDataMonths(ym || curYM(), 2)), subs = {}; ms.forEach(m => monthTx(m).forEach(x => { if (x.t === 'out' && !x.plan && x.c === c && x.s) subs[x.s] = (subs[x.s] || 0) + x.a; }));
+  const k = Object.keys(subs).filter(x => SUB_INFO[x]).sort((p, q) => subs[q] - subs[p])[0]; if (!k) return SAVE_TIPS[c] || '';
+  const a = leverAvg(x => x.c === c && x.s === k); return (a > 0 ? k + ': in media ' + eur(a) + ' al mese. ' : '') + SUB_INFO[k]; }
 /* revisione: per ogni categoria, cosa dicono i dati di quel mese (sottocategorie, confronto, spese fisse) e solo note pertinenti */
 function reviewCatHTML(ym, c, a, out){
   const L = monthTx(ym).filter(x => x.t === 'out' && !x.plan && x.c === c), subs = {}; L.forEach(x => { const k = x.s || ''; subs[k] = (subs[k] || 0) + x.a; });
@@ -973,7 +980,7 @@ function reviewCatHTML(ym, c, a, out){
   if (prevA.some(v => v > 0)) { const d = (a - avg) / avg * 100; f.push(Math.abs(d) < 10 ? 'In linea con ' + (pm.length === 1 ? 'il mese prima' : 'la media dei ' + pm.length + ' mesi prima') + ' (' + eur(avg) + ').' : (d > 0 ? '+' : '−') + Math.round(Math.abs(d)) + '% rispetto ' + (pm.length === 1 ? 'al mese prima' : 'alla media dei ' + pm.length + ' mesi prima') + ' (' + eur(avg) + ').'); }
   else if (pm.length) f.push('Nei mesi prima non c\'erano spese in questa categoria.');
   if (a > 0 && recA >= a * 0.5) f.push('Per il ' + Math.round(recA / a * 100) + '% sono spese fisse ricorrenti.');
-  const sub = Object.keys(subs).find(k => SUB_INFO[k]), note = sub ? SUB_INFO[sub] : (SAVE_TIPS[c] || '');
+  const sub = Object.keys(subs).filter(k => SUB_INFO[k]).sort((p, q) => subs[q] - subs[p])[0], note = sub ? SUB_INFO[sub] : (SAVE_TIPS[c] || '');
   return '<p class="small muted" style="margin:0">' + f.join(' ') + '</p>' + (note ? '<p class="small" style="margin:4px 0 0">' + esc(note) + '</p>' : '');
 }
 
@@ -1482,22 +1489,23 @@ function splitPlan(){
 }
 function nextMove(){
   const T = targets();
-  if (!stats(curYM()).n) return {t:'Registra le spese di questo mese', d:'Tutto parte dal tracciamento: senza dati non si può guidare.', go:{screen:'add'}};
+  if (!stats(curYM()).n) return {t:'Nessun movimento registrato questo mese', d:'I calcoli dell\'app partono dai movimenti registrati: con le prime spese di ' + ymLabel(curYM(), {month:'long'}) + ' compaiono qui i numeri del mese.', go:{screen:'add'}};
   const L = pilBalance('liq'), E = pilBalance('emerg');
   if (L < T.liq) return {t:'Liquidità: ' + eur(L) + ' su ' + eur(T.liq), d:'Sul conto hai meno della soglia che hai scelto (' + S.liqMonths + (S.liqMonths === 1 ? ' mese' : ' mesi') + ' di spese). Mancano ' + eur(T.liq - L) + ': le prossime entrate la faranno salire.', go:{screen:'pillars'}};
   if (E < T.emerg) return {t:'Fondo di emergenza: ' + eur(E) + ' su ' + eur(T.emerg), d:'Mancano ' + eur(T.emerg - E) + ' alla cifra che copre ' + S.emergMonths + ' mesi di spese essenziali. Sei tu a decidere quanto e quando aggiungere.', go:{screen:'pillars'}};
   const g = S.goals.find(x => !linkedGoal(x) && goalPlan(x).left > 0);
   if (g) return {t:'Obiettivo «' + g.name + '»', d:'Per arrivare entro ' + ymLabel(g.date) + ' il passo è di ' + eur(goalPlan(g).need) + ' al mese. Puoi vedere a che punto sei e le idee per arrivarci prima.', go:{screen:'goal', id:g.id}};
-  return {t:'Liquidità, emergenza e obiettivi sono in pari', d:'Il quarto pilastro sono gli investimenti a lungo termine. In Palestra → Impara trovi lezioni per capire come funzionano; per scelte personali rivolgiti a un consulente indipendente.', go:{screen:'learn'}};
+  return {t:'Liquidità, emergenza e obiettivi sono in pari', d:'Il quarto pilastro sono gli investimenti a lungo termine. In Palestra → Impara ci sono lezioni su come funzionano; per scelte personali esiste la consulenza finanziaria indipendente.', go:{screen:'learn'}};
 }
 function insights(ym){
   const s = stats(ym), prev = stats(addMonths(ym, -1)), res = [];
   const discCats = S.cats.out.filter(c => c.disc && s.byCat[c.id]).sort((a, b) => s.byCat[b.id] - s.byCat[a.id]);
-  if (s.out && s.disc) res.push({t:'Il ' + Math.round(s.disc / s.out * 100) + '% delle uscite è non essenziale', d:'Ristoranti, bar, delivery, abbonamenti, shopping e svago: ' + eur(s.disc) + ' questo mese, circa ' + eur(s.disc * 12) + ' in un anno.'});
-  discCats.slice(0, 2).forEach(c => res.push({c:c.id, t:c.n + ': ' + eur(s.byCat[c.id]) + ' al mese', d:SAVE_TIPS[c.id] || ''}));
-  S.cats.out.forEach(c => { const a = s.byCat[c.id] || 0, b = prev.byCat[c.id] || 0; if (b > 30 && a > b * 1.25 && res.length < 5) res.push({c:c.id, t:c.n + ' +' + Math.round((a / b - 1) * 100) + '% rispetto al mese scorso', d:'Da ' + eur(b) + ' a ' + eur(a) + '. ' + (SAVE_TIPS[c.id] || '')}); });
+  if (s.out && s.disc) res.push({t:'Il ' + Math.round(s.disc / s.out * 100) + '% delle uscite è non essenziale', d:discCats.slice(0, 4).map(c => c.n + ' ' + eur(s.byCat[c.id])).join(', ') + ': ' + eur(s.disc) + ' questo mese; allo stesso ritmo, circa ' + eur(s.disc * 12) + ' in un anno.'});
+  discCats.slice(0, 2).forEach(c => { const m = catAvgPrev(ym, c.id), a = s.byCat[c.id]; res.push({c:c.id, t:c.n + ': ' + eur(a) + ' questo mese', d:(m > 0 ? (Math.abs(a - m) / m < .1 ? 'In linea con la media dei mesi prima (' + eur(m) + '). ' : (a > m ? 'Sopra' : 'Sotto') + ' la media dei mesi prima (' + eur(m) + '). ') : '') + catNote(c.id, ym)}); });
+  S.cats.out.forEach(c => { const a = s.byCat[c.id] || 0, b = prev.byCat[c.id] || 0; if (b > 30 && a > b * 1.25 && res.length < 5) res.push({c:c.id, t:c.n + ' +' + Math.round((a / b - 1) * 100) + '% rispetto al mese scorso', d:'Da ' + eur(b) + ' a ' + eur(a) + '. ' + catNote(c.id, ym)}); });
   const small = s.L.filter(x => x.t === 'out' && x.a < 10);
-  if (small.length >= 6) res.push({t:small.length + ' piccole spese sotto i 10 €', d:'Insieme fanno ' + eur2(small.reduce((t, x) => t + x.a, 0)) + '. Sono le più difficili da vedere e le più facili da ridurre.'});
+  if (small.length >= 6) { const bc = {}; small.forEach(x => bc[x.c] = (bc[x.c] || 0) + 1); const tc = Object.entries(bc).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([c, n]) => catOf('out', c).n + ' (' + n + ')').join(' e ');
+    res.push({t:small.length + ' piccole spese sotto i 10 €', d:'Insieme fanno ' + eur2(small.reduce((t, x) => t + x.a, 0)) + ', soprattutto ' + tc + '. Prese una per una passano inosservate.'}); }
   return res.slice(0, 4);
 }
 
@@ -2478,7 +2486,7 @@ function renderGoal(){
   const p = goalPlan(g), s = stats(curYM()), sv = avgSave();
   const disc = S.cats.out.filter(c => c.disc).map(c => [c, avgMonths(st => st.byCat[c.id] || 0, 3)]).filter(x => x[1] > 20).sort((a, b) => b[1] - a[1]).slice(0, 3);
   const ideas = disc.map(([c, a]) => { const cut = Math.round(a * .3); const newMonths = p.left && sv + cut > 0 ? Math.ceil(p.left / (Math.max(0, sv) + cut)) : null;
-    return {t:esc(c.n) + ' con il 30% in meno', d:'+' + eur(cut) + ' al mese. ' + (SAVE_TIPS[c.id] || ''), m:newMonths}; });
+    return {t:esc(c.n) + ' con il 30% in meno', d:'+' + eur(cut) + ' al mese. ' + catNote(c.id), m:newMonths}; });
   const tip1 = ideas[0] ? ideas[0].t + ': ' + ideas[0].d.split('. ')[0] + '.' : 'Un oggetto che non usi più, venduto, diventa un\'entrata in più per questo obiettivo.';
   view.innerHTML = '<div class="sec" style="gap:18px">' + goalBack() + goalSwitch(g) +
     (p.left ? '<div class="card tipstop"><span class="label">' + ic('star') + ' Suggerimenti per arrivarci prima</span><ul class="tiplist"><li>' + autoTip(g) + '</li><li>' + esc(tip1) + '</li></ul>' + TIP_NOTE + '<button class="btn sm" style="align-self:flex-start" ' + nav$({screen:'gtips', id:g.id}) + '>Tutti i suggerimenti</button></div>' : '') +
@@ -2503,7 +2511,7 @@ function renderCharts(){
   const maxIO = Math.max(1, ...data.map(d => Math.max(d.s.inc, d.s.out)));
   const sel = data.find(d => d.ym === (R.sel || viewYM)) || data[5];
   const cur = stats(viewYM), prevAvg = {};
-  S.cats.out.forEach(c => { prevAvg[c.id] = [1, 2, 3].reduce((t, k) => t + (stats(addMonths(viewYM, -k)).byCat[c.id] || 0), 0) / 3; });
+  S.cats.out.forEach(c => { prevAvg[c.id] = catAvgPrev(viewYM, c.id); });
   const cats = S.cats.out.filter(c => (cur.byCat[c.id] || 0) + prevAvg[c.id] > 0).sort((a, b) => ((cur.byCat[b.id] || 0) - (cur.byCat[a.id] || 0))).slice(0, 8);
   const maxC = Math.max(1, ...cats.map(c => Math.max(cur.byCat[c.id] || 0, prevAvg[c.id])));
   view.innerHTML = '<div class="sec" style="gap:22px">' + demoBar() + '<div class="intro"><h2>Movimenti</h2></div>' + txToggle() + monthNav() +
@@ -2631,7 +2639,7 @@ function renderStats(){
   }
   let cmp = '';
   if (ST.mode === 'm') {
-    const avg = {}; S.cats.out.forEach(c => { avg[c.id] = [1, 2, 3].reduce((t, k) => t + (stats(addMonths(ST.ym, -k)).byCat[c.id] || 0), 0) / 3; });
+    const avg = {}; S.cats.out.forEach(c => { avg[c.id] = catAvgPrev(ST.ym, c.id); });
     const cats = S.cats.out.filter(c => (byCat[c.id] || 0) + avg[c.id] > 0).sort((a, c) => (byCat[c.id] || 0) - (byCat[a.id] || 0)).slice(0, 8);
     const mx = Math.max(1, ...cats.map(c => Math.max(byCat[c.id] || 0, avg[c.id])));
     cmp = '<div class="card"><span class="label">Questo mese e media dei 3 mesi prima</span><div class="legend small"><span><i class="sw" style="background:' + OUT_COL + '"></i>' + ymLabel(ST.ym, {month:'long'}) + '</span><span><i class="avgkey"></i>Media 3 mesi</span></div>' +
@@ -2743,14 +2751,14 @@ function renderGoalTips(){
   const g = S.goals.find(x => x.id === R.id); if (!g) return nav({screen:'pillars'});
   const p = goalPlan(g), sv = Math.max(0, goalPace(g).pace);
   const disc = S.cats.out.filter(c => c.disc).map(c => [c, avgMonths(st => st.byCat[c.id] || 0, 3)]).filter(x => x[1] > 15).sort((a, b) => b[1] - a[1]).slice(0, 3);
-  const ideas = disc.map(([c, a]) => { const cut = Math.round(a * .3), m = p.left && sv + cut > 0 ? Math.ceil(p.left / (sv + cut)) : null; return {t:esc(c.n) + ' con il 30% in meno', d:'In media spendi ' + eur(Math.round(a)) + ' al mese: con il 30% in meno, +' + eur(cut) + ' al mese per l\'obiettivo. ' + (SAVE_TIPS[c.id] || ''), m}; });
-  const extra = [['usato','Vendita di oggetti che non usi','Subito, Vinted, eBay: l\'entrata si registra come "Vendita usato" e può andare direttamente a questo obiettivo.'],['regali','Regali in denaro','Compleanni e feste: alla voce "Dove va questa entrata?" si può scegliere questo obiettivo.'],['freelance','Un\'entrata extra al mese','Ripetizioni, piccoli lavori, cashback: anche 50 € al mese accorciano la strada.']];
+  const ideas = disc.map(([c, a]) => { const cut = Math.round(a * .3), m = p.left && sv + cut > 0 ? Math.ceil(p.left / (sv + cut)) : null; return {t:esc(c.n) + ' con il 30% in meno', d:'In media ' + eur(Math.round(a)) + ' al mese: con il 30% in meno sarebbero ' + eur(cut) + ' al mese in più per l\'obiettivo. ' + catNote(c.id), m}; });
+  const extra = [['usato','Vendita di oggetti che non usi','Subito, Vinted, eBay: l\'entrata si registra come "Vendita usato" e può andare direttamente a questo obiettivo.'],['regali','Regali in denaro','Compleanni e feste: alla voce "Dove va questa entrata?" si può scegliere questo obiettivo.'],['freelance','Un\'entrata extra al mese','Ripetizioni, piccoli lavori, cashback.' + (p.left && sv > 0 ? ' Con 50 € al mese in più, ci si arriverebbe in circa ' + Math.ceil(p.left / (sv + 50)) + ' mesi invece di ' + Math.ceil(p.left / sv) + '.' : p.left ? ' Con 50 € al mese, ci si arriverebbe in circa ' + Math.ceil(p.left / 50) + ' mesi.' : '')]];
   const top = Object.entries(stats(curYM()).byCat).concat(Object.entries(stats(addMonths(curYM(), -1)).byCat)).sort((a, b) => b[1] - a[1]).map(x => x[0]);
   const MAP = {abbonamenti:2, bollette:3, alimentari:5, banca:7, assicurazioni:8, svago:11, trasporti:12, ristoranti:17, shopping:10, abbigliamento:10};
   const gymIdx = [...new Set(top.map(c => MAP[c]).filter(x => x !== undefined).concat([13, 14, 9, 18]))].slice(0, 5);
   view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn(g.name, {screen:'goal', id:g.id}) +
-    '<div class="intro"><span class="label">Suggerimenti</span><h2>Arrivare prima a ' + esc(g.name) + '</h2>' + (p.left ? '<p class="muted">Ti mancano ' + eur(p.left) + '. Il passo giusto è ' + eur(p.need) + ' al mese' + (sv ? ', oggi accantoni in media ' + eur(Math.round(sv)) : '') + '.</p>' : '') + '</div>' +
-    '<button class="readcard" ' + nav$({screen:'sim'}) + '><span class="t"><b>' + ic('chart') + ' Simulatore del futuro</b><span>Guarda quanto pesa ogni euro risparmiato nel tempo</span></span>' + ic('right') + '</button>' +
+    '<div class="intro"><span class="label">Suggerimenti</span><h2>Arrivare prima a ' + esc(g.name) + '</h2>' + (p.left ? '<p class="muted">Ti mancano ' + eur(p.left) + '. Il passo che servirebbe è ' + eur(p.need) + ' al mese' + (sv ? ', oggi accantoni in media ' + eur(Math.round(sv)) : '') + '.</p>' : '') + '</div>' +
+    '<button class="readcard" ' + nav$({screen:'sim'}) + '><span class="t"><b>' + ic('chart') + ' Simulatore del futuro</b><span>Quanto pesa ogni euro risparmiato nel tempo</span></span>' + ic('right') + '</button>' +
     '<div class="card"><b>1. Quanto ti avanza</b><p class="small muted">' + autoTip(g) + ' Quello che metti da parte si registra con "Accantona".</p>' + TIP_NOTE + '</div>' +
     (ideas.length ? '<div class="sec"><span class="label">Le spese che pesano di più</span>' + ideas.map(x => '<div class="card" style="gap:6px;padding:14px 16px"><b>' + x.t + '</b><p class="small muted">' + esc(x.d) + '</p>' + (x.m ? '<span class="chip" style="align-self:flex-start;color:var(--ytext)">Così ci si arriverebbe in circa ' + x.m + ' mesi</span>' : '') + '</div>').join('') + '</div>' : '') +
     '<div class="sec"><span class="label">Entrate in più</span><div class="list">' + extra.map(x => '<button class="item" ' + nav$({screen:'add', type:'in'}) + '>' + catTile('in', catOf('in', x[0])) + '<span class="t"><b>' + x[1] + '</b><span class="sub" style="white-space:normal">' + x[2] + '</span></span>' + ic('right') + '</button>').join('') + '</div></div>' +
@@ -2844,15 +2852,15 @@ function coachMsgs(){
       out.push({i:'target', c:d >= 0 ? '#22A45D' : '#d95926', t:'Al ritmo attuale (' + eur(Math.round(pace)) + ' al mese), «' + g.name + '» si raggiungerebbe ' + (d > 0 ? 'con ' + d + (d === 1 ? ' mese' : ' mesi') + ' di anticipo.' : d === 0 ? 'proprio alla scadenza.' : 'con ' + (-d) + (d === -1 ? ' mese' : ' mesi') + ' di ritardo: per la scadenza servirebbero ' + eur(p.need) + ' al mese.'), b:'Media di tutti i mesi registrati (fino a 24): un mese eccezionale non la sposta'}); }
     else if (p.left) out.push({i:'target', c:'#e3a008', t:'Per «' + g.name + '» non c\'è ancora nulla da parte: servirebbero ' + eur(p.need) + ' al mese fino a ' + ymLabel(g.date, {month:'long', year:'numeric'}) + '.', b:'Cifra mancante divisa per i mesi alla scadenza'}); }
   S.goals.filter(x => !linkedGoal(x) && x !== g).forEach(x => { const p = goalPlan(x); if (p.left && monthsBetween(curYM(), x.date) <= 3) out.push({i:'calendar', c:'#e3a008', t:'Hai previsto «' + x.name + '» entro ' + ymLabel(x.date, {month:'long'}) + ', ma mancano ' + eur(p.left) + ': servono ' + eur(p.need) + ' al mese.', b:'Obiettivi con scadenza entro 3 mesi'}); });
-  const avg = {}; S.cats.out.forEach(c => { avg[c.id] = [1, 2, 3].reduce((t, k) => t + (stats(addMonths(curYM(), -k)).byCat[c.id] || 0), 0) / 3; });
+  const avg = {}; S.cats.out.forEach(c => { avg[c.id] = catAvgPrev(curYM(), c.id); });
   const spikes = S.cats.out.map(c => ({c, a:s.byCat[c.id] || 0, m:avg[c.id]})).filter(x => x.m > 0 && x.a - x.m >= 15 && x.a / x.m >= 1.15).sort((a, b) => (b.a - b.m) - (a.a - a.m));
-  spikes.slice(0, 2).forEach(x => out.push({i:x.c.i, c:OUT_COL, t:'Questo mese le spese per ' + x.c.n.toLowerCase() + ' sono già aumentate del ' + Math.round((x.a / x.m - 1) * 100) + '%: ' + eur(x.a) + ' contro una media di ' + eur(Math.round(x.m)) + '.', b:'Mese in corso rispetto alla media dei 3 mesi precedenti'}));
+  spikes.slice(0, 2).forEach(x => out.push({i:x.c.i, c:OUT_COL, t:'Questo mese le spese per ' + x.c.n.toLowerCase() + ' sono già aumentate del ' + Math.round((x.a / x.m - 1) * 100) + '%: ' + eur(x.a) + ' contro una media di ' + eur(Math.round(x.m)) + '.', b:'Mese in corso rispetto alla media dei mesi precedenti con dati (fino a 3)'}));
   const ess = avgEssential(); if (ess > 0) { const mo = pilBalance('emerg') / ess; if (mo < 3) out.push({i:'shield', c:'#d95926', t:'Il fondo di emergenza copre ' + mo.toFixed(1).replace('.', ',') + ' mesi di spese essenziali. L\'indicazione più diffusa è di avere da 3 a 6 mesi.', b:'Fondo di emergenza ÷ spese essenziali medie (' + eur(Math.round(ess)) + ' al mese)'}); }
   const prev = stats(addMonths(curYM(), -1));
   if (s.rate !== null && prev.rate !== null && Math.abs(s.rate - prev.rate) >= 5) out.push({i:'chart', c:s.rate > prev.rate ? '#22A45D' : '#d95926', t:'Il tasso di risparmio è ' + Math.round(s.rate) + '%, ' + (s.rate > prev.rate ? 'in crescita' : 'in calo') + ' di ' + Math.round(Math.abs(s.rate - prev.rate)) + ' punti rispetto al mese scorso.', b:'Entrate e uscite registrate'});
   const fc = fcStats(curYM()); if (fc.n > s.n && fc.save < 0) out.push({i:'calendar', c:'#d95926', t:'Con i movimenti programmati fino a fine mese, le uscite supererebbero le entrate di ' + eur(-fc.save) + '.', b:'Movimenti registrati più ricorrenti e programmati del mese'});
   const nx = fcStats(addMonths(curYM(), 1)); if (nx.inc > 0) out.push({i:'repeat', c:'#3987e5', t:'Per ' + ymLabel(addMonths(curYM(), 1), {month:'long'}) + ' sono già previsti ' + eur(nx.inc) + ' di entrate e ' + eur(nx.out) + ' di uscite tra ricorrenti e programmati: restano ' + eur(nx.save) + ' per tutto il resto.', b:'Ricorrenti e movimenti programmati'});
-  upcomingDues().slice(0, 1).forEach(d => out.unshift({i:'calendar', c:'#e3a008', t:(dueDays(d) < 0 ? esc(d.n) + ' è scaduto' : 'Tra ' + dueDays(d) + ' giorni scade ' + esc(d.n)) + ' (' + eur2(d.a) + ' ' + FREQ[d.freq][0] + ').', b:'Il tuo calendario delle scadenze', go:{screen:'dues', open:d.id}}));
+  upcomingDues().slice(0, 1).forEach(d => out.unshift({i:'calendar', c:'#e3a008', t:(dueDays(d) < 0 ? d.n + ' è scaduto' : 'Tra ' + dueDays(d) + ' giorni scade ' + d.n) + ' (' + eur2(d.a) + ' ' + FREQ[d.freq][0] + ').', b:'Il tuo calendario delle scadenze', go:{screen:'dues', open:d.id}}));
   const last = S.tx.map(x => x.d).filter(d => d <= today()).sort().pop();
   if (last && daysBetween(last, today()) >= 3) out.push({i:'list', c:'#3987e5', t:'Nessun movimento registrato da ' + daysBetween(last, today()) + ' giorni: se nel frattempo hai speso qualcosa, puoi aggiungerlo ora.', b:'Data dell\'ultimo movimento'});
   return out.slice(0, 4);
@@ -2967,12 +2975,12 @@ function renderDues(){
   } else if (D) {
     const st = dueState(D), cat = catOf('out', D.c);
     body = '<div class="card" style="border-color:' + st.c + '"><div class="spread"><b style="font-size:1.15rem">' + esc(D.n) + '</b><span class="status" style="background:' + st.c + '">' + st.l + '</span></div>' +
-      '<p class="num">' + eur2(D.a) + ' ' + FREQ[D.freq][0] + (D.freq !== 'o' ? ' · ' + eur(dueYear(D)) + ' all\'anno' : '') + ' · rinnovo il ' + dshort(D.date) + '</p>' +
-      '<span class="label">Prima di rinnovare, le 5 strade</span>' +
-      '<div class="tipi"><span class="tag">Elimina</span><p>Lo hai usato negli ultimi mesi? Se no, disdici: risparmi ' + eur(dueYear(D)) + ' all\'anno.</p></div>' +
-      '<div class="tipi"><span class="tag">Rinegozia</span><p>Chiama con un\'offerta concorrente in mano e chiedi di adeguare il prezzo.</p></div>' +
-      '<div class="tipi"><span class="tag">Sostituisci</span><p>Confronta altri fornitori o un piano più piccolo. ' + esc(SAVE_TIPS[D.c] || '') + '</p></div>' +
-      '<div class="tipi"><span class="tag">Gratis</span><p>Esiste un\'alternativa gratuita o condivisa che ti basta?</p></div>' +
+      '<p class="num">' + eur2(D.a) + ' ' + FREQ[D.freq][0] + (D.freq !== 'o' && D.freq !== 'y' ? ' · ' + eur(dueYear(D)) + ' all\'anno' : '') + ' · rinnovo il ' + dshort(D.date) + '</p>' +
+      '<span class="label">Prima del rinnovo, le possibilità</span>' + (D.freq !== 'o' ? '<p class="small muted" style="margin:0">' + (cs => cs > 0 ? 'È il ' + Math.round(dueYear(D) / cs * 100) + '% di quanto hai speso in ' + esc(cat.n) + ' negli ultimi 12 mesi (' + eur(cs) + ').' : '')(Array.from({length:12}, (_, i) => stats(addMonths(curYM(), -i)).byCat[D.c] || 0).reduce((t, v) => t + v, 0)) + '</p>' : '') +
+      '<div class="tipi"><span class="tag">Elimina</span><p>Disdire vorrebbe dire ' + eur(dueYear(D)) + ' in meno all\'anno.</p></div>' +
+      '<div class="tipi"><span class="tag">Rinegozia</span><p>Con un\'offerta concorrente, molti fornitori adeguano il prezzo: con il 15% in meno sarebbero ' + eur(dueYear(D) * .15) + ' all\'anno.</p></div>' +
+      '<div class="tipi"><span class="tag">Sostituisci</span><p>Un altro fornitore o un piano più piccolo. ' + esc(catNote(D.c)) + '</p></div>' +
+      '<div class="tipi"><span class="tag">Gratis</span><p>Per alcuni servizi esistono alternative gratuite o condivise, come i piani famiglia.</p></div>' +
       '<span class="label" style="margin-top:6px">Cosa hai deciso?</span><div class="grid2">' +
         '<button class="btn" data-dec="renew">Rinnovo</button><button class="btn ghost" data-dec="nego">Rinegoziato</button><button class="btn ghost" data-dec="less">Ridotto</button><button class="btn danger" data-dec="cancel">Disdetto</button></div>' +
       '<div id="dec"></div><div class="row"><a class="small" href="' + dueCal(D) + '" target="_blank" rel="noopener">Promemoria nel calendario un mese prima</a><button class="textlink" ' + nav$({screen:'dues', form:D.id}) + '>Modifica</button></div></div>';
@@ -2981,7 +2989,7 @@ function renderDues(){
     '<div class="io"><div><span class="label">Costo all\'anno</span><b>' + eur(yr) + '</b></div><div><span class="label">Risparmiato con le decisioni</span><b style="color:' + IN_COL + '">' + eur(cut) + '</b></div></div>' +
     (body || '<button class="btn" style="align-self:flex-start" ' + nav$({screen:'dues', form:'new'}) + '>' + ic('plus') + 'Aggiungi una scadenza</button>') +
     (L.length ? '<div class="list">' + L.map(d => { const st = dueState(d); return '<button class="item" ' + nav$({screen:'dues', open:d.id}) + '>' + catTile('out', catOf('out', d.c)) + '<span class="t"><b>' + esc(d.n) + '</b><span class="sub">' + eur2(d.a) + ' ' + FREQ[d.freq][0] + ' · ' + dshort(d.date) + '</span></span><span class="status" style="background:' + st.c + '">' + (dueDays(d) < 0 ? 'Scaduta' : dueDays(d) + ' gg') + '</span></button>'; }).join('') + '</div>'
-      : '<div class="note">Nessuna scadenza. Inizia dalle più costose: assicurazione auto, bollo, abbonamento annuale della palestra.</div>') + '</div>';
+      : '<div class="note">Nessuna scadenza. Le più utili da inserire sono le più costose: assicurazione auto, bollo, abbonamenti annuali.</div>') + '</div>';
   if (R.form) {
     view.querySelector('#du-ok').onclick = () => { const n = val('du-n').trim(), a = parseAmt(val('du-a')), date = val('du-d'); if (!n || !(a > 0) || !date) return toast('Inserisci nome, importo e data');
       const rec = {n, a, freq:val('du-f'), date, c:val('du-c')}; if (R.form === 'new') S.dues.push(Object.assign({id:uid()}, rec)); else Object.assign(S.dues.find(x => x.id === R.form), rec); save(); toast('Scadenza salvata'); nav({screen:'dues'}); };
@@ -3066,10 +3074,32 @@ function mCheckDone(M){
   toast('Missione completata! +' + M.xp + ' punti'); return true;
 }
 function gymTabs(cur){ return '<div class="seg3 gymtabs">' + [['gym', 'Percorso'], ['missions', 'Sfide'], ['learn', 'Impara']].map(t => '<button ' + nav$({screen:t[0]}) + ' aria-pressed="' + (cur === t[0]) + '">' + t[1] + '</button>').join('') + '</div>'; }
+/* per ogni missione, cosa dicono i tuoi dati: serve a mettere prima quelle più legate alle tue spese */
+function mRel(M){
+  const out = (fn) => leverAvg(fn), days = n => new Set(S.tx.filter(x => x.t === 'out' && x.d <= today() && daysBetween(x.d, today()) < n).map(x => x.d)).size;
+  const R0 = (v, t) => ({v, t});
+  if (M.id === 'abbo3') { const a = out(x => x.c === 'abbonamenti'); return a > 0 ? R0(a, 'Abbonamenti: in media ' + eur(a) + ' al mese') : R0(0, 'Nei tuoi dati non ci sono abbonamenti'); }
+  if (M.id === 'pranzo') { const a = out(x => x.c === 'ristoranti' && ['Pranzo fuori', 'Delivery'].includes(x.s)); return a > 0 ? R0(a, 'Pranzi fuori e consegne: in media ' + eur(a) + ' al mese') : R0(0, 'Nei tuoi dati non ci sono pranzi fuori'); }
+  if (M.id === 'confronta') { const a = out(x => ['shopping', 'abbigliamento'].includes(x.c)); return a > 0 ? R0(a * .5, 'Shopping e abbigliamento: in media ' + eur(a) + ' al mese') : R0(0, ''); }
+  if (M.id === 'impulso') { const a = out(x => catOf('out', x.c).disc); return a > 0 ? R0(a * .4, 'Spese non essenziali: in media ' + eur(a) + ' al mese') : R0(0, ''); }
+  if (M.id === 'zero') { const d = days(30); return R0(d > 20 ? 40 : 10, 'Negli ultimi 30 giorni, spese in ' + d + ' giorni diversi'); }
+  if (M.id === 'track30') { const d = new Set(S.tx.filter(x => x.d <= today() && daysBetween(x.d, today()) < 30).map(x => x.d)).size; return R0(d < 15 ? 45 : 5, 'Negli ultimi 30 giorni, movimenti registrati in ' + d + ' giorni'); }
+  if (M.id === 'somma') { const a = Math.round(avgSave()); return R0(20, a > 0 ? 'In media avanzano ' + eur(a) + ' al mese' : ''); }
+  const by = (lbl, fn, k, none) => { const a = out(fn); return a > 0 ? R0(a * (k || 1), lbl + ': in media ' + eur(a) + ' al mese') : R0(0, none || ''); };
+  if (M.id === 'online') return by('Acquisti online', x => x.s === 'Acquisti online', 1, 'Nei tuoi dati non ci sono acquisti online');
+  if (M.id === 'delivery') return by('Delivery', x => x.s === 'Delivery', 1, 'Nei tuoi dati non ci sono consegne a domicilio');
+  if (M.id === 'colazione') return by('Bar e caffè', x => x.s === 'Bar e caffè', 1, 'Nei tuoi dati non ci sono spese al bar');
+  if (M.id === 'batch') return by('Ristoranti e consegne', x => x.c === 'ristoranti', .4);
+  if (M.id === 'lista') return by('Spesa alimentare', x => x.c === 'alimentari', .15);
+  if (M.id === 'energia') return by('Luce e gas', x => ['Luce', 'Gas'].includes(x.s), 1, 'Nei tuoi dati non ci sono bollette di luce e gas');
+  if (M.id === 'rinegozia') return by('Bollette, assicurazioni e abbonamenti', x => ['bollette', 'assicurazioni', 'abbonamenti'].includes(x.c), .3);
+  if (M.id === 'rinuncia' || M.id === 'contanti') return by('Spese non essenziali', x => catOf('out', x.c).disc, .2);
+  return R0(15, '');
+}
 function renderMissions(){
   const ms = mState(), L = mLevel();
   MISSIONS.filter(M => ms.active[M.id] && M.type === 'auto').forEach(mCheckDone);
-  const act = MISSIONS.filter(M => ms.active[M.id]), avail = MISSIONS.filter(M => !ms.active[M.id]);
+  const act = MISSIONS.filter(M => ms.active[M.id]), rel = Object.fromEntries(MISSIONS.map(M => [M.id, mRel(M)])), avail = MISSIONS.filter(M => !ms.active[M.id]).sort((a, b) => rel[b.id].v - rel[a.id].v);
   const doneIds = ms.done.map(d => d.id), saved = ms.done.reduce((t, d) => t + (d.saved || 0), 0);
   view.innerHTML = '<div class="sec" style="gap:20px">' + gymTabs('missions') +
     '<div class="intro"><span class="marker y" style="font-size:1.05rem">Sfide e missioni</span><h2>Dalla teoria alla pratica</h2><p class="muted">Piccole missioni concrete, al massimo ' + MAX_ACTIVE + ' alla volta. Nessuna classifica: gareggi solo con te stesso.</p></div>' +
@@ -3077,7 +3107,7 @@ function renderMissions(){
       '<div class="spread small muted"><span>' + ms.done.length + ' missioni completate</span><span>Risparmi annotati: <b style="color:var(--fg)">' + eur(saved) + '</b></span></div></div>' +
     (act.length ? '<div class="sec"><span class="label">In corso</span>' + act.map(M => { const st = ms.active[M.id], p = mProgress(M, st), T = mTarget(M, st);
       return '<button class="readcard" ' + nav$({screen:'mission', id:M.id}) + '><span class="t"><b>' + ic(M.i) + ' ' + M.t + '</b><span class="wbbar"><i style="width:' + Math.min(100, p / T * 100) + '%;background:var(--yellow)"></i></span><span>' + (M.type === 'amount' || M.type === 'roundup' ? eur2(p) + ' di ' + eur(T) : p + ' di ' + T) + ' · dal ' + dshort(st.start) + '</span></span>' + ic('right') + '</button>'; }).join('') + '</div>' : '') +
-    '<div class="sec"><span class="label">Scegli una missione' + (act.length >= MAX_ACTIVE ? ' · finisci prima una di quelle in corso' : '') + '</span><div class="list">' + avail.map(M => '<button class="item" ' + nav$({screen:'mission', id:M.id}) + '><span class="ic">' + ic(M.i) + '</span><span class="t"><b>' + M.t + '</b><span class="sub">' + M.xp + ' punti' + (doneIds.includes(M.id) ? ' · già completata ' + doneIds.filter(x => x === M.id).length + 'x' : '') + '</span></span>' + ic('right') + '</button>').join('') + '</div></div>' +
+    '<div class="sec"><span class="label">Scegli una missione' + (act.length >= MAX_ACTIVE ? ' · finisci prima una di quelle in corso' : '') + '</span><div class="list">' + avail.map(M => '<button class="item" ' + nav$({screen:'mission', id:M.id}) + '><span class="ic">' + ic(M.i) + '</span><span class="t"><b>' + M.t + '</b><span class="sub">' + (rel[M.id].t ? esc(rel[M.id].t) + ' · ' : '') + M.xp + ' punti' + (doneIds.includes(M.id) ? ' · già completata ' + doneIds.filter(x => x === M.id).length + 'x' : '') + '</span></span>' + ic('right') + '</button>').join('') + '</div></div>' +
     (ms.done.length ? '<div class="sec"><span class="label">Traguardi</span><div class="badges">' + ms.done.slice().reverse().map(d => { const M = MISSIONS.find(x => x.id === d.id); return '<span class="badge2">' + ic(M.i) + '<span><b>' + M.t + '</b><br><span class="small muted">' + dshort(d.d) + (d.saved ? ' · ' + eur(d.saved) : '') + '</span></span></span>'; }).join('') + '</div></div>' : '') +
   '</div>';
 }
@@ -3543,13 +3573,13 @@ const DREAMS = {
 const dreamFor = (kind, amount) => { const L = DREAMS[kind] || DREAMS.personale; return L.filter(d => d[0] <= amount).pop() || L[0]; };
 /* spese che si ripetono e che si possono davvero ridurre: [id, nome, filtro, consiglio, quota realistica di riduzione] */
 const LEVERS = [
-  ['abbonamenti', 'Abbonamenti', x => x.c === 'abbonamenti', 'Tieni solo quelli che usi davvero', .5],
+  ['abbonamenti', 'Abbonamenti', x => x.c === 'abbonamenti', 'Solo quelli usati davvero', .5],
   ['colazioni', 'Colazioni e caffè al bar', x => x.c === 'ristoranti' && x.s === 'Bar e caffè', 'Metà delle colazioni a casa', .5],
   ['pranzi', 'Pranzi fuori e consegne', x => x.c === 'ristoranti' && ['Delivery', 'Pranzo fuori'].includes(x.s), 'La schiscetta un paio di volte a settimana', .4],
   ['cene', 'Cene fuori e aperitivi', x => x.c === 'ristoranti' && !['Bar e caffè', 'Delivery', 'Pranzo fuori'].includes(x.s), 'Una cena a casa con amici al posto del ristorante', .3],
   ['spesa', 'Spesa al supermercato', x => x.c === 'alimentari', 'Lista, menù della settimana, meno sprechi', .1],
-  ['tabacchi', 'Sigarette, gratta e vinci, scommesse', x => x.c === 'tabacchi', 'Dimezzare aiuta portafoglio e salute', .5],
-  ['svago', 'Uscite e svago', x => x.c === 'svago', 'Alterna uscite a pagamento e gratuite', .3]
+  ['tabacchi', 'Sigarette, gratta e vinci, scommesse', x => x.c === 'tabacchi', 'La metà: meno spesa e più salute', .5],
+  ['svago', 'Uscite e svago', x => x.c === 'svago', 'Uscite a pagamento alternate a quelle gratuite', .3]
 ];
 function leverAvg(fn){ return avgMonths(st => st.L.filter(x => x.t === 'out' && fn(x)).reduce((t, x) => t + x.a, 0), 3); }
 function renderWhatIf(){

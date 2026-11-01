@@ -352,7 +352,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-conten
 .bcirc small{display:block;font-size:1.5rem;color:var(--ytext)}
 .center{justify-content:center;text-align:center}
 
-.toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%) translateY(20px);background:var(--yellow);color:#000;padding:10px 18px;border-radius:99px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;z-index:30;max-width:calc(100vw - 32px)}
+.toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%) translateY(20px);background:var(--yellow);color:#000;padding:10px 18px;border-radius:99px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;z-index:250;max-width:calc(100vw - 32px)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* v2: colors, charts, settings */
 .gear{border:0;background:none;padding:4px;color:var(--muted);display:grid;place-items:center}
@@ -3515,14 +3515,22 @@ async function decryptText(env, pw){ const it = +env.iter || 310000; if (!(it >=
 function exportBackup(){
   if (!downloads) { toast('Il salvataggio dei file non è disponibile qui'); return Promise.resolve(); }
   return new Promise(done => catPop('<b style="font-size:1.1rem">Backup completo</b><p class="small muted" style="margin:0">Il backup contiene tutti i tuoi dati. Proteggilo con una password: senza, chi trova il file (su Drive, nella posta…) può leggerlo.</p>' +
-    '<div class="field"><label for="bk-p1">Password</label><input id="bk-p1" type="password" autocomplete="new-password" placeholder="Almeno 6 caratteri"></div><div class="field"><label for="bk-p2">Ripeti la password</label><input id="bk-p2" type="password" autocomplete="new-password"></div>' +
+    '<div class="field"><label for="bk-p1">Password</label><input id="bk-p1" type="password" autocomplete="new-password" placeholder="Almeno 6 caratteri"></div><div class="field"><label for="bk-p2">Ripeti la password</label><input id="bk-p2" type="password" autocomplete="new-password"></div><p class="small" id="bk-msg" role="alert" style="margin:0;min-height:1.2em"></p>' +
     '<p class="small" style="margin:0;color:var(--warn)">Segnatela: se la dimentichi il backup non si può più aprire, nemmeno da noi.</p>' +
     '<div class="row" style="flex-wrap:wrap"><button class="btn" id="bk-enc">' + ic('shield') + 'Salva protetto</button><button class="btn ghost" id="bk-plain">Salva senza password</button></div><button class="textlink" data-x style="align-self:flex-start">Annulla</button>', (o, close) => {
     const go = async pw => { const raw = JSON.stringify(Object.assign({app:'buddy4free-risparmio', exported:new Date().toISOString()}, S));
       try { const data = pw ? await encryptText(raw, pw) : raw; close(); const now = new Date(), fname = 'buddy4free-backup-' + today() + '-' + pad(now.getHours()) + pad(now.getMinutes()) + (pw ? '-protetto' : '') + '.json'; await downloads.save({filename:fname, data}); S.lastBackupName = fname; S.lastBackup = today(); save(); toast(pw ? 'Backup protetto salvato' : 'Backup salvato'); }
       catch(e) { close(); if (e && e.code !== 'declined') toast('Non è stato possibile salvare il backup'); }
       done(); };
-    o.querySelector('#bk-enc').onclick = () => { const a = o.querySelector('#bk-p1').value, b2 = o.querySelector('#bk-p2').value; if (a.length < 6) return toast('La password deve avere almeno 6 caratteri'); if (a !== b2) return toast('Le due password non coincidono'); go(a); };
+    /* l'errore si vede dentro il riquadro, mentre scrivi e quando tocchi Salva */
+    const p1 = o.querySelector('#bk-p1'), p2 = o.querySelector('#bk-p2'), msg = o.querySelector('#bk-msg');
+    const check = force => { const a = p1.value, b2 = p2.value; let t = '', ok = false;
+      if (a.length < 6) t = a || force ? 'La password deve avere almeno 6 caratteri (ora ' + a.length + ')' : '';
+      else if (b2 !== a) t = b2 || force ? (a.startsWith(b2) && !force ? '' : 'Le due password non coincidono') : '';
+      else { t = '✓ Password valida'; ok = true; }
+      msg.textContent = t; msg.style.color = ok ? 'var(--good)' : 'var(--critical)'; return ok; };
+    p1.oninput = p2.oninput = () => check(false);
+    o.querySelector('#bk-enc').onclick = () => { if (!check(true)) { (p1.value.length < 6 ? p1 : p2).focus(); return; } go(p1.value); };
     o.querySelector('#bk-plain').onclick = () => go(null);
     o.addEventListener('click', e => { if (e.target === o || e.target.closest('[data-x]')) done(); }); }));
 }

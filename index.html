@@ -4,8 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
+<meta name="b4f-build" content="202611010633">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-JVDmpTK1psxwComyTWnjxx9OClErpBhw9ksuGgho3dE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-zDmmlepW03Js8v2qcCH9/vnofntd5NBJ+GtbFJHl5J8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -709,6 +710,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 
 .dtheme{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 6px}.dtheme .label{margin:0}
+.planhead{display:flex;flex-direction:column;gap:2px;margin:22px 0 2px;padding-top:14px;border-top:2px dashed var(--line)}
 /* ---------- tema chiaro (Impostazioni → Visualizzazione) ---------- */
 :root[data-theme="light"]{--bg:#F5F4EF;--soft:#FFFFFF;--soft2:#ECEAE3;--fg:#17170F;--muted:#6A685F;--line:#E0DDD3;--ytext:#9A6A00;--yic:#FFFFFF;--yring:#9C978A;--yrw:1;--yol:#17170F;--good:#0B8A0B;--warn:#B77900;--serious:#C9562B;--critical:#D23B40;color-scheme:light}
 :root[data-theme="light"],[data-theme="light"] body{background:var(--bg);color:var(--fg)}
@@ -766,6 +768,10 @@ if (window.top !== window.self) { try { top.location = location.href; } catch(e)
 (function(){
   let prev = 0; try { prev = +localStorage.getItem('b4f-boot') || 0; localStorage.setItem('b4f-boot', String(Date.now())); } catch(e) { return; }
   window.addEventListener('error', e => { try { if (e.message && /b4f-modalita-sicura/.test(e.message)) return; localStorage.setItem('b4f-lasterr', JSON.stringify({m:String(e.message || ''), s:String((e.error && e.error.stack) || (e.filename + ':' + e.lineno)).slice(0, 1500), t:new Date().toISOString()})); } catch(x) {} });
+  /* rallentamenti oltre 0,7 s: si annotano con la schermata, per "Segnala un problema" (niente dati finanziari) */
+  try { new PerformanceObserver(l => { const L = (() => { try { return JSON.parse(localStorage.getItem('b4f-slow') || '[]'); } catch(e) { return []; } })(); let scr = '?'; try { scr = R.screen; } catch(e) {}
+    l.getEntries().forEach(e => { if (e.duration >= 700) L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:scr}); });
+    try { localStorage.setItem('b4f-slow', JSON.stringify(L.slice(-20))); } catch(e) {} }).observe({type:'longtask', buffered:true}); } catch(e) {}
   if (!prev) return;
   const err = (() => { try { return JSON.parse(localStorage.getItem('b4f-lasterr') || 'null'); } catch(e) { return null; } })();
   /* con il PIN attivo la copia dei dati non si offre qui: si fa dall'app, dopo il PIN */
@@ -1804,7 +1810,8 @@ function renderTx(){
   else L = L.concat(XF);
   if (TXQ) { const q = normQ(TXQ).trim(); L = L.filter(x => normQ(x.xfer ? [destLabel(x.from), destLabel(x.to), x.n].join(' ') : [x.n, x.s, catOf(x.t, x.c).n, String(x.a).replace('.', ',')].join(' ')).includes(q)); }
   L.sort((a, b) => b.d.localeCompare(a.d));
-  const shown = L.slice(0, TXLIM), groups = {}; shown.forEach(x => (groups[x.d] = groups[x.d] || []).push(x));
+  /* i movimenti programmati (non ancora avvenuti) stanno in fondo, dal più vicino, sotto il loro titolo */
+  const LO = L.filter(x => !x.plan).concat(L.filter(x => x.plan).sort((a, b) => a.d.localeCompare(b.d))), shown = LO.slice(0, TXLIM), groups = {}, fgroups = {}; shown.forEach(x => { const g = x.plan ? fgroups : groups; (g[x.d] = g[x.d] || []).push(x); });
   const perLabel = TXP === 'm' ? ymLabel(viewYM) : TXP === 'y' ? 'Anno ' + TXY : TXP === 'p' ? ymLabel(months[0], {month:'short', year:'numeric'}) + ' – ' + ymLabel(months[months.length - 1], {month:'short', year:'numeric'}) : 'Da ' + ymLabel(months[0], {month:'short', year:'numeric'});
   const period = txPeriodHTML(months);
   const catSel = '<div class="txfilt"><div class="txq">' + ic('list') + '<input id="tx-q" type="search" placeholder="Cerca nella nota, nella categoria o nell\'importo" value="' + esc(TXQ) + '" aria-label="Cerca nei movimenti">' + (TXQ ? '<button id="tx-qx" aria-label="Cancella la ricerca">×</button>' : '') + '</div>' + (txFilter === 'xfer' && !TXC ? '' : '<select id="tx-c" aria-label="Filtra per categoria"><option value="">' + (txFilter === 'out' ? 'Tutte le categorie di uscita' : txFilter === 'in' ? 'Tutte le categorie di entrata' : 'Tutte le categorie') + '</option>' + [['out', 'Uscite'], ['in', 'Entrate']].filter(([t]) => !['in', 'out'].includes(txFilter) || txFilter === t || (TXC && TXC.t === t)).map(([t, n]) => '<optgroup label="' + n + '">' + S.cats[t].map(c => '<option value="' + t + ':' + c.id + '"' + (TXC && TXC.t === t && TXC.c === c.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</optgroup>').join('') + '</select>') +
@@ -1842,7 +1849,7 @@ function renderTx(){
     (TXC ? '<div class="spread"><span class="chip" style="background:' + catColor(TXC.t, cat) + ';color:#fff">' + ic(cat.i) + esc(cat.n) + (TXC.s ? ' › ' + esc(TXC.s) : TXC.s === '' ? ' › senza sottocategoria' : '') + '</span><button class="textlink" id="tx-clr">Togli il filtro</button></div>'
       : '<div class="filters">' + [['all','Tutti'],['out','Uscite'],['in','Entrate'],['xfer','Trasferimenti']].map(f => '<button data-f="' + f[0] + '" aria-pressed="' + (txFilter === f[0]) + '">' + f[1] + '</button>').join('') + '</div>') +
     summary + selBar() +
-    (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => '<div class="dayhead">' + dl(d) + '</div><div class="list">' + groups[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
+    (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => [groups, d]).concat(Object.keys(fgroups).sort().map(d => [fgroups, d])).map(([G, d], gi, GA) => (G === fgroups && (gi === 0 || GA[gi - 1][0] !== fgroups) ? '<div class="planhead"><span class="label">Movimenti programmati</span><span class="small muted">Non ancora avvenuti: non contano nei totali di oggi</span></div>' : '') + '<div class="dayhead">' + dl(d) + '</div><div class="list">' + G[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
       const c = catOf(x.t, x.c);
       if (TXSEL) { const ok = !x.rec && S.tx.some(y => y.id === x.id); return '<label class="item selrow' + (ok ? '' : ' off') + '">' + (ok ? '<input type="checkbox" data-tsel="' + x.id + '"' + (TXSEL.has(x.id) ? ' checked' : '') + '>' : '<span class="small muted" title="Ricorrente: si modifica dalla serie">↻</span>') + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (isRf(x) ? ' · rimborso' : '') + '</span></span>' + txAmt(x) + '</label>'; }
       return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan && !x.rec ? ' · programmata il ' + dshort(x.d) : x.plan ? ' · previsto' : x.rec ? ' · ' + recFreq(S.rec.find(r => r.id === x.rec) || {}, true) : '') + (isRf(x) ? ' · <b style="color:' + IN_COL + '">rimborso</b>' : '') + '</span></span>' + txAmt(x) + '</button>'; }).join('') + '</div>').join('') + '</div>' +
@@ -4371,6 +4378,20 @@ async function notifRetry(){ if (!S.notif || !S.notif.on || S.notif.periodic || 
     await reg.periodicSync.register('b4f-daily', {minInterval:12 * 3600e3}); S.notif.periodic = true; save(); if (R.screen === 'notif') renderNotif(); } catch(e) {} }
 setTimeout(notifRetry, 2500);
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { const g = e.data && e.data.go; if (GO_OK.includes(g)) nav({screen:g}); });
+/* dettagli tecnici per capire un problema: versione, telefono, quanti dati (non quali), rallentamenti ed errori */
+function diagText(){ const g = k => { try { return localStorage.getItem(k); } catch(e) { return null; } }, slow = (() => { try { return JSON.parse(g('b4f-slow') || '[]'); } catch(e) { return []; } })(), err = (() => { try { return JSON.parse(g('b4f-lasterr') || 'null'); } catch(e) { return null; } })();
+  const m = document.querySelector('meta[name="b4f-build"]');
+  return ['Buddy4Free Risparmio · segnalazione', 'Versione: ' + (m ? m.content : 'anteprima'), 'Data: ' + new Date().toLocaleString('it-IT'), 'Schermata: ' + R.screen,
+    'Tema: ' + themePref() + ' (' + document.documentElement.dataset.theme + ')', 'Schermo: ' + innerWidth + '×' + innerHeight, 'Telefono: ' + navigator.userAgent,
+    'Dati: ' + S.tx.length + ' movimenti, ' + S.rec.length + ' ricorrenti, ' + S.moves.length + ' movimenti dei pilastri, ' + S.goals.length + ' obiettivi, ' + (S.debts || []).length + ' finanziamenti, ' + (S.dues || []).length + ' scadenze, storico ' + Object.values(S.hist || {}).reduce((t, h) => t + h.length, 0) + ' mesi',
+    'Memoria usata: ' + Math.round(((g('b4f-finanza-v1') || '').length) / 1024) + ' KB', 'Copia offline: ' + (navigator.serviceWorker && navigator.serviceWorker.controller ? 'sì' : 'no'),
+    'Rallentamenti: ' + (slow.length ? slow.slice(-10).map(x => x.t + ' ' + x.ms + ' ms (' + x.s + ')').join('; ') : 'nessuno'),
+    'Ultimo errore: ' + (err ? err.t + ' ' + err.m + ' ' + (err.s || '').split('\n').slice(0, 3).join(' / ') : 'nessuno')].join('\n'); }
+function diagPop(){ const t = diagText();
+  catPop('<b style="font-size:1.1rem">Segnala un problema</b><p class="small muted" style="margin:0">Se l\'app si è bloccata, è lenta o fa qualcosa di strano, manda questi dettagli a Buddy4Free con due righe su cosa stavi facendo. Non contengono i tuoi movimenti né i tuoi importi.</p>' +
+    '<pre style="white-space:pre-wrap;font-size:.72rem;max-height:40vh;overflow:auto;background:var(--soft2);border-radius:10px;padding:10px;margin:0">' + esc(t) + '</pre>' +
+    '<div class="row" style="flex-wrap:wrap"><button class="btn" id="dg-copy">Copia</button><a class="btn ghost" href="mailto:buddyforfree@gmail.com?subject=' + encodeURIComponent('Segnalazione Buddy4Free Risparmio') + '&body=' + encodeURIComponent('Cosa stavo facendo:\n\n\n' + t) + '">Scrivi una mail</a></div><span class="small muted">Indirizzo: buddyforfree@gmail.com</span><button class="textlink" data-x style="align-self:flex-start">Chiudi</button>', o => {
+    o.querySelector('#dg-copy').onclick = async () => { try { await navigator.clipboard.writeText(t); toast('Dettagli copiati'); } catch(e) { toast('Non riesco a copiare: fai uno screenshot'); } }; }); }
 function renderSettings(){
   view.innerHTML = '<div class="sec" style="gap:22px">' + backBtn('Home', {screen:'home'}) + '<div class="intro"><h2>Impostazioni</h2></div>' +
     '<div class="sec"><span class="label">Promemoria</span><div class="list"><button class="item" ' + nav$({screen:'notif'}) + '><span class="ic">' + ic('calendar') + '</span><span class="t"><b>Notifiche e promemoria</b><span class="sub">' + WELL.length + ' promemoria: soldi e benessere, con orari e calendario</span></span>' + ic('right') + '</button></div></div>' +
@@ -4389,6 +4410,7 @@ function renderSettings(){
       '<button class="item" ' + nav$({screen:'terms'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Termini e condizioni</b><span class="sub">Versione ' + TERMS_V + (S.termsAt ? ', accettata il ' + dshort(S.termsAt) : '') + '</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'privacy'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Informativa sulla privacy</b><span class="sub">I tuoi dati restano sul tuo dispositivo</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'howto'}) + '><span class="ic">' + ic('book') + '</span><span class="t"><b>Guida</b><span class="sub">Il metodo, le schermate e tutte le funzioni</span></span>' + ic('right') + '</button>' +
+      '<button class="item" id="s-diag"><span class="ic">' + ic('shield') + '</span><span class="t"><b>Segnala un problema</b><span class="sub">Dettagli tecnici da mandare a Buddy4Free, senza i tuoi dati</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'legend'}) + '><span class="ic">' + ic('book') + '</span><span class="t"><b>Legenda</b><span class="sub">Cosa significano colori, pilastri e voci dell\'app</span></span>' + ic('right') + '</button>' +
       '<button class="item" data-ask="demo"><span class="ic">' + ic('star') + '</span><span class="t"><b>Carica il conto di esempio</b><span class="sub">Tre mesi di movimenti per provare l\'app</span></span>' + ic('right') + '</button>' +
       '<button class="item" data-ask="setup"><span class="ic">' + ic('calendar') + '</span><span class="t"><b>Rifai la configurazione iniziale</b><span class="sub">Stipendio, spese fisse, obiettivo, saldi</span></span>' + ic('right') + '</button>' +
@@ -4403,6 +4425,7 @@ function renderSettings(){
   const bk = view.querySelector('#s-bk'); if (bk) bk.onclick = exportBackup; lockCard();
   view.querySelector('#s-rs').onchange = e => { const f = e.target.files[0]; if (f) importBackup(f); };
   view.querySelector('#s-snd').onchange = e => { S.sound = e.target.checked; save(); };
+  const sd = view.querySelector('#s-diag'); if (sd) sd.onclick = diagPop;
   view.querySelector('#s-tips').onchange = e => { S.showTips = e.target.checked; save(); renderSettings(); };
   view.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { try { localStorage.setItem('b4f-theme', b.dataset.th); } catch(e) {} applyTheme(); const y = window.scrollY; renderSettings(); window.scrollTo({top:y}); });
   view.querySelector('#s-hide').onchange = e => { S.hide = e.target.checked; save(); render(); };

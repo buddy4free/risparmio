@@ -1151,8 +1151,13 @@ let remT = null;
 function remSync(){ clearTimeout(remT); remT = setTimeout(async () => { if (!('caches' in window) || !S.notif) return; try { const gd = gymDay();
   const st = {on:!!S.notif.on, quiz:(S.qd || {}).last || null, gym:gd.doneToday ? today() : null, gymN:gd.idx < 21 ? gd.idx + 1 : 0, track:S.tx.map(x => x.d).filter(d => d <= today()).sort().pop() || null};
   await (await caches.open('b4f-rem')).put('rem.json', new Response(JSON.stringify(st), {headers:{'content-type':'application/json'}})); } catch(e) {} }, 1200); }
+/* dopo "Salva" si mostra subito la schermata e si scrive in memoria un attimo dopo; se l'app va in secondo piano si scrive subito */
+let saveSoonT = 0, savePending = false;
+function saveSoon(){ savePending = true; S.savedAt = Date.now(); cancelAnimationFrame(saveSoonT); saveSoonT = requestAnimationFrame(() => setTimeout(() => { if (savePending) save(); }, 0)); }
+const saveNow = () => { if (savePending) save(); };
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); }); window.addEventListener('pagehide', saveNow);
 function save(){
-  S.savedAt = Date.now(); remSync();
+  savePending = false; S.savedAt = Date.now(); remSync();
   try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch(e) {}
   if (!remote) return;
   clearTimeout(saveTimer); saveTimer = setTimeout(flush, 800);
@@ -1326,7 +1331,8 @@ function nav(r, back){
   if (r.screen === 'home') { NAVSTACK.length = 0; histHome(); } else if (!back && R && !same(R, r)) histPush();
   if (r.screen !== 'home' && !back && R && !same(R, r) && !(R.screen === 'add' && r.screen === 'add') && !['welcome', 'setup'].includes(R.screen)) { /* tornare a una schermata già aperta (Annulla, Salva) vale come andare indietro */ const k = NAVSTACK.findLastIndex(x => same(x, r)); if (k >= 0) NAVSTACK.length = k; else { NAVSTACK.push(R); if (NAVSTACK.length > 60) NAVSTACK.shift(); } } else if (back && NAVSTACK.length && same(NAVSTACK[NAVSTACK.length - 1], r)) NAVSTACK.pop();
   if (['goal', 'whatif', 'gtips'].includes(r.screen) && !GOAL_SCR.includes(R.screen)) GOAL_FROM = {screen:R.screen, id:R.id}; PREV = R; R = r; try { localStorage.setItem('b4f-last', JSON.stringify({r, t:Date.now()})); } catch(e) {} render(); const y = back ? SCROLL[skey(r)] || 0 : 0; window.scrollTo({top:y}); if (back && y) requestAnimationFrame(() => window.scrollTo({top:y})); }
-view.addEventListener('click', e => { if (e.target.closest('[data-savebig]')) { const s = document.getElementById('f-save'); if (s) s.click(); return; } const b = e.target.closest('[data-nav]'); if (b) nav(JSON.parse(b.dataset.nav), b.classList.contains('back')); });
+view.addEventListener('pointerdown', e => { if (e.button > 0 || !e.target.closest('[data-savebig]')) return; e.preventDefault(); tapAt = Date.now(); tapX = e.clientX; tapY = e.clientY; const s = document.getElementById('f-save'); if (s) s.click(); });
+view.addEventListener('click', e => { if (e.target.closest('[data-savebig]')) { if (e.detail === 0) { const s = document.getElementById('f-save'); if (s) s.click(); } return; } const b = e.target.closest('[data-nav]'); if (b) nav(JSON.parse(b.dataset.nav), b.classList.contains('back')); });
 document.getElementById('logo').onclick = () => nav(S.setup ? {screen:'home'} : {screen:'welcome'});
 /* tasto +: si aprono tre scorciatoie sopra il tasto, invece di una schermata intera */
 function dialOpen(){ return !!document.getElementById('dial'); }
@@ -2059,7 +2065,7 @@ function renderAdd(){
     if (!destOptions(CT).includes(F.p)) F.p = 'liq';
     if (F.rf) { const v = {t:'out', c:F.c, s:F.s, a:-a, d:F.d, n:F.n, p:F.p};
       if (R.edit) Object.assign(S.tx.find(x => x.id === R.edit), v); else S.tx.push(Object.assign({id:uid()}, v, F.d < pilFrom() ? {f:1} : {}));
-      save(); toast('Rimborso salvato · +' + eur2(a) + ' su ' + catOf('out', F.c).n); viewYM = ymOf(F.d) > curYM() ? curYM() : ymOf(F.d); F = null; return nav({screen:'tx'}); }
+      saveSoon(); toast('Rimborso salvato · +' + eur2(a) + ' su ' + catOf('out', F.c).n); viewYM = ymOf(F.d) > curYM() ? curYM() : ymOf(F.d); F = null; return nav({screen:'tx'}); }
     const recFields = {every:F.every, unit:F.unit, count:F.end === 'count' ? F.count : null, until:F.end === 'until' ? (F.until || null) : null, start:F.d, day:+F.d.slice(8)};
     if (F.recId) { const r = S.rec.find(x => x.id === F.recId); Object.assign(r, {c:F.c, s:F.s, a, n:F.n, p:F.p}, recFields); if (r.unit === 'm') r.from = r.from || ymOf(F.d); else r.from = ymOf(r.start); }
     else if (R.edit) { Object.assign(S.tx.find(x => x.id === R.edit), {t:F.t, c:F.c, s:F.s, a, d:F.d, n:F.n, p:F.p});
@@ -2068,7 +2074,7 @@ function renderAdd(){
     else if (F.rec) S.rec.push(Object.assign({id:uid(), t:F.t, c:F.c, s:F.s, a, n:F.n, from:ymOf(F.d), to:null, skip:[], p:F.p}, recFields));
     else S.tx.push(Object.assign({id:uid(), t:F.t, c:F.c, s:F.s, a, d:F.d, n:F.n, p:F.p}, F.d < pilFrom() ? {f:1} : {}));
     if (F.ocrKey && F.t === 'out') (S.ocrMap = S.ocrMap || {})[F.ocrKey] = {c:F.c, s:F.s || ''};
-    save(); toast((R.edit ? 'Aggiornato' : (F.t === 'in' ? 'Entrata ' : 'Uscita ') + (!F.rec && F.d > today() ? 'programmata per il ' + dshort(F.d) : 'salvata')) + ' · ' + (F.t === 'in' ? '+' : '−') + eur2(a) + (F.t === 'in' ? ' in ' : ' da ') + destLabel(F.p));
+    saveSoon(); toast((R.edit ? 'Aggiornato' : (F.t === 'in' ? 'Entrata ' : 'Uscita ') + (!F.rec && F.d > today() ? 'programmata per il ' + dshort(F.d) : 'salvata')) + ' · ' + (F.t === 'in' ? '+' : '−') + eur2(a) + (F.t === 'in' ? ' in ' : ' da ') + destLabel(F.p));
     viewYM = F.rec && ymOf(F.d) > curYM() ? curYM() : ymOf(F.d); F = null; nav({screen:R.back || 'tx'});
   };
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {

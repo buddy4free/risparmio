@@ -58,6 +58,8 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - DA RIPROPORRE A LORENZO (le ritiene innovative, 28/10/2026):
   - Momenti della vita: guide brevi con elenco di controllo per i grandi passaggi (primo lavoro, convivenza, figlio in arrivo, cambio auto, acquisto casa, pensione): cosa sapere e quali voci prevedere, senza dire cosa scegliere.
   - Nuovi simulatori nello stile di quelli esistenti: quanto costa davvero l'auto (rata, assicurazione, carburante, manutenzione, svalutazione, all'anno e al mese); affitto o acquisto della casa (confronto di numeri, non consiglio); "numero della libertà" (quanto servirebbe per coprire le proprie spese per un certo numero di anni, come concetto educativo).
+- IN PROGETTAZIONE (01/11/2026): "Il mio stipendio" (netto, giorno di accredito, 12/13/14 mensilità, mese della 14ª): previsione del mese prima dell'accredito con tacca sulla barra, conferma con un tocco il giorno dell'accredito (sostituisce la stima, mai somma), confronto previsto/ricevuto in Analisi (mese e anno). Bozze mostrate a Lorenzo; da usare anche per chi ha già lo stipendio ricorrente.
+- DA RIPROPORRE A LORENZO (01/11/2026, collegata allo stipendio): parte "Far crescere le entrate" (formazione, corsi, competenze, come prepararsi a chiedere un aumento, feedback), con linguaggio descrittivo: ottimizzate le spese, il tasso di risparmio cresce soprattutto con le entrate.
 - Altre idee proposte, da valutare: lista dei desideri con pausa; "quante ore di lavoro costa"; umore dell'acquisto; spese annuali spalmate sui mesi dalle Scadenze; educare i figli ai soldi; video del canale collegati alle lezioni; sfida del mese condivisa.
 
 ## Linguaggio dei testi (coach, suggerimenti, obiettivi)

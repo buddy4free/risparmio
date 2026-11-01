@@ -753,7 +753,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
   window.addEventListener('error', e => { try { if (e.message && /b4f-modalita-sicura/.test(e.message)) return; localStorage.setItem('b4f-lasterr', JSON.stringify({m:String(e.message || ''), s:String((e.error && e.error.stack) || (e.filename + ':' + e.lineno)).slice(0, 1500), t:new Date().toISOString()})); } catch(x) {} });
   /* rallentamenti oltre 0,7 s: si annotano con la schermata, per "Segnala un problema" (niente dati finanziari) */
   try { new PerformanceObserver(l => { const L = (() => { try { return JSON.parse(localStorage.getItem('b4f-slow') || '[]'); } catch(e) { return []; } })(); let scr = '?'; try { scr = R.screen; } catch(e) {}
-    l.getEntries().forEach(e => { if (e.duration >= 700) L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:scr}); });
+    l.getEntries().forEach(e => { if (e.duration >= 700) L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:scr, at:Date.now()}); });
     try { localStorage.setItem('b4f-slow', JSON.stringify(L.slice(-20))); } catch(e) {} }).observe({type:'longtask', buffered:true}); } catch(e) {}
   if (!prev) return;
   const err = (() => { try { return JSON.parse(localStorage.getItem('b4f-lasterr') || 'null'); } catch(e) { return null; } })();
@@ -4368,6 +4368,18 @@ function checkNewer(){ try { if (!('caches' in window) || document.getElementByI
 function showUpd(){ const u = document.createElement('div'); u.id = 'upd'; u.className = 'updbar';
   u.innerHTML = '<span><b>È pronta una nuova versione</b> dell\'app</span><button class="btn sm" id="upd-go">Aggiorna</button><button class="updx" id="upd-x" aria-label="Più tardi">×</button>';
   document.body.appendChild(u); u.querySelector('#upd-go').onclick = () => { saveNow(); location.reload(); }; u.querySelector('#upd-x').onclick = () => u.remove(); }
+/* dopo un errore o un blocco di almeno 3 secondi, alla riapertura un avviso discreto porta a "Segnala un problema" (una volta per episodio, solo per gli ultimi 3 giorni) */
+function checkTrouble(){ try { if (document.getElementById('upd') || document.getElementById('lock') || document.getElementById('catpop')) return setTimeout(checkTrouble, 4000);
+  const J = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch(e) { return d; } }, seen = +localStorage.getItem('b4f-segn') || 0;
+  const err = J('b4f-lasterr', null), slow = J('b4f-slow', []); let ev = 0, what = '';
+  const et = err && err.t && !/^Script error|ResizeObserver/i.test(err.m || '') ? Date.parse(err.t) || 0 : 0; if (et > ev) { ev = et; what = 'ha avuto un errore'; }
+  slow.forEach(x => { if (x.ms >= 3000 && x.at > ev) { ev = x.at; what = 'si è bloccata per qualche secondo'; } });
+  if (!ev || ev <= seen || Date.now() - ev > 3 * 864e5 || Date.now() - ev < 15000) return;
+  localStorage.setItem('b4f-segn', String(ev));
+  const u = document.createElement('div'); u.id = 'upd'; u.className = 'updbar';
+  u.innerHTML = '<span><b>L\'ultima volta l\'app ' + what + '</b> · i dettagli aiutano a sistemarla</span><button class="btn sm" id="tr-go">Segnala</button><button class="updx" id="tr-x" aria-label="Chiudi">×</button>';
+  document.body.appendChild(u); u.querySelector('#tr-go').onclick = () => { u.remove(); diagPop(); }; u.querySelector('#tr-x').onclick = () => u.remove(); } catch(e) {} }
+setTimeout(checkTrouble, 2500);
 setTimeout(checkNewer, 5000); setTimeout(checkNewer, 15000); setTimeout(checkNewer, 40000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewer(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { const g = e.data && e.data.go; if (GO_OK.includes(g)) nav({screen:g}); });

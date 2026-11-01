@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611011633">
+<meta name="b4f-build" content="202611011636">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-0bMD6uDWIcc7fLFvEThyKHY2jM1lar+dpepTxH55xIE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-X9OEddhfEnbg0IjMv/K+fu7cnkvu2jt8mhBZOvRK88w='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -104,8 +104,8 @@ svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stro
 .scale span:first-child{border-radius:99px 3px 3px 99px}
 .scale span:last-child{border-radius:3px 99px 99px 3px}
 .scale i{position:absolute;top:-5px;width:4px;height:20px;border-radius:3px;background:var(--fg);box-shadow:0 0 0 2px var(--bg);transform:translateX(-2px)}
-.scale i.fc{background:var(--bg);border:2px dashed var(--fg);width:12px;height:20px;transform:translateX(-6px);box-shadow:none}
-.status.fcst{background:transparent;border:2px dashed var(--good);color:var(--fg)}.status.fcst::before{background:var(--good);opacity:1}
+.scale i.fc{background:var(--good);border:3px solid var(--fg);width:14px;height:22px;top:-6px;transform:translateX(-7px);box-shadow:0 0 0 2px var(--bg);border-radius:5px}
+.status.fcst{background:transparent;border:2px dashed var(--good);color:var(--fg)}.status.fcst::before{background:#3DDC6A;opacity:1;width:10px;height:10px;box-shadow:0 0 0 2px rgba(61,220,106,.25)}:root[data-theme="light"] .status.fcst::before{background:var(--good)}
 .hbar .fctrack{position:relative;overflow:hidden}.hbar .fctrack i{position:absolute;left:0;top:0;bottom:0}
 .fcf{background:repeating-linear-gradient(45deg,var(--c) 0 4px,transparent 4px 8px)!important;opacity:.75}
 i.lg{display:inline-block;width:12px;height:10px;border-radius:3px;background:var(--muted);vertical-align:middle;margin:0 2px}i.lgt{display:inline-block;width:3px;height:12px;background:var(--fg);vertical-align:middle;margin:0 2px}
@@ -1821,7 +1821,7 @@ function rateHero(s){
   return '<div class="hero"><span class="label">' + (viewYM === curYM() ? 'Questo mese risparmi' : viewYM > curYM() ? 'Previsto per ' + ymLabel(viewYM, {month:'long'}) : 'Risparmio di ' + ymLabel(viewYM, {month:'long'})) + '</span>' +
     '<div class="rate"><span class="big num">' + (s.rate === null ? '–' : Math.round(s.rate) + '%') + '</span><span class="status" style="background:' + b.c + '">' + b.l + (fc ? ' oggi' : '') + '</span>' + (fc ? '<span class="status fcst">previsto ' + Math.round(fc.rate) + '%</span>' : '') + '</div>' +
     '<p class="num" style="font-size:1.05rem"><b>' + eur(s.save) + '</b> <span class="muted">' + (s.save >= 0 ? 'rimasti' : 'oltre le entrate') + ' su ' + eur(s.inc) + ' di entrate</span></p>' +
-    '<div class="sec" style="gap:5px"><div class="scale" role="img" aria-label="Scala: rosso fino a 10%, arancio fino a 25%, giallo fino a 39%, verde da 40%"><span style="background:var(--critical)"></span><span style="background:var(--serious)"></span><span style="background:var(--warn)"></span><span style="background:var(--good)"></span>' + (s.rate === null ? '' : '<i style="left:' + pos + '%"></i>') + (fc ? '<i class="fc" style="left:' + fpos + '%" title="Previsione di fine mese"></i>' : '') + '</div>' +
+    '<div class="sec" style="gap:5px"><div class="scale" role="img" aria-label="Scala: rosso fino a 10%, arancio fino a 25%, giallo fino a 39%, verde da 40%"><span style="background:var(--critical)"></span><span style="background:var(--serious)"></span><span style="background:var(--warn)"></span><span style="background:var(--good)"></span>' + (s.rate === null ? '' : '<i style="left:' + pos + '%"></i>') + (fc ? '<i class="fc" style="left:' + fpos + '%;background:' + band(fc.rate).c + '" title="Previsione di fine mese"></i>' : '') + '</div>' +
     '<div class="scale-lbl"><span style="left:0">0</span><span style="left:10%">10</span><span style="left:25%">25</span><span style="left:40%">40</span><span style="left:100%">100%</span></div></div>' +
     '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur(s.inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur(s.out) + '</b></div></div>' + planLine(s) + '</div>';
 }

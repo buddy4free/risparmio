@@ -4354,16 +4354,19 @@ async function notifRetry(){ if (!S.notif || !S.notif.on || S.notif.periodic || 
     await reg.periodicSync.register('b4f-daily', {minInterval:12 * 3600e3}); S.notif.periodic = true; save(); if (R.screen === 'notif') renderNotif(); } catch(e) {} }
 setTimeout(notifRetry, 2500);
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { const g = e.data && e.data.go; if (GO_OK.includes(g)) nav({screen:g}); });
-/* dettagli tecnici per capire un problema: versione, telefono, quanti dati (non quali), rallentamenti ed errori */
-function diagText(){ const g = k => { try { return localStorage.getItem(k); } catch(e) { return null; } }, slow = (() => { try { return JSON.parse(g('b4f-slow') || '[]'); } catch(e) { return []; } })(), err = (() => { try { return JSON.parse(g('b4f-lasterr') || 'null'); } catch(e) { return null; } })();
-  const m = document.querySelector('meta[name="b4f-build"]');
-  return ['Buddy4Free Risparmio · segnalazione', 'Versione: ' + (m ? m.content : 'anteprima'), 'Data: ' + new Date().toLocaleString('it-IT'), 'Schermata: ' + R.screen,
-    'Tema: ' + themePref() + ' (' + document.documentElement.dataset.theme + ')', 'Schermo: ' + innerWidth + '×' + innerHeight, 'Telefono: ' + navigator.userAgent,
-    'Dati: ' + S.tx.length + ' movimenti, ' + S.rec.length + ' ricorrenti, ' + S.moves.length + ' movimenti dei pilastri, ' + S.goals.length + ' obiettivi, ' + (S.debts || []).length + ' finanziamenti, ' + (S.dues || []).length + ' scadenze, storico ' + Object.values(S.hist || {}).reduce((t, h) => t + h.length, 0) + ' mesi',
-    'Memoria usata: ' + Math.round(((g('b4f-finanza-v1') || '').length) / 1024) + ' KB', 'Copia offline: ' + (navigator.serviceWorker && navigator.serviceWorker.controller ? 'sì' : 'no'),
-    'Rallentamenti: ' + (slow.length ? slow.slice(-10).map(x => x.t + ' ' + x.ms + ' ms (' + x.s + ')').join('; ') : 'nessuno'),
-    'Ultimo errore: ' + (err ? err.t + ' ' + err.m + ' ' + (err.s || '').split('\n').slice(0, 3).join(' / ') : 'nessuno')].join('\n'); }
-function diagPop(){ const t = diagText();
+/* dettagli tecnici per capire un problema: versione, telefono, quanti dati (non quali), rallentamenti ed errori.
+   Ogni riga si calcola da sola: se una non riesce, le altre si vedono lo stesso. */
+function diagText(){ const g = k => { try { return localStorage.getItem(k); } catch(e) { return null; } }, J = (k, d) => { try { return JSON.parse(g(k) || 'null') || d; } catch(e) { return d; } };
+  const L = (label, f) => { try { return label + ': ' + f(); } catch(e) { return label + ': (non disponibile: ' + (e && e.message) + ')'; } }, arr = v => Array.isArray(v) ? v.length : 0;
+  const slow = J('b4f-slow', []), err = J('b4f-lasterr', null);
+  return ['Buddy4Free Risparmio · segnalazione',
+    L('Versione', () => { const m = document.querySelector('meta[name="b4f-build"]'); return m ? m.content : 'anteprima'; }), L('Data', () => new Date().toLocaleString('it-IT')), L('Schermata', () => R.screen),
+    L('Tema', () => themePref() + ' (' + document.documentElement.dataset.theme + ')'), L('Schermo', () => innerWidth + '×' + innerHeight), L('Telefono', () => navigator.userAgent),
+    L('Dati', () => arr(S.tx) + ' movimenti, ' + arr(S.rec) + ' ricorrenti, ' + arr(S.moves) + ' movimenti dei pilastri, ' + arr(S.goals) + ' obiettivi, ' + arr(S.debts) + ' finanziamenti, ' + arr(S.dues) + ' scadenze, storico ' + Object.values(S.hist || {}).reduce((t, h) => t + arr(h), 0) + ' mesi'),
+    L('Memoria usata', () => Math.round(((g('b4f-finanza-v1') || '').length) / 1024) + ' KB'), L('Copia offline', () => navigator.serviceWorker && navigator.serviceWorker.controller ? 'sì' : 'no'),
+    L('Rallentamenti', () => Array.isArray(slow) && slow.length ? slow.slice(-10).map(x => x.t + ' ' + x.ms + ' ms (' + x.s + ')').join('; ') : 'nessuno'),
+    L('Ultimo errore', () => err ? err.t + ' ' + err.m + ' ' + String(err.s || '').split('\n').slice(0, 3).join(' / ') : 'nessuno')].join('\n'); }
+function diagPop(){ let t; try { t = diagText(); } catch(e) { t = 'Dettagli non disponibili: ' + (e && e.message) + '\n' + navigator.userAgent; }
   catPop('<b style="font-size:1.1rem">Segnala un problema</b><p class="small muted" style="margin:0">Se l\'app si è bloccata, è lenta o fa qualcosa di strano, manda questi dettagli a Buddy4Free con due righe su cosa stavi facendo. Non contengono i tuoi movimenti né i tuoi importi.</p>' +
     '<pre style="white-space:pre-wrap;font-size:.72rem;max-height:40vh;overflow:auto;background:var(--soft2);border-radius:10px;padding:10px;margin:0">' + esc(t) + '</pre>' +
     '<div class="row" style="flex-wrap:wrap"><button class="btn" id="dg-copy">Copia</button><a class="btn ghost" href="mailto:buddyforfree@gmail.com?subject=' + encodeURIComponent('Segnalazione Buddy4Free Risparmio') + '&body=' + encodeURIComponent('Cosa stavo facendo:\n\n\n' + t) + '">Scrivi una mail</a></div><span class="small muted">Indirizzo: buddyforfree@gmail.com</span><button class="textlink" data-x style="align-self:flex-start">Chiudi</button>', o => {
@@ -4394,6 +4397,8 @@ function renderSettings(){
     '</div><div id="ask"></div></div>' +
     '<div class="sec"><span class="label">Suono</span><label class="check"><input type="checkbox" id="s-snd"' + (S.sound ? ' checked' : '') + '> Suoni nella respirazione guidata</label></div>' +
     '<p class="small muted">Sincronizzazione: se usi l\'app con il tuo account Claude, i dati si salvano nel tuo account e li ritrovi su telefono e computer. In più puoi fare un backup su file quando vuoi. I dati restano nel tuo account e su questo dispositivo. Le informazioni su risparmio e investimenti sono educative e non sono una consulenza finanziaria.</p></div>';
+  /* "Segnala un problema" si collega per primo: deve funzionare anche se qualcos'altro qui sotto va storto */
+  const sd = view.querySelector('#s-diag'); if (sd) sd.onclick = diagPop;
   bindRem(renderSettings);
   const c = view.querySelector('#s-csv'); if (c) c.onclick = exportCSV;
   view.querySelectorAll('[data-pdf]').forEach(b => b.onclick = () => catPop('<b style="font-size:1.1rem">Resoconto PDF ' + (b.dataset.pdf === 'y' ? 'dell\'anno' : 'del mese') + '</b><p class="small muted" style="margin:0">Riepilogo, grafici, categorie, pilastri e obiettivi.</p><div class="actopts"><button class="actopt" data-pk="0"><b>Solo sintesi e grafici</b><span>Poche pagine, da leggere o condividere</span></button><button class="actopt" data-pk="1"><b>Sintesi + elenco di tutti i movimenti</b><span>Più lungo: utile come archivio</span></button></div><button class="textlink" data-x style="align-self:flex-start">Annulla</button>', (o, close) => {
@@ -4401,7 +4406,6 @@ function renderSettings(){
   const bk = view.querySelector('#s-bk'); if (bk) bk.onclick = exportBackup; lockCard();
   view.querySelector('#s-rs').onchange = e => { const f = e.target.files[0]; if (f) importBackup(f); };
   view.querySelector('#s-snd').onchange = e => { S.sound = e.target.checked; save(); };
-  const sd = view.querySelector('#s-diag'); if (sd) sd.onclick = diagPop;
   view.querySelector('#s-tips').onchange = e => { S.showTips = e.target.checked; save(); renderSettings(); };
   view.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { try { localStorage.setItem('b4f-theme', b.dataset.th); } catch(e) {} applyTheme(); const y = window.scrollY; renderSettings(); window.scrollTo({top:y}); });
   view.querySelector('#s-hide').onchange = e => { S.hide = e.target.checked; save(); render(); };

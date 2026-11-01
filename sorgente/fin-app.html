@@ -926,29 +926,57 @@ const CAT_COLS = ['#3987e5','#d95926','#199e70','#c98500','#d55181','#2f9e00','#
 const hashN = str => { let h = 0; for (const ch of String(str)) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
 /* Saving ideas per category, from the five roads: elimina, rinegozia, sostituisci, gratis, guadagna */
 const SAVE_TIPS = {
-  ristoranti:'Porta il pranzo da casa 3 giorni su 5 e fai il caffè con la moka: sono le cifre piccole che pesano di più.',
-  abbonamenti:'Tieni solo quelli usati nell\'ultimo mese e fai ruotare gli streaming, uno alla volta.',
-  shopping:'Prima di ogni acquisto aspetta 48 ore. Per elettronica e casa valuta ricondizionato e usato.',
-  abbigliamento:'Regola delle 48 ore, saldi solo con una lista, e l\'usato di qualità su Vinted.',
-  svago:'Alterna con attività gratuite: biblioteche, eventi del Comune, musei statali la prima domenica del mese.',
-  viaggi:'Prenota in anticipo, viaggia fuori stagione e confronta i prezzi in navigazione anonima.',
-  tabacchi:'È la voce dove ogni euro risparmiato vale doppio: per i soldi e per la salute.',
-  bollette:'Confronta luce e gas sul Portale Offerte di ARERA e chiama l\'operatore di telefono e internet per rinegoziare.',
-  trasporti:'Usa mezzi o bici per i tragitti brevi e confronta i prezzi del carburante.',
-  assicurazioni:'Confronta a ogni rinnovo con Preventivass e togli le garanzie doppie.',
-  alimentari:'Menù settimanale, lista della spesa e prezzo al chilo. Le marche del distributore costano meno.',
-  banca:'Confronta il costo totale del conto: esistono conti a canone zero. Per il mutuo valuta la surroga, che è gratuita.',
-  casa:'Mutuo: chiedi una rinegoziazione o valuta la surroga. Manutenzione: chiedi sempre almeno due preventivi.',
-  salute:'Per i farmaci chiedi il generico equivalente. Conserva gli scontrini: sono detraibili nel 730.',
-  sport:'La palestra la usi abbastanza? Corsa, camminata e allenamento all\'aperto sono gratis.',
-  cura:'Allunga di qualche settimana il tempo tra un appuntamento e l\'altro: nessuno se ne accorge, il conto sì.',
-  figli:'Usato e scambio tra famiglie: i bambini crescono in fretta.',
-  animali:'Confronta i prezzi del cibo online e in negozio, e valuta le confezioni grandi.',
-  istruzione:'Molti corsi di qualità sono gratuiti online. Le spese scolastiche possono essere detraibili.',
-  regali_out:'Guarda quanto hai speso in regali l\'anno scorso e chiediti se ti va bene così. In famiglia la "lista dei desideri" evita doppioni e acquisti a vuoto.',
-  tasse:'Segna le scadenze in calendario: pagare in ritardo costa sanzioni e interessi.',
-  altro:'Dai una categoria precisa a queste spese: è il primo passo per capire dove vanno.'
+  ristoranti:'Pranzi fuori, bar e caffè sono cifre piccole che, sommate nel mese, spesso pesano più di quanto sembri.',
+  abbonamenti:'Gli abbonamenti si rinnovano da soli e a volte restano attivi anche quando non si usano più. Molti servizi si possono sospendere e riattivare.',
+  shopping:'Per elettronica e casa esistono ricondizionato e usato. Un\'attesa di 48 ore prima di comprare è un metodo diffuso per distinguere bisogno e impulso.',
+  abbigliamento:'Saldi con una lista, usato di qualità e l\'attesa di 48 ore sono i modi più diffusi per contenere questa voce.',
+  svago:'Biblioteche, eventi del Comune e musei statali la prima domenica del mese sono alternative gratuite.',
+  viaggi:'Prenotazione in anticipo e periodi fuori stagione sono i fattori che incidono di più sul prezzo.',
+  tabacchi:'È la voce dove ogni euro in meno vale doppio: per i soldi e per la salute.',
+  bollette:'Le offerte di luce e gas si possono confrontare sul Portale Offerte di ARERA; per telefono e internet le tariffe cambiano spesso e gli operatori hanno offerte diverse.',
+  trasporti:'Per i tragitti brevi mezzi e bici costano meno; il prezzo del carburante cambia anche di molto tra un distributore e l\'altro.',
+  assicurazioni:'Al rinnovo i preventivi si possono confrontare (per esempio con Preventivass); a volte ci sono garanzie doppie tra polizze diverse.',
+  alimentari:'Menù settimanale, lista della spesa e prezzo al chilo sono gli strumenti più usati; le marche del distributore costano in genere meno.',
+  banca:'Il costo totale del conto (canone, carte, commissioni) varia molto da banca a banca: esistono conti a canone zero.',
+  casa:'',
+  salute:'Il farmaco generico equivalente costa meno a parità di principio attivo. Le spese sanitarie sono in parte detraibili nel 730, conservando gli scontrini.',
+  sport:'Corsa, camminata e allenamento all\'aperto sono gratuiti; un abbonamento conviene quando si usa con regolarità.',
+  cura:'Qualche settimana in più tra un appuntamento e l\'altro riduce la spesa dell\'anno senza cambiare abitudini.',
+  figli:'Usato e scambio tra famiglie funzionano bene: i bambini crescono in fretta.',
+  animali:'I prezzi del cibo variano tra online e negozio; le confezioni grandi costano meno al chilo.',
+  istruzione:'Molti corsi di qualità sono gratuiti online. Alcune spese scolastiche sono detraibili.',
+  regali_out:'In famiglia una "lista dei desideri" evita doppioni e acquisti a vuoto.',
+  tasse:'Pagare in ritardo comporta sanzioni e interessi: le scadenze si possono inserire in Scadenze per vederle in anticipo.',
+  altro:'Le spese senza una categoria precisa sono le più difficili da leggere: con una categoria diventano più chiare.'
 };
+/* informazioni legate a una sottocategoria: compaiono solo se in quel mese ci sono spese con quella sottocategoria */
+const SUB_INFO = {
+  'Mutuo':'Per il mutuo esistono la rinegoziazione con la propria banca e la surroga verso un\'altra banca, che è gratuita.',
+  'Manutenzione':'Per lavori e manutenzione, due preventivi danno un termine di confronto.',
+  'Luce':'Le offerte di luce e gas si possono confrontare sul Portale Offerte di ARERA.', 'Gas':'Le offerte di luce e gas si possono confrontare sul Portale Offerte di ARERA.',
+  'Internet':'Per internet e telefono le tariffe cambiano spesso e gli operatori hanno offerte diverse.', 'Telefono':'Per internet e telefono le tariffe cambiano spesso e gli operatori hanno offerte diverse.',
+  'Carburante':'Il prezzo del carburante cambia anche di molto tra un distributore e l\'altro.',
+  'Farmacia':'Il farmaco generico equivalente costa meno a parità di principio attivo; gli scontrini della farmacia sono in parte detraibili nel 730.',
+  'Streaming':'Gli streaming si possono alternare, uno alla volta, invece di tenerli tutti attivi.',
+  'Rate':'Il costo reale di un finanziamento (interessi, TAEG, quanto manca) si vede in Pilastri → Finanziamenti e debiti.', 'Prestiti':'Il costo reale di un finanziamento (interessi, TAEG, quanto manca) si vede in Pilastri → Finanziamenti e debiti.',
+  'Delivery':'Il delivery costa in genere più dello stesso piatto al ristorante, tra consegna e prezzi più alti.',
+  'Bar e caffè':'Un caffè al giorno al bar sono circa 30 € al mese.'
+};
+/* revisione: per ogni categoria, cosa dicono i dati di quel mese (sottocategorie, confronto, spese fisse) e solo note pertinenti */
+function reviewCatHTML(ym, c, a, out){
+  const L = monthTx(ym).filter(x => x.t === 'out' && !x.plan && x.c === c), subs = {}; L.forEach(x => { const k = x.s || ''; subs[k] = (subs[k] || 0) + x.a; });
+  const top = Object.entries(subs).filter(e => e[0]).sort((p, q) => q[1] - p[1]).slice(0, 2);
+  const pm = [1, 2, 3].map(k => addMonths(ym, -k)).filter(m => monthTx(m).some(x => !x.plan)), prevA = pm.map(m => stats(m).byCat[c] || 0), avg = prevA.length ? prevA.reduce((t, v) => t + v, 0) / prevA.length : 0, recA = L.filter(x => x.rec).reduce((t, x) => t + x.a, 0);
+  const f = [];
+  if (top.length) f.push('Soprattutto ' + top.map(e => esc(e[0]) + ' (' + eur(e[1]) + ')').join(' e ') + '.');
+  if (out > 0) f.push('È il ' + Math.round(a / out * 100) + '% delle uscite del mese.');
+  if (prevA.some(v => v > 0)) { const d = (a - avg) / avg * 100; f.push(Math.abs(d) < 10 ? 'In linea con ' + (pm.length === 1 ? 'il mese prima' : 'la media dei ' + pm.length + ' mesi prima') + ' (' + eur(avg) + ').' : (d > 0 ? '+' : '−') + Math.round(Math.abs(d)) + '% rispetto alla media dei 3 mesi prima (' + eur(avg) + ').'); }
+  else if (pm.length) f.push('Nei mesi prima non c\'erano spese in questa categoria.');
+  if (a > 0 && recA >= a * 0.5) f.push('Per il ' + Math.round(recA / a * 100) + '% sono spese fisse ricorrenti.');
+  const sub = Object.keys(subs).find(k => SUB_INFO[k]), note = sub ? SUB_INFO[sub] : (SAVE_TIPS[c] || '');
+  return '<p class="small muted" style="margin:0">' + f.join(' ') + '</p>' + (note ? '<p class="small" style="margin:4px 0 0">' + esc(note) + '</p>' : '');
+}
+
 const KINDS = [['viaggio','Viaggio','plane'],['auto','Auto','car'],['casa','Casa','house'],['emergenza','Fondo emergenza','shield'],['patrimonio','Patrimonio totale','pillars'],['personale','Altro obiettivo','target']];
 const PILLARS = [
   {id:'liq', n:'Liquidità', short:'Liquidità', c:'#3987e5', i:'wallet', d:'Il conto corrente di tutti i giorni: qui arrivano le entrate ed escono le spese, se non scegli diversamente.'},
@@ -1466,7 +1494,7 @@ function insights(ym){
   const s = stats(ym), prev = stats(addMonths(ym, -1)), res = [];
   const discCats = S.cats.out.filter(c => c.disc && s.byCat[c.id]).sort((a, b) => s.byCat[b.id] - s.byCat[a.id]);
   if (s.out && s.disc) res.push({t:'Il ' + Math.round(s.disc / s.out * 100) + '% delle uscite è non essenziale', d:'Ristoranti, bar, delivery, abbonamenti, shopping e svago: ' + eur(s.disc) + ' questo mese, circa ' + eur(s.disc * 12) + ' in un anno.'});
-  discCats.slice(0, 2).forEach(c => res.push({c:c.id, t:c.n + ': ' + eur(s.byCat[c.id]) + ' al mese', d:SAVE_TIPS[c.id] || SAVE_TIPS.altro}));
+  discCats.slice(0, 2).forEach(c => res.push({c:c.id, t:c.n + ': ' + eur(s.byCat[c.id]) + ' al mese', d:SAVE_TIPS[c.id] || ''}));
   S.cats.out.forEach(c => { const a = s.byCat[c.id] || 0, b = prev.byCat[c.id] || 0; if (b > 30 && a > b * 1.25 && res.length < 5) res.push({c:c.id, t:c.n + ' +' + Math.round((a / b - 1) * 100) + '% rispetto al mese scorso', d:'Da ' + eur(b) + ' a ' + eur(a) + '. ' + (SAVE_TIPS[c.id] || '')}); });
   const small = s.L.filter(x => x.t === 'out' && x.a < 10);
   if (small.length >= 6) res.push({t:small.length + ' piccole spese sotto i 10 €', d:'Insieme fanno ' + eur2(small.reduce((t, x) => t + x.a, 0)) + '. Sono le più difficili da vedere e le più facili da ridurre.'});
@@ -4638,12 +4666,12 @@ function renderReview(){
   const ym = addMonths(curYM(), -1), s = stats(ym), p = stats(addMonths(ym, -1)), b = band(s.rate);
   const top = Object.entries(s.byCat).sort((a, c) => c[1] - a[1]).slice(0, 3);
   const done = S.reviews[ym];
-  const checks = ['Ho guardato le 3 categorie più alte e scelto cosa ridurre','Ho controllato abbonamenti e scadenze del mese prossimo','Ho risposto alle 3 domande dell\'indice di benessere','Ho accantonato il risparmio del mese nei pilastri','Ho verificato se sono in linea con il mio obiettivo'];
+  const checks = ['Ho guardato le 3 categorie più alte','Ho visto abbonamenti e scadenze del mese prossimo','Ho risposto alle 3 domande dell\'indice di benessere','Ho registrato nei pilastri dove è andato il risparmio del mese','Ho visto a che punto è il mio obiettivo'];
   view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn('Statistiche', {screen:'stats'}) + '<div class="intro"><span class="label">Revisione mensile</span><h2 style="text-transform:capitalize">' + ymLabel(ym) + '</h2></div>' +
     (s.n ? '<div class="hero"><div class="rate"><span class="big num">' + (s.rate === null ? '–' : Math.round(s.rate) + '%') + '</span><span class="status" style="background:' + b.c + '">' + b.l + '</span></div>' +
       '<p>Hai risparmiato <b>' + eur(s.save) + '</b>' + (p.n && p.rate !== null && s.rate !== null ? ', ' + (s.rate >= p.rate ? '<span style="color:var(--good)">+' : '<span style="color:var(--critical)">') + Math.round(s.rate - p.rate) + ' punti</span> rispetto al mese prima' : '') + '.</p>' +
       '<div class="io"><div><span class="label">Entrate</span><b style="color:var(--good)">' + eur(s.inc) + '</b></div><div><span class="label">Uscite</span><b>' + eur(s.out) + '</b></div></div></div>' +
-      '<div class="sec"><span class="label">Le 3 categorie più alte</span>' + top.map(([c, a]) => '<div class="card" style="gap:4px;padding:14px 16px"><div class="spread"><b>' + esc(catOf('out', c).n) + '</b><b class="num">' + eur(a) + '</b></div><p class="small muted">' + esc(SAVE_TIPS[c] || SAVE_TIPS.altro) + '</p></div>').join('') + '</div>'
+      '<div class="sec"><span class="label">Le 3 categorie più alte</span>' + top.map(([c, a]) => '<div class="card" style="gap:4px;padding:14px 16px"><div class="spread"><b>' + esc(catOf('out', c).n) + '</b><b class="num">' + eur(a) + '</b></div>' + reviewCatHTML(ym, c, a, s.out) + '</div>').join('') + '</div>'
       : '<div class="note">Nessun movimento registrato a ' + ymLabel(ym, {month:'long'}) + '. La revisione funziona dal primo mese completo di tracciamento.</div>') +
     '<div class="row"><button class="btn ghost sm" ' + nav$({screen:'dues'}) + '>' + ic('calendar') + 'Scadenze</button><button class="btn ghost sm" ' + nav$({screen:'wbi'}) + '>' + ic('heart') + 'Indice di benessere</button></div>' +
     '<div class="sec"><span class="label">La checklist</span>' + checks.map((c, i) => '<label class="check"><input type="checkbox" class="rv"' + (done ? ' checked disabled' : '') + '> ' + c + '</label>').join('') + '</div>' +

@@ -743,6 +743,34 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 <img id="logo-full" src="data:image/jpeg;base64,__FULL__" alt="" hidden>
 
 <script>
+/* ---------- rete di sicurezza all'avvio ----------
+   Se l'apertura precedente non è arrivata in fondo (un calcolo bloccato o un errore), questa volta l'app si apre
+   in modalità sicura: niente calcoli, i dati restano dove sono e si possono salvare o mandare i dettagli. */
+(function(){
+  let prev = 0; try { prev = +localStorage.getItem('b4f-boot') || 0; localStorage.setItem('b4f-boot', String(Date.now())); } catch(e) { return; }
+  window.addEventListener('error', e => { try { if (e.message && /b4f-modalita-sicura/.test(e.message)) return; localStorage.setItem('b4f-lasterr', JSON.stringify({m:String(e.message || ''), s:String((e.error && e.error.stack) || (e.filename + ':' + e.lineno)).slice(0, 1500), t:new Date().toISOString()})); } catch(x) {} });
+  if (!prev) return;
+  const err = (() => { try { return JSON.parse(localStorage.getItem('b4f-lasterr') || 'null'); } catch(e) { return null; } })();
+  /* con il PIN attivo la copia dei dati non si offre qui: si fa dall'app, dopo il PIN */
+  const pin = (() => { try { const d = JSON.parse(localStorage.getItem('b4f-finanza-v1') || '{}'); return !!(d.lock && d.lock.on); } catch(e) { return true; } })();
+  const info = 'Buddy4Free Risparmio, modalità sicura\nData: ' + new Date().toLocaleString('it-IT') + '\nApertura bloccata: ' + new Date(prev).toLocaleString('it-IT') + '\nErrore: ' + (err ? err.m + '\n' + err.s : 'nessun errore registrato (probabile calcolo bloccato)') + '\nUltima schermata: ' + (localStorage.getItem('b4f-last') || '-').slice(0, 200) + '\nTelefono: ' + navigator.userAgent;
+  const box = document.createElement('div'); box.id = 'safe';
+  box.setAttribute('style', 'position:fixed;inset:0;z-index:300;overflow:auto;background:#000;color:#fff;font:16px/1.5 system-ui,sans-serif;padding:24px 18px calc(24px + env(safe-area-inset-bottom,0px))');
+  const B = (id, t, main) => '<button id="' + id + '" style="display:block;width:100%;margin:10px 0;padding:14px;border-radius:12px;font-weight:700;font-size:1rem;border:' + (main ? '0;background:#FFC90A;color:#000' : '1px solid #444;background:#141414;color:#fff') + '">' + t + '</button>';
+  box.innerHTML = '<h2 style="margin:0 0 8px;font-size:1.4rem">L\'app non si è aperta come doveva</h2><p style="margin:0 0 6px;color:#ccc">I tuoi dati sono al sicuro su questo telefono: non è stato cancellato niente.</p><p style="margin:0 0 14px;color:#ccc">Prova a riaprirla. Se si blocca di nuovo, salva una copia dei dati e manda i dettagli a Buddy4Free: servono a trovare e correggere il problema.</p>' +
+    B('sf-go', 'Riprova ad aprire l\'app', true) + (pin ? '' : B('sf-save', 'Salva una copia dei dati')) + B('sf-copy', 'Copia i dettagli per Buddy4Free') +
+    '<p style="color:#ccc;font-size:.9rem">Oppure scrivi a <b>buddyforfree@gmail.com</b> incollando i dettagli. Non contengono i tuoi movimenti né i tuoi importi.</p><pre id="sf-info" style="white-space:pre-wrap;font-size:.75rem;color:#aaa;background:#111;border-radius:10px;padding:10px">' + info.replace(/[&<>]/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;'})[c]) + '</pre>';
+  document.body.appendChild(box);
+  box.querySelector('#sf-go').onclick = () => { try { localStorage.removeItem('b4f-boot'); localStorage.removeItem('b4f-last'); } catch(e) {} location.reload(); };
+  box.querySelector('#sf-copy').onclick = async () => { try { await navigator.clipboard.writeText(info); box.querySelector('#sf-copy').textContent = 'Copiato'; } catch(e) { box.querySelector('#sf-copy').textContent = 'Non riesco a copiare: fai uno screenshot dei dettagli qui sotto'; } };
+  if (!pin) box.querySelector('#sf-save').onclick = async () => { let raw = null; try { raw = localStorage.getItem('b4f-finanza-v1'); } catch(e) {}
+    if (!raw) return box.querySelector('#sf-save').textContent = 'Nessun dato da salvare';
+    try { const d = JSON.parse(raw); d.app = 'buddy4free-risparmio'; d.exported = new Date().toISOString(); raw = JSON.stringify(d); } catch(e) {}
+    const name = 'buddy4free-copia-sicurezza-' + new Date().toISOString().slice(0, 16).replace(/[T:]/g, '-') + '.json', file = new File([raw], name, {type:'application/json'});
+    try { if (navigator.canShare && navigator.canShare({files:[file]})) { await navigator.share({files:[file], title:name}); return; } } catch(e) { if (e && e.name === 'AbortError') return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
+  throw new Error('b4f-modalita-sicura');
+})();
 const LOGO = document.getElementById('logo-full').src;
 document.querySelector('#logo .lgr').src = LOGO;
 /* tema: è una preferenza di questo telefono (non va nei backup); predefinito automatico, segue il telefono */
@@ -4494,4 +4522,6 @@ function renderBreath(){
 render();
 if (lockDue()) showLock(); else lockSeen();
 setTimeout(samsungPop, 300);
+/* l'apertura è arrivata in fondo: la prossima volta niente modalità sicura */
+try { localStorage.removeItem('b4f-boot'); } catch(e) {}
 </script>

@@ -2360,6 +2360,9 @@ function renderPillars(){
   bindDemo(); bindPil(renderPillars); bindEq();
 }
 function bindEq(){ view.querySelectorAll('[data-eq]').forEach(b => b.onclick = () => { EQ = b.dataset.eq; const sl = b.closest('.slide'); sl.innerHTML = pillarEquity(); bindEq(); const c = sl.closest('.carousel'); if (c) c.style.height = sl.scrollHeight + 'px'; }); }
+/* movimenti reali del mese in corso per un pilastro (senza gli allineamenti dello storico): servono a passare dal saldo di oggi a quello di fine mese scorso e viceversa */
+const pilMonthSum = k => pillarMoves(k).filter(m => !m.hk && ymOf(m.d) >= curYM() && m.d <= today()).reduce((t, m) => t + m.a, 0);
+const prevMonthName = () => ymLabel(addMonths(curYM(), -1), {month:'long'});
 function bindPil(again){
   view.querySelectorAll('[data-tm]').forEach(b => b.onclick = () => { const [k, m] = b.dataset.tm.split(':'); if (k === 'liq') S.liqMonths = +m; else S.emergMonths = +m; save(); again(); });
   view.querySelectorAll('[data-tgt-auto]').forEach(b => b.onclick = () => { S.tgt[b.dataset.tgtAuto] = null; save(); again(); });
@@ -2372,14 +2375,16 @@ function bindPil(again){
     const viaLiq = !set && k !== 'liq';
     box.innerHTML = '<div class="sec" style="gap:8px;margin-top:4px"><div class="row"><div class="eur" style="flex:1"><input id="mv-in" inputmode="none" readonly data-pad="' + (set ? 'neg' : '') + '" placeholder="' + (set ? 'Saldo reale di oggi' : 'Importo') + '"></div><button class="btn sm" id="mv-ok">' + (set ? 'Salva' : sign > 0 ? 'Aggiungi' : 'Preleva') + '</button></div>' +
       (set && k === 'inv' ? (() => { const v = invPaidAt(curYM()); return '<div class="field"><label for="mv-p">Totale versato finora (facoltativo)</label><div class="eur"><input id="mv-p" inputmode="none" readonly data-pad value="' + (v === null ? '' : Math.round(v * 100) / 100) + '"></div><span class="small muted">Quanto hai messo tu in totale, senza guadagni e perdite. La differenza con il saldo è il plus/minus.</span></div>'; })() : '') +
+      (set && k !== 'goal' && +today().slice(8) <= 5 ? (ms => '<label class="check small"><input type="checkbox" id="mv-eom"' + (((S.hist || {})[k] || []).some(h => h.ym === addMonths(curYM(), -1)) ? '' : ' checked') + '> Vale anche come saldo di fine ' + prevMonthName() + (Math.abs(ms) >= 0.01 ? ' (togliendo i movimenti di ' + ymLabel(curYM(), {month:'long'}) + ' già registrati: ' + (ms > 0 ? '+' : '−') + eur2(Math.abs(ms)) + ')' : '') + '</label>')(pilMonthSum(k)) : '') +
       (viaLiq ? '<label class="check small"><input type="checkbox" id="mv-liq" checked> ' + (sign > 0 ? 'Prendi i soldi dalla liquidità' : 'Rimetti i soldi nella liquidità') + '</label>' : '') + '<input id="mv-n" placeholder="Nota (facoltativa)"></div>';
     box.querySelector('input').focus();
     box.querySelector('#mv-ok').onclick = () => { const a = parseAmt(val('mv-in')); if (!set && !(a > 0)) return;
-      if (set) { const d = a - pilBalance(k); adjPil(k, d); addMove(k, d, val('mv-n').trim() || 'Correzione del saldo');
+      if (set) { const eom = document.getElementById('mv-eom'), ms = pilMonthSum(k), d = a - pilBalance(k); adjPil(k, d); addMove(k, d, val('mv-n').trim() || 'Correzione del saldo');
+        if (eom && eom.checked) { const pym = addMonths(curYM(), -1); S.hist = S.hist || {}; S.hist[k] = (S.hist[k] || []).filter(h => h.ym !== pym).concat({ym:pym, v:Math.round((a - ms) * 100) / 100}); rebuildHist(k); }
         if (k === 'inv' && val('mv-p').trim() !== '') { const pv = parseAmt(val('mv-p')); if (pv >= 0) { S.invPaid = S.invPaid || {}; S.invPaid[today()] = pv; } } }
       else if (viaLiq && document.getElementById('mv-liq').checked) { if (sign > 0) transfer('liq', k, a); else transfer(k, 'liq', Math.min(a, pilBalance(k))); }
       else { const d = sign > 0 ? a : -Math.min(a, pilBalance(k)); adjPil(k, d); addMove(k, d, val('mv-n').trim() || (sign > 0 ? 'Aggiunta' : 'Prelievo')); }
-      save(); toast('Saldo aggiornato'); again(); };
+      save(); toast(set && document.getElementById('mv-eom') && document.getElementById('mv-eom').checked ? 'Saldo aggiornato, anche a fine ' + prevMonthName() : 'Saldo aggiornato'); again(); };
   });
 }
 function addMove(k, a, n, d, x){ if (!a) return; S.moves.push(Object.assign({d:d || today(), k, a:Math.round(a * 100) / 100, n:n || ''}, x ? {x} : {})); if (S.moves.length > 3000) S.moves.shift(); }
@@ -2444,6 +2449,11 @@ function renderPillar(){
     S.hist = S.hist || {}; S.hist[p.id] = (S.hist[p.id] || []).filter(h => h.ym !== ym).concat({ym, v}); rebuildHist(p.id);
     if (p.id === 'inv' && val('h-p').trim() !== '') { const pv = parseAmt(val('h-p')); if (pv >= 0) { S.invPaid = S.invPaid || {}; S.invPaid[ym + '-31'] = pv; } }
     save(); toast('Storico aggiornato'); const y = window.scrollY; R = {screen:'pillar', id:p.id, hist:1, hm:ym}; renderPillar(); postRender(); window.scrollTo({top:y}); const hv = document.getElementById('h-v'); if (hv) hv.focus({preventScroll:true});
+    /* ultimo mese chiuso: si propone di allineare anche il saldo di oggi, così non si scrive due volte */
+    if (ym === addMonths(curYM(), -1) && p.id !== 'goal') { const k = p.id, ms = pilMonthSum(k), want = Math.round((v + ms) * 100) / 100, now = pilBalance(k);
+      if (Math.abs(want - now) >= 1) setTimeout(() => catPop('<b style="font-size:1.1rem">Allineare anche il saldo di oggi?</b><p class="small muted" style="margin:0">Fine ' + prevMonthName() + ' ' + eur2(v) + (Math.abs(ms) >= 0.01 ? ' ' + (ms > 0 ? '+' : '−') + ' movimenti di ' + ymLabel(curYM(), {month:'long'}) + ' già registrati (' + eur2(Math.abs(ms)) + ')' : '') + ' = <b style="color:var(--fg)">' + eur2(want) + '</b>. Oggi nell\'app risulta ' + eur2(now) + '.</p>' +
+        '<button class="btn wide" id="al-ok">Sì, porta il saldo di oggi a ' + eur2(want) + '</button><button class="textlink" data-x style="align-self:center">No, il saldo di oggi è giusto così</button>', (o, close) => {
+        o.querySelector('#al-ok').onclick = () => { const d = want - pilBalance(k); adjPil(k, d); addMove(k, d, 'Correzione del saldo'); rebuildHist(k); save(); close(); toast('Saldo di oggi allineato'); const y2 = window.scrollY; renderPillar(); postRender(); window.scrollTo({top:y2}); }; }, true), 300); }
   };
 }
 

@@ -758,10 +758,14 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 (function(){
   let prev = 0; try { prev = +localStorage.getItem('b4f-boot') || 0; localStorage.setItem('b4f-boot', String(Date.now())); } catch(e) { return; }
   window.addEventListener('error', e => { try { if (e.message && /b4f-modalita-sicura/.test(e.message)) return; localStorage.setItem('b4f-lasterr', JSON.stringify({m:String(e.message || ''), s:String((e.error && e.error.stack) || (e.filename + ':' + e.lineno)).slice(0, 1500), t:new Date().toISOString()})); } catch(x) {} });
-  /* rallentamenti oltre 0,7 s: si annotano con la schermata, per "Segnala un problema" (niente dati finanziari) */
+  /* rallentamenti oltre 0,4 s: si annotano con la schermata, per "Segnala un problema" (niente dati finanziari) */
   try { new PerformanceObserver(l => { const L = (() => { try { return JSON.parse(localStorage.getItem('b4f-slow') || '[]'); } catch(e) { return []; } })(); let scr = '?'; try { scr = R.screen; } catch(e) {}
-    l.getEntries().forEach(e => { if (e.duration >= 700) L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:scr, at:Date.now()}); });
+    l.getEntries().forEach(e => { if (e.duration >= 400) L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:scr, at:Date.now()}); });
     try { localStorage.setItem('b4f-slow', JSON.stringify(L.slice(-20))); } catch(e) {} }).observe({type:'longtask', buffered:true}); } catch(e) {}
+  /* tocchi lenti: dal tocco allo schermo aggiornato, oltre 0,5 s (vede anche i blocchi del disegno, non solo dei calcoli) */
+  try { new PerformanceObserver(l => { const E = l.getEntries().filter(e => e.duration >= 500 && /pointer|click|key/.test(e.name)); if (!E.length) return; const L = (() => { try { return JSON.parse(localStorage.getItem('b4f-slow') || '[]'); } catch(e) { return []; } })(); let scr = '?'; try { scr = R.screen; } catch(e) {}
+    E.forEach(e => L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:'tocco, ' + scr, at:Date.now()}));
+    try { localStorage.setItem('b4f-slow', JSON.stringify(L.slice(-20))); } catch(e) {} }).observe({type:'event', durationThreshold:500, buffered:true}); } catch(e) {}
   if (!prev) return;
   const err = (() => { try { return JSON.parse(localStorage.getItem('b4f-lasterr') || 'null'); } catch(e) { return null; } })();
   /* con il PIN attivo la copia dei dati non si offre qui: si fa dall'app, dopo il PIN */
@@ -1130,9 +1134,11 @@ const ymOf = s => s.slice(0, 7);
 const curYM = () => ymOf(today());
 const addMonths = (ym, n) => { const [y, m] = ym.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
 const monthsBetween = (a, b) => { const [y1, m1] = a.split('-').map(Number), [y2, m2] = b.split('-').map(Number); return (y2 - y1) * 12 + (m2 - m1); };
-const ymLabel = (ym, opt) => new Date(ym + '-15T12:00:00').toLocaleDateString('it-IT', opt || {month:'long', year:'numeric'});
-const dLabel = s => new Date(s + 'T12:00:00').toLocaleDateString('it-IT', {weekday:'long', day:'numeric', month:'long'});
-const dshort = s => new Date(s + 'T12:00:00').toLocaleDateString('it-IT', {day:'numeric', month:'short'});
+/* formattatori di date creati una volta sola e riusati: crearne uno nuovo a ogni data è lento sui telefoni */
+const DTF = {}, dtf = (o, d) => { if (isNaN(d)) return d.toLocaleDateString('it-IT', o); const k = JSON.stringify(o); return (DTF[k] || (DTF[k] = new Intl.DateTimeFormat('it-IT', o))).format(d); };
+const ymLabel = (ym, opt) => dtf(opt || {month:'long', year:'numeric'}, new Date(ym + '-15T12:00:00'));
+const dLabel = s => dtf({weekday:'long', day:'numeric', month:'long'}, new Date(s + 'T12:00:00'));
+const dshort = s => dtf({day:'numeric', month:'short'}, new Date(s + 'T12:00:00'));
 const daysBetween = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
 const dayOffset = (s, n) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return iso(d); };
 /* numeri all'italiana: il punto delle migliaia c'è sempre (anche 1.250), dal milione si abbrevia (1,25 Mln) */
@@ -1588,11 +1594,14 @@ window.addEventListener('popstate', () => {
 const TABS = [['home','Home','house'],['tx','Movimenti','list'],['stats','Statistiche','chart'],['pillars','Pilastri','pillars'],['gym','Palestra','dumbbell'],['well','Benessere','leaf']];
 const TAB_OF = {import:'home', privacy:'home', terms:'home', support:'home', whatif:'pillars', debts:'pillars', missions:'gym', mission:'gym', learn:'gym', lesson:'gym', wbi:'home', dues:'tx', an:'stats', notif:'home', home:'home', tx:'tx', stats:'stats', charts:'stats', add:'tx', review:'stats', pillars:'pillars', pillar:'pillars', goal:'pillars', gtips:'pillars', sim:'pillars', gym:'gym', read:'gym', champ:'gym', well:'well', breath:'well'};
 function backBtn(label, r){ return '<button class="back" ' + nav$(r) + '>' + ic('left') + esc(label) + '</button>'; }
+let TABQ = null;
 function render(){
   const inApp = S.setup && !['welcome','setup'].includes(R.screen);
   const tabs = document.getElementById('tabs'); tabs.hidden = !inApp || R.screen === 'add' || R.screen === 'howto';
   tabs.firstElementChild.innerHTML = TABS.map(t => '<button data-tab="' + t[0] + '" aria-current="' + (TAB_OF[R.screen] === t[0]) + '">' + ic(t[2]) + t[1] + '</button>').join('');
-  tabs.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => nav({screen:b.dataset.tab}));
+  /* tocchi rapidi: la voce toccata si accende subito e si disegna solo l'ultima schermata scelta, non tutte quelle in mezzo */
+  tabs.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tabs.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-current', String(x === b)));
+    const go = !TABQ; TABQ = b.dataset.tab; if (go) requestAnimationFrame(() => setTimeout(() => { const t = TABQ; TABQ = null; if (t) nav({screen:t}); }, 0)); });
   document.body.classList.remove('kpon', 'kpsave'); document.getElementById('fab').hidden = !inApp || ['add', 'breath', 'howto'].includes(R.screen); dialClose();
   document.getElementById('fab').innerHTML = ic('plus');
   document.getElementById('topbar').hidden = R.screen === 'welcome' || R.screen === 'add';

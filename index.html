@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611090630">
+<meta name="b4f-build" content="202611102006">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-x/XjkLFkLZBpaitbv3fimy6l4u2Avq1NqA1aeDk0Cbg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-kdgLiFmL++fEis87PtTVjsOW2LFFsBstQrkrqNda5EA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -481,7 +481,7 @@ i.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right
 .savebar .btn{box-shadow:0 6px 20px rgba(255,201,10,.25)}
 .subs button{display:inline-flex;align-items:center}
 
-.formbar{position:sticky;top:env(safe-area-inset-top, 0px);z-index:12;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:10px 0;margin-top:-6px;background:rgba(0,0,0,.86);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.formbar{position:sticky;top:env(safe-area-inset-top, 0px);z-index:12;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;padding:10px 0;margin-top:-6px;background:rgba(0,0,0,.97);border-bottom:1px solid var(--line)}
 .formbar b{font-family:var(--display);font-size:1rem;text-align:center;white-space:nowrap}
 .formbar .back{padding:0}
 .formbar .btn{justify-self:end;padding:8px 16px;background:rgba(255,201,10,.92)}
@@ -564,7 +564,7 @@ button.cmsg span > span:first-child{text-decoration:underline;text-decoration-co
 .cal i{width:22px;height:22px;border-radius:6px;background:var(--soft2)}
 .cal i.on{background:var(--yellow)}
 
-.top{position:sticky;top:env(safe-area-inset-top, 0px);z-index:14;background:rgba(0,0,0,.92);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);margin-top:-14px;padding-block:10px;border-bottom:1px solid var(--line)}
+.top{position:sticky;top:env(safe-area-inset-top, 0px);z-index:14;background:var(--bg);margin-top:-14px;padding-block:10px;border-bottom:1px solid var(--line)}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top, 0px);z-index:20;background:#000}
 .logo img{height:34px}
 .burger{width:40px;height:40px;border:0;background:none;padding:8px 6px;display:flex;flex-direction:column;justify-content:space-between}
@@ -724,12 +724,12 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 :root[data-theme="light"],[data-theme="light"] body{background:var(--bg);color:var(--fg)}
 [data-theme="light"] .dream{background:var(--soft)}
 [data-theme="light"] body::before{background:var(--bg)}
-[data-theme="light"] .top{background:rgba(245,244,239,.94)}
+[data-theme="light"] .top{background:var(--bg)}
 [data-theme="light"] .tabs{background:rgba(255,255,255,.97)}
 [data-theme="light"] .tabs button{color:#77756C}
 [data-theme="light"] .tabs button[aria-current="true"]{color:var(--fg);font-weight:800}
 [data-theme="light"] .tabs button[aria-current="true"] svg{background:var(--yellow);color:#17170F;border-radius:999px;padding:4px 14px;box-sizing:content-box;margin-bottom:-2px}
-[data-theme="light"] .formbar{background:rgba(245,244,239,.92)}
+[data-theme="light"] .formbar{background:rgba(245,244,239,.97)}
 [data-theme="light"] .formbar.typed{background:color-mix(in srgb, var(--tc) 16%, rgba(245,244,239,.94))}
 [data-theme="light"] .savebar{background:linear-gradient(to bottom, rgba(245,244,239,0), var(--bg) 40%)}
 [data-theme="light"] .kpsbox,[data-theme="light"] .drawer{background:#FFFFFF}
@@ -780,9 +780,18 @@ if (window.top !== window.self) { try { top.location = location.href; } catch(e)
   try { new PerformanceObserver(l => { const L = (() => { try { return JSON.parse(localStorage.getItem('b4f-slow') || '[]'); } catch(e) { return []; } })(); let scr = '?'; try { scr = R.screen; } catch(e) {}
     l.getEntries().forEach(e => { if (e.duration >= 400) L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:scr, at:Date.now()}); });
     try { localStorage.setItem('b4f-slow', JSON.stringify(L.slice(-20))); } catch(e) {} }).observe({type:'longtask', buffered:true}); } catch(e) {}
-  /* tocchi lenti: dal tocco allo schermo aggiornato, oltre 0,5 s (vede anche i blocchi del disegno, non solo dei calcoli) */
-  try { new PerformanceObserver(l => { const E = l.getEntries().filter(e => e.duration >= 500 && /pointer|click|key/.test(e.name)); if (!E.length) return; const L = (() => { try { return JSON.parse(localStorage.getItem('b4f-slow') || '[]'); } catch(e) { return []; } })(); let scr = '?'; try { scr = R.screen; } catch(e) {}
-    E.forEach(e => L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:'tocco, ' + scr, at:Date.now()}));
+  /* tocchi lenti: dal tocco allo schermo aggiornato, oltre 0,5 s. Una riga per tocco, con cosa è stato toccato e dove va il tempo:
+     attesa = l'app era occupata prima di rispondere; calcolo = la risposta al tocco; disegno = il telefono che ridisegna lo schermo */
+  try { let hid = 0; document.addEventListener('visibilitychange', () => { if (document.hidden) hid = performance.now(); });
+    const what = el => { try { if (!el || !el.closest) return '?'; const t = el.closest('[data-tab]'); if (t) return 'barra ' + t.dataset.tab; const b = el.closest('button, a, input, select, label'); if (!b) return el.tagName.toLowerCase(); return b.tagName.toLowerCase() + (b.type && b.tagName === 'INPUT' ? ' ' + b.type : '') + ' "' + (b.textContent || b.getAttribute('aria-label') || b.id || '').trim().slice(0, 18) + '"'; } catch(e) { return '?'; } };
+    /* cosa è stato toccato si annota al momento del tocco: dopo, la schermata può essere già stata ridisegnata */
+    let lastWhat = '?'; document.addEventListener('pointerdown', e => { lastWhat = what(e.target); }, true);
+    const seen = new Set();
+    new PerformanceObserver(l => { const G = {}; l.getEntries().forEach(e => { if (e.duration < 500 || !e.interactionId || seen.has(e.interactionId) || (hid > e.startTime && hid < e.startTime + e.duration)) return; const k = e.interactionId, q = G[k];
+      if (!q || e.processingEnd - e.processingStart > q.processingEnd - q.processingStart) G[k] = e; }); const E = Object.values(G); if (!E.length) return;
+    const L = (() => { try { return JSON.parse(localStorage.getItem('b4f-slow') || '[]'); } catch(e) { return []; } })(); let scr = '?'; try { scr = R.screen; } catch(e) {}
+    E.forEach(e => { seen.add(e.interactionId); const wait = Math.round(e.processingStart - e.startTime), run = Math.round(e.processingEnd - e.processingStart), draw = Math.max(0, Math.round(e.startTime + e.duration - e.processingEnd));
+      L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:'tocco ' + (e.target && e.target.isConnected ? what(e.target) : lastWhat) + ' in ' + scr + ': attesa ' + wait + ', calcolo ' + run + ', disegno ' + draw, at:Date.now()}); });
     try { localStorage.setItem('b4f-slow', JSON.stringify(L.slice(-20))); } catch(e) {} }).observe({type:'event', durationThreshold:500, buffered:true}); } catch(e) {}
   if (!prev) return;
   const err = (() => { try { return JSON.parse(localStorage.getItem('b4f-lasterr') || 'null'); } catch(e) { return null; } })();

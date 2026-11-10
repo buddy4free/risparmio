@@ -760,7 +760,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
   window.addEventListener('error', e => { try { if (e.message && /b4f-modalita-sicura/.test(e.message)) return; localStorage.setItem('b4f-lasterr', JSON.stringify({m:String(e.message || ''), s:String((e.error && e.error.stack) || (e.filename + ':' + e.lineno)).slice(0, 1500), t:new Date().toISOString()})); } catch(x) {} });
   /* rallentamenti oltre 0,4 s: si annotano con la schermata, per "Segnala un problema" (niente dati finanziari) */
   try { new PerformanceObserver(l => { const L = (() => { try { return JSON.parse(localStorage.getItem('b4f-slow') || '[]'); } catch(e) { return []; } })(); let scr = '?'; try { scr = R.screen; } catch(e) {}
-    l.getEntries().forEach(e => { if (e.duration >= 400) L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:scr, at:Date.now()}); });
+    l.getEntries().forEach(e => { if (e.duration >= 400) L.push({t:(d => [d.getMonth() + 1, d.getDate()].map(x => String(x).padStart(2, '0')).join('-') + ' ' + [d.getHours(), d.getMinutes()].map(x => String(x).padStart(2, '0')).join(':'))(new Date()), ms:Math.round(e.duration), s:scr, at:Date.now()}); });
     try { localStorage.setItem('b4f-slow', JSON.stringify(L.slice(-20))); } catch(e) {} }).observe({type:'longtask', buffered:true}); } catch(e) {}
   /* tocchi lenti: dal tocco allo schermo aggiornato, oltre 0,5 s. Una riga per tocco, con cosa è stato toccato e dove va il tempo:
      attesa = l'app era occupata prima di rispondere; calcolo = la risposta al tocco; disegno = il telefono che ridisegna lo schermo */
@@ -773,7 +773,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
       if (!q || e.processingEnd - e.processingStart > q.processingEnd - q.processingStart) G[k] = e; }); const E = Object.values(G); if (!E.length) return;
     const L = (() => { try { return JSON.parse(localStorage.getItem('b4f-slow') || '[]'); } catch(e) { return []; } })(); let scr = '?'; try { scr = R.screen; } catch(e) {}
     E.forEach(e => { seen.add(e.interactionId); const wait = Math.round(e.processingStart - e.startTime), run = Math.round(e.processingEnd - e.processingStart), draw = Math.max(0, Math.round(e.startTime + e.duration - e.processingEnd));
-      L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:'tocco ' + (e.target && e.target.isConnected ? what(e.target) : lastWhat) + ' in ' + scr + ': attesa ' + wait + ', calcolo ' + run + ', disegno ' + draw, at:Date.now()}); });
+      L.push({t:(d => [d.getMonth() + 1, d.getDate()].map(x => String(x).padStart(2, '0')).join('-') + ' ' + [d.getHours(), d.getMinutes()].map(x => String(x).padStart(2, '0')).join(':'))(new Date()), ms:Math.round(e.duration), s:'tocco ' + (e.target && e.target.isConnected ? what(e.target) : lastWhat) + ' in ' + scr + ': attesa ' + wait + ', calcolo ' + run + ', disegno ' + draw, at:Date.now()}); });
     try { localStorage.setItem('b4f-slow', JSON.stringify(L.slice(-20))); } catch(e) {} }).observe({type:'event', durationThreshold:500, buffered:true}); } catch(e) {}
   if (!prev) return;
   const err = (() => { try { return JSON.parse(localStorage.getItem('b4f-lasterr') || 'null'); } catch(e) { return null; } })();

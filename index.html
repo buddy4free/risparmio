@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611102006">
+<meta name="b4f-build" content="202611102017">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-kdgLiFmL++fEis87PtTVjsOW2LFFsBstQrkrqNda5EA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-MlN8f/336DRYYK0NmJ7O7UaWdrNnGFZxIf8IKYwfAb4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -778,7 +778,7 @@ if (window.top !== window.self) { try { top.location = location.href; } catch(e)
   window.addEventListener('error', e => { try { if (e.message && /b4f-modalita-sicura/.test(e.message)) return; localStorage.setItem('b4f-lasterr', JSON.stringify({m:String(e.message || ''), s:String((e.error && e.error.stack) || (e.filename + ':' + e.lineno)).slice(0, 1500), t:new Date().toISOString()})); } catch(x) {} });
   /* rallentamenti oltre 0,4 s: si annotano con la schermata, per "Segnala un problema" (niente dati finanziari) */
   try { new PerformanceObserver(l => { const L = (() => { try { return JSON.parse(localStorage.getItem('b4f-slow') || '[]'); } catch(e) { return []; } })(); let scr = '?'; try { scr = R.screen; } catch(e) {}
-    l.getEntries().forEach(e => { if (e.duration >= 400) L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:scr, at:Date.now()}); });
+    l.getEntries().forEach(e => { if (e.duration >= 400) L.push({t:(d => [d.getMonth() + 1, d.getDate()].map(x => String(x).padStart(2, '0')).join('-') + ' ' + [d.getHours(), d.getMinutes()].map(x => String(x).padStart(2, '0')).join(':'))(new Date()), ms:Math.round(e.duration), s:scr, at:Date.now()}); });
     try { localStorage.setItem('b4f-slow', JSON.stringify(L.slice(-20))); } catch(e) {} }).observe({type:'longtask', buffered:true}); } catch(e) {}
   /* tocchi lenti: dal tocco allo schermo aggiornato, oltre 0,5 s. Una riga per tocco, con cosa è stato toccato e dove va il tempo:
      attesa = l'app era occupata prima di rispondere; calcolo = la risposta al tocco; disegno = il telefono che ridisegna lo schermo */
@@ -791,7 +791,7 @@ if (window.top !== window.self) { try { top.location = location.href; } catch(e)
       if (!q || e.processingEnd - e.processingStart > q.processingEnd - q.processingStart) G[k] = e; }); const E = Object.values(G); if (!E.length) return;
     const L = (() => { try { return JSON.parse(localStorage.getItem('b4f-slow') || '[]'); } catch(e) { return []; } })(); let scr = '?'; try { scr = R.screen; } catch(e) {}
     E.forEach(e => { seen.add(e.interactionId); const wait = Math.round(e.processingStart - e.startTime), run = Math.round(e.processingEnd - e.processingStart), draw = Math.max(0, Math.round(e.startTime + e.duration - e.processingEnd));
-      L.push({t:new Date().toISOString().slice(5, 16).replace('T', ' '), ms:Math.round(e.duration), s:'tocco ' + (e.target && e.target.isConnected ? what(e.target) : lastWhat) + ' in ' + scr + ': attesa ' + wait + ', calcolo ' + run + ', disegno ' + draw, at:Date.now()}); });
+      L.push({t:(d => [d.getMonth() + 1, d.getDate()].map(x => String(x).padStart(2, '0')).join('-') + ' ' + [d.getHours(), d.getMinutes()].map(x => String(x).padStart(2, '0')).join(':'))(new Date()), ms:Math.round(e.duration), s:'tocco ' + (e.target && e.target.isConnected ? what(e.target) : lastWhat) + ' in ' + scr + ': attesa ' + wait + ', calcolo ' + run + ', disegno ' + draw, at:Date.now()}); });
     try { localStorage.setItem('b4f-slow', JSON.stringify(L.slice(-20))); } catch(e) {} }).observe({type:'event', durationThreshold:500, buffered:true}); } catch(e) {}
   if (!prev) return;
   const err = (() => { try { return JSON.parse(localStorage.getItem('b4f-lasterr') || 'null'); } catch(e) { return null; } })();

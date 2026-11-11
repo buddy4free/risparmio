@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611110621">
+<meta name="b4f-build" content="202611110751">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-MlN8f/336DRYYK0NmJ7O7UaWdrNnGFZxIf8IKYwfAb4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-/F3J6Gnnpb2K64wS5RFoJ5gLGQeXaBHohMkgK9GPovE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -171,7 +171,9 @@ i.lg{display:inline-block;width:12px;height:10px;border-radius:3px;background:va
 .amount input{border:0;background:none;font-family:var(--display);font-size:2.6rem;font-weight:900;padding:0;border-radius:0}
 .catview{display:flex;border:1px solid var(--line);border-radius:99px;padding:2px;flex:none}.catview button{border:0;background:none;color:var(--muted);font-size:.75rem;font-weight:700;padding:5px 10px;border-radius:99px}.catview button[aria-pressed="true"]{background:var(--yellow);color:#000}
 .catlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:16px;overflow:hidden}
-.cl+.cl{border-top:1px solid var(--line)}.clrow{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;background:none;border:0;color:inherit;text-align:left}
+.cl+.cl{border-top:1px solid var(--line)}
+/* righe fuori dallo schermo: il telefono non le disegna finché non ci si arriva scorrendo */
+.list > .item, .catlist > .cl{content-visibility:auto;contain-intrinsic-size:auto 58px}.clrow{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;background:none;border:0;color:inherit;text-align:left}
 .clrow .t{flex:1;display:flex;flex-direction:column;min-width:0}.clrow .t b{font-size:1rem}.clrow .sub{font-size:.78rem;color:var(--muted)}.clrow[aria-current="true"] .t b{color:var(--ytext)}
 .clchev{font-size:1.3rem;color:var(--muted);width:22px;text-align:center}.clchev .i{width:18px;height:18px}.cl.open{background:var(--soft)}
 .clsubs{display:flex;flex-wrap:wrap;gap:8px;padding:2px 14px 14px 62px}.clsubs button{border:1px solid var(--line);background:#000;border-radius:99px;padding:9px 14px;font-weight:600;font-size:.88rem;color:inherit}.clsubs button[aria-pressed="true"]{background:var(--yellow);color:#000;border-color:var(--yellow)}.clsubs .muted{color:var(--muted)}
@@ -1978,7 +1980,7 @@ function renderHome(){
 let txFilter = 'all';
 /* filtri dei movimenti: categoria (TXC = {t, c, s}), periodo (mese, anno, tutto) */
 const normQ = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-let TXQ = '', TXC = null, TXP = 'm', TXY = +curYM().slice(0, 4), TXLIM = 300, TXREF = null, TXFR = addMonths(curYM(), -5), TXTO = curYM(), TXSEL = null, TXMV = {c:'', s:''};
+let TXQ = '', TXC = null, TXP = 'm', TXY = +curYM().slice(0, 4), TXLIM = 80, TXREF = null, TXFR = addMonths(curYM(), -5), TXTO = curYM(), TXSEL = null, TXMV = {c:'', s:''};
 /* periodo condiviso da Movimenti e Analisi */
 function txMonths(){
   const first = [...S.tx.map(x => ymOf(x.d)), ...S.rec.map(r => r.from)].sort()[0] || curYM();
@@ -2055,7 +2057,7 @@ function renderTx(){
   if (TXQ) { const q = normQ(TXQ).trim(); L = L.filter(x => normQ(x.xfer ? [destLabel(x.from), destLabel(x.to), x.n].join(' ') : [x.n, x.s, catOf(x.t, x.c).n, String(x.a).replace('.', ',')].join(' ')).includes(q)); }
   L.sort((a, b) => b.d.localeCompare(a.d));
   /* i movimenti programmati (non ancora avvenuti) stanno in fondo, dal più vicino, sotto il loro titolo */
-  const LO = L.filter(x => !x.plan).concat(L.filter(x => x.plan).sort((a, b) => a.d.localeCompare(b.d))), shown = LO.slice(0, TXLIM), groups = {}, fgroups = {}; shown.forEach(x => { const g = x.plan ? fgroups : groups; (g[x.d] = g[x.d] || []).push(x); });
+  const LO = L.filter(x => !x.plan).concat(L.filter(x => x.plan).sort((a, b) => a.d.localeCompare(b.d))), shown = LO.slice(0, TXSEL ? Math.max(TXLIM, 300) : TXLIM), /* selezionando si vedono (e si selezionano) fino a 300 righe, come prima */ groups = {}, fgroups = {}; shown.forEach(x => { const g = x.plan ? fgroups : groups; (g[x.d] = g[x.d] || []).push(x); });
   const perLabel = TXP === 'm' ? ymLabel(viewYM) : TXP === 'y' ? 'Anno ' + TXY : TXP === 'p' ? ymLabel(months[0], {month:'short', year:'numeric'}) + ' – ' + ymLabel(months[months.length - 1], {month:'short', year:'numeric'}) : 'Da ' + ymLabel(months[0], {month:'short', year:'numeric'});
   const period = txPeriodHTML(months);
   const catSel = '<div class="txfilt"><div class="txq">' + ic('list') + '<input id="tx-q" type="search" placeholder="Cerca nella nota, nella categoria o nell\'importo" value="' + esc(TXQ) + '" aria-label="Cerca nei movimenti">' + (TXQ ? '<button id="tx-qx" aria-label="Cancella la ricerca">×</button>' : '') + '</div>' + (txFilter === 'xfer' && !TXC ? '' : '<select id="tx-c" aria-label="Filtra per categoria"><option value="">' + (txFilter === 'out' ? 'Tutte le categorie di uscita' : txFilter === 'in' ? 'Tutte le categorie di entrata' : 'Tutte le categorie') + '</option>' + [['out', 'Uscite'], ['in', 'Entrate']].filter(([t]) => !['in', 'out'].includes(txFilter) || txFilter === t || (TXC && TXC.t === t)).map(([t, n]) => '<optgroup label="' + n + '">' + S.cats[t].map(c => '<option value="' + t + ':' + c.id + '"' + (TXC && TXC.t === t && TXC.c === c.id ? ' selected' : '') + '>' + esc(c.n) + '</option>').join('') + '</optgroup>').join('') + '</select>') +
@@ -2102,7 +2104,7 @@ function renderTx(){
     (downloads && S.tx.length + S.rec.length ? '<button class="textlink" id="csv">Esporta tutti i movimenti in CSV</button>' : '') +
   '</div>';
   bindDemo();
-  const rr = () => { TXLIM = 300; renderTx(); }, keepY = () => { const y = window.scrollY; renderTx(); window.scrollTo({top:y}); };
+  const rr = () => { TXLIM = 80; renderTx(); }, keepY = () => { const y = window.scrollY; renderTx(); window.scrollTo({top:y}); };
   bindTxPeriod(rr);
   const sb = view.querySelector('#tx-sel'); if (sb) sb.onclick = () => { TXSEL = TXSEL ? null : new Set(); if (TXSEL) histPush(); keepY(); };
   const sa = view.querySelector('#tx-sall'); if (sa) sa.onclick = () => { const ids = selectable.map(x => x.id); if (ids.every(id => TXSEL.has(id))) ids.forEach(id => TXSEL.delete(id)); else ids.forEach(id => TXSEL.add(id)); keepY(); };

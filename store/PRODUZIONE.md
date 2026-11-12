@@ -46,3 +46,24 @@ Buddy4Free Risparmio è un'app gratuita, senza pubblicità e senza account, che 
 
 **Come hai deciso che l'app è pronta per la produzione?**
 Tutti i problemi segnalati durante il test sono stati corretti e verificati, anche con dati di grandi dimensioni (oltre 6.000 movimenti). Ogni pubblicazione passa da test di sicurezza automatici (backup con dati malevoli, cifratura, blocco con PIN, protezione dei contenuti) e da un controllo che blocca modifiche non previste. Negli ultimi giorni del test non sono emersi errori bloccanti. [Aggiungere: i riscontri finali dei tester.] Prima del rilascio pubblico verrà pubblicata una versione Android con motore interno, provata prima su un dispositivo di test.
+
+## Versioni brevi (massimo 300 caratteri, richieste dal modulo)
+
+**Coinvolgimento dei tester** (280 caratteri)
+I tester hanno usato l'app ogni giorno con i propri dati reali: movimenti, import CSV, backup, grafici, revisione mensile. Con la funzione "Segnala un problema" ci hanno mandato dettagli tecnici. In 14 giorni abbiamo pubblicato 16 aggiornamenti, ognuno con un messaggio ai tester.
+
+**Riepilogo dei feedback** (255 caratteri)
+Raccolti con "Segnala un problema" nell'app e messaggi diretti. Temi: blocco all'apertura, tasti e Salva lenti, rallentamenti con oltre 6.000 movimenti, aggiornamenti in ritardo, suggerimenti poco pertinenti, richiesta di previsione prima dello stipendio.
+
+**Pubblico di destinazione** (241 caratteri)
+Adulti in Italia che vogliono capire dove vanno i propri soldi e risparmiare con un metodo semplice, senza collegare il conto e senza che i dati lascino il telefono. In particolare il pubblico del canale di educazione finanziaria Buddy4Free.
+
+**Valore per gli utenti** (281 caratteri)
+App gratuita, senza pubblicità né account: registra entrate e spese, mostra il tasso di risparmio, organizza i soldi in 4 pilastri, con obiettivi, grafici, revisione mensile, simulatore e lezioni brevi. I dati restano sul telefono, backup cifrato. Descrive i dati, non dà consigli.
+
+**Modifiche dopo il test** (272 caratteri)
+Modalità sicura all'avvio, "Segnala un problema", aggiornamenti senza ritardi, tasti e Salva più reattivi, app più veloce con molti dati, movimenti programmati separati, saldi allineati in automatico, previsione dello stipendio, suggerimenti personalizzati sui dati reali.
+
+**Come hai deciso che è pronta** (235 caratteri)
+Tutti i problemi segnalati sono stati corretti e verificati anche con oltre 6.000 movimenti. Ogni pubblicazione passa test di sicurezza automatici (backup, cifratura, PIN). Negli ultimi giorni del test non sono emersi errori bloccanti.
+

@@ -281,6 +281,11 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public String nextReminders() {
+            return Promemoria.prossimi(getApplicationContext());
+        }
+
+        @JavascriptInterface
         public String notifPermission() {
             return permessoNotifiche();
         }

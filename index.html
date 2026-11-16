@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611160759">
+<meta name="b4f-build" content="202611160815">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-l7tIl1NS9qJRsPEd9/GydMlD2/rCLu12Wx91UnXyUZc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-DWydzgjAzcEnzhrF0we7H4KDoUa5e4anr99KibT9zuI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -2851,8 +2851,8 @@ function bindRem(again){ view.querySelectorAll('[data-time]').forEach(inp => inp
   view.querySelectorAll('[data-tpick]').forEach(b => b.onclick = () => { const id = b.dataset.tpick, w = WELL.find(x => x.id === id), [h0, m0] = (S.times[id] || w.time).split(':').map(Number);
     const opt = (n, cur) => Array.from({length:n}, (_, i) => '<option value="' + i + '"' + (i === cur ? ' selected' : '') + '>' + pad(i) + '</option>').join('');
     catPop('<b style="font-size:1.1rem">' + w.n + '</b><p class="small muted" style="margin:0">Scegli l\'orario del promemoria.</p><div class="row" style="gap:8px;align-items:center;justify-content:center;font-size:1.4rem;font-weight:800"><select id="tp-h" aria-label="Ore" style="width:auto;font-size:1.3rem">' + opt(24, h0) + '</select>:<select id="tp-m" aria-label="Minuti" style="width:auto;font-size:1.3rem">' + opt(60, m0) + '</select></div><button class="btn wide" id="tp-ok" style="width:100%">Salva</button><button class="textlink" data-x style="align-self:center">Annulla</button>', (o, close) => {
-      o.querySelector('#tp-ok').onclick = () => { S.times[id] = pad(+o.querySelector('#tp-h').value) + ':' + pad(+o.querySelector('#tp-m').value); save(); close(); toast((S.remOn || {})[id] ? 'Promemoria alle ' + S.times[id] : 'Orario salvato: ' + S.times[id]); again(); }; }, true); });
-  view.querySelectorAll('[data-remon]').forEach(cb => cb.onchange = () => { S.remOn = S.remOn || {}; S.remOn[cb.dataset.remon] = cb.checked; save();
+      o.querySelector('#tp-ok').onclick = () => { S.times[id] = pad(+o.querySelector('#tp-h').value) + ':' + pad(+o.querySelector('#tp-m').value); save(); remNative(); close(); toast((S.remOn || {})[id] ? 'Promemoria alle ' + S.times[id] : 'Orario salvato: ' + S.times[id]); again(); }; }, true); });
+  view.querySelectorAll('[data-remon]').forEach(cb => cb.onchange = () => { S.remOn = S.remOn || {}; S.remOn[cb.dataset.remon] = cb.checked; save(); remNative();
     if (cb.checked && window.B4FNative.notifPermission() !== 'granted') { window.__b4fNotifPerm = st => { if (st !== 'granted') notifHelpNative(); again(); }; window.B4FNative.askNotif(); } else { toast(cb.checked ? 'Promemoria attivo alle ' + S.times[cb.dataset.remon] : 'Promemoria spento'); again(); } }); }
 function notifHelpNative(){ catPop('<b style="font-size:1.1rem">Notifiche bloccate</b><p class="small" style="margin:0">Il telefono non permette all\'app di mandare notifiche. Si sbloccano nelle impostazioni dell\'app: Notifiche → attiva.</p><button class="btn" id="nh-go">Apri le impostazioni</button><button class="textlink small" data-x style="align-self:center">Più tardi</button>', (o, close) => { o.querySelector('#nh-go').onclick = () => { close(); window.B4FNative.openNotifSettings(); }; }, true); }
 /* l'elenco dei promemoria attivi va al telefono, con cosa risulta già fatto oggi (così non avvisa per niente) */
@@ -4653,6 +4653,9 @@ function notifCard(){
   if (nativeRem()) { const p = window.B4FNative.notifPermission(), n = WELL.filter(w => (S.remOn || {})[w.id]).length;
     return '<div class="card" style="gap:10px"><div class="spread"><b>Notifiche dell\'app</b><span class="chip" style="background:' + (p === 'granted' && n ? 'var(--green,#22A45D)' : 'var(--soft2)') + ';color:#fff">' + (p !== 'granted' ? 'Da permettere' : n ? n + ' attiv' + (n === 1 ? 'o' : 'i') : 'Nessuno') + '</span></div>' +
       '<p class="small muted" style="margin:0">Spunta qui sotto i promemoria che vuoi ricevere, con l\'orario che preferisci. Arrivano all\'ora scelta, anche con l\'app chiusa. "Hai segnato tutto?", la domanda del giorno e la tappa della palestra non arrivano se le hai già fatte.</p>' +
+      (n && window.B4FNative.nextReminders ? (() => { let J = {}; try { J = JSON.parse(window.B4FNative.nextReminders() || '{}'); } catch(e) {} const t0 = new Date(), dom = new Date(t0.getTime() + 864e5).toDateString();
+        const rows = WELL.filter(w => (S.remOn || {})[w.id]).map(w => { const ms = J[w.id], d = ms ? new Date(ms) : null; return w.n + ': ' + (d ? (d.toDateString() === t0.toDateString() ? 'oggi' : d.toDateString() === dom ? 'domani' : d.toLocaleDateString('it-IT', {day:'numeric', month:'short'})) + ' alle ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) : 'in attesa'); });
+        return '<p class="small" style="margin:0"><b>Prossimi avvisi</b><br>' + rows.map(esc).join('<br>') + '</p>'; })() : '') +
       '<div class="row">' + (p === 'denied' ? '<button class="btn sm" id="nt-set">Sblocca le notifiche</button>' : '') + '<button class="btn sm ghost" id="nt-ntry">Notifica di prova</button></div></div>'; }
   if (!notifCan()) return '<div class="card"><b>Notifiche dell\'app</b><p class="small muted" style="margin:0">Disponibili nell\'app installata dal Play Store o dal sito. Qui usa il calendario.</p></div>';
   const on = S.notif && S.notif.on && Notification.permission === 'granted', den = Notification.permission === 'denied' || (!!(S.notif && S.notif.on) && Notification.permission !== 'granted');

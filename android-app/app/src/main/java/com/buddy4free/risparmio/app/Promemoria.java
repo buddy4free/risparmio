@@ -27,7 +27,6 @@ import java.util.Set;
  */
 public class Promemoria extends BroadcastReceiver {
     static final String PREF = "promemoria", AZIONE = "com.buddy4free.risparmio.PROMEMORIA", CANALE = "promemoria";
-    private static final long FINESTRA = 10 * 60 * 1000L; // il telefono può spostarlo di qualche minuto per risparmiare batteria
 
     static void salva(Context c, String json) {
         c.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putString("dati", json).apply();
@@ -47,6 +46,7 @@ public class Promemoria extends BroadcastReceiver {
         AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
         SharedPreferences sp = c.getSharedPreferences(PREF, Context.MODE_PRIVATE);
         Set<String> prima = new HashSet<>(sp.getStringSet("attivi", new HashSet<>())), ora = new HashSet<>();
+        JSONObject prossimi = new JSONObject();
         JSONArray L = dati(c).optJSONArray("list");
         for (int k = 0; L != null && k < L.length(); k++) {
             JSONObject r = L.optJSONObject(k);
@@ -55,10 +55,17 @@ public class Promemoria extends BroadcastReceiver {
             long t = prossimo(r.optString("at", "21:00"), r.optBoolean("m"));
             if (id.isEmpty() || t <= 0) continue;
             ora.add(id);
-            am.setWindow(AlarmManager.RTC_WAKEUP, t, FINESTRA, pi(c, id));
+            // suona anche con il telefono a riposo (risparmio energetico profondo); Android può spostarlo di qualche minuto
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, t, pi(c, id));
+            try { prossimi.put(id, t); } catch (Exception ignored) { }
         }
         for (String id : prima) if (!ora.contains(id)) am.cancel(pi(c, id));
-        sp.edit().putStringSet("attivi", ora).apply();
+        sp.edit().putStringSet("attivi", ora).putString("prossimi", prossimi.toString()).apply();
+    }
+
+    /** Per la pagina: quando suonerà ogni promemoria (millisecondi). */
+    static String prossimi(Context c) {
+        return c.getSharedPreferences(PREF, Context.MODE_PRIVATE).getString("prossimi", "{}");
     }
 
     private static PendingIntent pi(Context c, String id) {

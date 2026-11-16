@@ -1,19 +1,12 @@
 # App Android definitiva (motore interno WebView) · versione "Prova" da installare a mano (APK).
-# Parte da sola a ogni modifica di android-app/ o della pagina sul ramo prossima, oppure a mano:
+# Si avvia a mano (deciso da Lorenzo il 16/11/2026: un APK per gruppo di modifiche):
 # Actions → "App Android definitiva (prova)" → Run workflow.
 # Il file da scaricare è in fondo alla pagina dell'esecuzione, sezione Artifacts.
 # La chiave di firma e le password stanno solo nei Secrets del repository.
 name: App Android definitiva (prova)
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [prossima]
-    paths:
-      - 'android-app/**'
-      - 'sorgente/fin-app.html'
-      - 'sorgente/build_pwa.py'
-      - '.github/workflows/android-app.yml'
+  workflow_dispatch:   # solo a mano, quando Lorenzo decide di provare un gruppo di modifiche
 
 permissions:
   contents: read
@@ -35,6 +28,8 @@ jobs:
           rm -rf "$W" && mkdir -p "$W"
           cp index.html manifest.webmanifest "$W/"
           cp -r fonts vendor icons guida "$W/"
+          # Android tratta in modo speciale i file .gz nel pacchetto: la lingua del lettore scontrini va già decompressa
+          gunzip -c vendor/ocr/ita.traineddata.gz > "$W/vendor/ocr/ita.traineddata" && rm "$W/vendor/ocr/ita.traineddata.gz"
           echo "::notice::Pagina $(grep -o 'b4f-build" content="[0-9]*' index.html | grep -o '[0-9]*$'), $(du -sh "$W" | cut -f1)"
 
       - uses: actions/setup-java@v4

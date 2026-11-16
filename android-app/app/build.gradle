@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
 }
 
 android {
@@ -47,6 +48,9 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
     androidResources {
         // la pagina e le librerie sono già compresse dove serve; i file .gz del lettore scontrini restano così come sono
         noCompress 'gz', 'wasm', 'woff2'
@@ -56,4 +60,7 @@ android {
 dependencies {
     implementation 'androidx.webkit:webkit:1.12.1'
     implementation 'androidx.core:core:1.13.1'
+    // passi giornalieri letti da Health Connect (Samsung Health, Garmin…), solo lettura
+    implementation 'androidx.health.connect:connect-client:1.1.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
 }

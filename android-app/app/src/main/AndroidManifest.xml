@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- facoltativo, concesso dall'utente: avvisi puntuali al minuto ("Sveglie e promemoria") -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- solo lettura dei passi da Health Connect, su richiesta dell'utente -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
     <!-- nessun permesso di rete: la pagina è dentro il pacchetto e i dati restano sul telefono.
          I link esterni (sito, mail, calendario) si aprono nelle altre app. -->
     <application
@@ -26,7 +28,22 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Health Connect (Android 13 e precedenti): spiegazione dell'uso dei dati = informativa privacy dell'app -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
         </activity>
+        <!-- Health Connect (Android 14 e successivi): stessa informativa -->
+        <activity-alias
+            android:name="UsoDeiPermessi"
+            android:exported="true"
+            android:targetActivity=".MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
         <receiver android:name=".Promemoria" android:exported="false" />
         <receiver android:name=".Avvio" android:exported="true">
             <intent-filter>
@@ -43,6 +60,7 @@
         </provider>
     </application>
     <queries>
+        <package android:name="com.google.android.apps.healthdata" />
         <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent>
         <intent><action android:name="android.intent.action.SENDTO" /><data android:scheme="mailto" /></intent>
     </queries>

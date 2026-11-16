@@ -44,7 +44,7 @@ import java.io.OutputStream;
 public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final String HOME = "https://" + HOST + "/assets/www/index.html";
-    private static final int REQ_FILE = 1, REQ_SAVE = 2, REQ_NOTIF = 3;
+    private static final int REQ_FILE = 1, REQ_SAVE = 2, REQ_NOTIF = 3, REQ_PASSI = 4;
     private static final String CARTELLA = "Buddy4Free";
 
     private WebView web;
@@ -161,6 +161,7 @@ public class MainActivity extends Activity {
         }
 
         vaiA = getIntent().getStringExtra("vai");
+        if (perInformativa(getIntent())) vaiA = "privacy";
         Promemoria.canale(this);
         web.loadUrl(HOME);
     }
@@ -168,11 +169,29 @@ public class MainActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        String v = intent.getStringExtra("vai");
+        String v = perInformativa(intent) ? "privacy" : intent.getStringExtra("vai");
         if (v != null) {
             vaiA = v;
             apriSchermata();
         }
+    }
+
+    private static boolean perInformativa(Intent i) {
+        String a = i == null ? null : i.getAction();
+        return "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE".equals(a) || "android.intent.action.VIEW_PERMISSION_USAGE".equals(a);
+    }
+
+    /** Passi da Health Connect: la risposta torna alla pagina. Con chiedi=true, se manca il permesso lo si chiede. */
+    private void passi(boolean chiedi) {
+        Passi.leggi(getApplicationContext(), 30, json -> runOnUiThread(() -> {
+            if (chiedi && json.contains("\"permesso\"")) {
+                try {
+                    startActivityForResult(Passi.intentPermesso(this), REQ_PASSI);
+                    return;
+                } catch (Exception ignored) { }
+            }
+            web.evaluateJavascript("window.__b4fSteps&&window.__b4fSteps(" + json + ")", null);
+        }));
     }
 
     /** Toccando un promemoria si apre la schermata giusta (domanda del giorno, palestra, revisione…). */
@@ -281,6 +300,29 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public String stepsStatus() {
+            return Passi.stato(getApplicationContext());
+        }
+
+        /** Collega i passi: chiede il permesso di Health Connect se serve, poi legge gli ultimi 30 giorni. */
+        @JavascriptInterface
+        public void stepsConnect() {
+            passi(true);
+        }
+
+        /** Rilegge i passi senza chiedere nulla (all'apertura di Benessere). */
+        @JavascriptInterface
+        public void stepsRead() {
+            passi(false);
+        }
+
+        /** Health Connect da installare o aggiornare: la sua pagina nel Play Store. */
+        @JavascriptInterface
+        public void stepsInstall() {
+            runOnUiThread(() -> apriFuori(Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")));
+        }
+
+        @JavascriptInterface
         public boolean exactAllowed() {
             return Promemoria.puntuali((android.app.AlarmManager) getSystemService(ALARM_SERVICE));
         }
@@ -380,6 +422,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+        if (req == REQ_PASSI) {
+            passi(false); // dopo la scelta dell'utente: si legge (o si risponde "permesso" se non concesso)
+            return;
+        }
         if (req == REQ_FILE) {
             Uri[] r = WebChromeClient.FileChooserParams.parseResult(res, data);
             if (res == RESULT_OK && (r == null || r.length == 0) && fotoUri != null) r = new Uri[]{fotoUri}; // foto scattata con la fotocamera

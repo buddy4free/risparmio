@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611160825">
+<meta name="b4f-build" content="202611160831">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-r841o6P7xMZrin/CwNEiaiPgOroPnwgCtcRmuUsVTp0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+2/0VebQrqgrTVm3VdmDib1WVNuYYbBYq4y79jBbWMs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -2861,7 +2861,15 @@ function remNative(){ if (!nativeRem()) return; try { const on = S.remOn || {}, 
   const skip = {track:S.tx.some(x => x.d === t) ? t : '', quiz:(S.qd || {}).last === t ? t : '', gym:gd.doneToday ? t : ''};
   window.B4FNative.setReminders(JSON.stringify({list, skip})); } catch(e) {} }
 /* toccando una notifica si apre la schermata giusta */
-window.__b4fGo = id => { const to = {track:{screen:'tx'}, quiz:{screen:'learn'}, gym:{screen:'gym'}, review:{screen:'review'}, steps:{screen:'well'}, pause:{screen:'well'}, breath:{screen:'breath'}}[id]; if (to && S.setup) nav(to); };
+window.__b4fGo = id => { const to = {track:{screen:'tx'}, quiz:{screen:'learn'}, gym:{screen:'gym'}, review:{screen:'review'}, steps:{screen:'well'}, pause:{screen:'well'}, breath:{screen:'breath'}, privacy:{screen:'privacy'}}[id]; if (to && (S.setup || id === 'privacy')) nav(to); };
+/* passi da Health Connect (Samsung Health, Garmin…): solo nell'app Android, solo lettura, i numeri restano sul telefono */
+const hcCan = () => !!(window.B4FNative && window.B4FNative.stepsStatus);
+window.__b4fSteps = r => { try {
+  if (r.stato === 'ok') { const G = r.giorni || {}; let n = 0; Object.keys(G).forEach(d => { const v = Math.round(+G[d] || 0); if (v > 0 && /^\d{4}-\d{2}-\d{2}$/.test(d)) { S.well[d] = S.well[d] || {}; S.well[d].steps = v; S.well[d].hc = 1; n++; } });
+    const first = !(S.hc && S.hc.on); S.hc = {on:true, at:Date.now()}; save(); if (first) toast(n ? 'Passi collegati: ' + n + ' giorni letti' : 'Collegato: Connessione Salute non ha ancora passi da darmi'); if (R.screen === 'well') renderWell(); return; }
+  if (r.stato === 'permesso') { if (S.hc && S.hc.on) { S.hc.on = false; save(); } toast('Senza il permesso "Passi" non posso leggerli'); if (R.screen === 'well') renderWell(); return; }
+  if (r.stato === 'nonDisponibile' || r.stato === 'aggiornare') return catPop('<b style="font-size:1.1rem">Serve Connessione Salute</b><p class="small" style="margin:0">I passi di Samsung Health, Garmin e altre app passano da Connessione Salute (Health Connect), l\'archivio salute di Android. ' + (r.stato === 'aggiornare' ? 'Sul telefono va aggiornato.' : 'Sul telefono non risulta installato.') + '</p><button class="btn" id="hc-inst" style="width:100%">Apri il Play Store</button><button class="textlink" data-x style="align-self:center">Più tardi</button>', (o, close) => { o.querySelector('#hc-inst').onclick = () => { close(); window.B4FNative.stepsInstall(); }; }, true);
+  toast('Non riesco a leggere i passi' + (r.msg ? ': ' + String(r.msg).slice(0, 60) : '')); } catch(e) {} };
 function renderGym(){
   const g = gymDay();
   const found = g.log.reduce((s, e) => s + (e.found || 0), 0);
@@ -2913,12 +2921,17 @@ function renderWell(){
       '<div class="wrow"><span class="ic">' + ic('coffee') + '</span><span class="t"><b>Pause dal lavoro</b><span>Due pause di 5 minuti, lontano dalla scrivania</span></span><span class="row" style="gap:6px"><button class="tick" data-p="1" aria-pressed="' + ((W.pause || 0) >= 1) + '" aria-label="Prima pausa">1</button><button class="tick" data-p="2" aria-pressed="' + ((W.pause || 0) >= 2) + '" aria-label="Seconda pausa">2</button></span></div>' +
       '<button class="wrow" style="border-left:0;border-right:0;border-top:0;background:none;text-align:left;width:100%" ' + nav$({screen:'breath'}) + '><span class="ic' + (W.breath ? ' y' : '') + '">' + ic(W.breath ? 'check' : 'wave') + '</span><span class="t"><b>Respirazione guidata</b><span>' + (W.breath ? 'Fatta oggi' : '2, 5 o 10 minuti, con i suoni') + '</span></span>' + ic('right') + '</button>' +
     '</div></div>' +
-    '<div class="card"><span class="label">Passi, ultimi 7 giorni</span><div class="steps7" role="img" aria-label="Passi degli ultimi 7 giorni">' + days.map(d => { const s = (S.well[d] || {}).steps || 0; return '<button type="button" data-sday="' + d + '" title="' + dshort(d) + ': ' + fmtN(s) + ' passi, tocca per cambiare"><em>' + (s ? (s / 1000).toFixed(1).replace('.', ',') + 'k' : '') + '</em><span style="height:' + Math.max(2, s / maxS * 100) + 'px;background:' + (s >= 8000 ? 'var(--good)' : 'var(--yellow)') + '"></span><small>' + new Date(d + 'T12:00:00').toLocaleDateString('it-IT', {weekday:'narrow'}) + '</small></button>'; }).join('') + '<i class="goal8" style="bottom:' + (8000 / maxS * 100 + 20) + 'px"></i></div><div class="legend small muted"><span><i class="tgt-key"></i>8.000 passi</span><span><i class="sw" style="background:var(--good)"></i>obiettivo raggiunto</span></div><p class="small muted" style="margin:0">Tocca un giorno per inserire o correggere i passi, anche dei giorni passati.</p></div>' +
+    '<div class="card"><span class="label">Passi, ultimi 7 giorni</span><div class="steps7" role="img" aria-label="Passi degli ultimi 7 giorni">' + days.map(d => { const s = (S.well[d] || {}).steps || 0; return '<button type="button" data-sday="' + d + '" title="' + dshort(d) + ': ' + fmtN(s) + ' passi, tocca per cambiare"><em>' + (s ? (s / 1000).toFixed(1).replace('.', ',') + 'k' : '') + '</em><span style="height:' + Math.max(2, s / maxS * 100) + 'px;background:' + (s >= 8000 ? 'var(--good)' : 'var(--yellow)') + '"></span><small>' + new Date(d + 'T12:00:00').toLocaleDateString('it-IT', {weekday:'narrow'}) + '</small></button>'; }).join('') + '<i class="goal8" style="bottom:' + (8000 / maxS * 100 + 20) + 'px"></i></div><div class="legend small muted"><span><i class="tgt-key"></i>8.000 passi</span><span><i class="sw" style="background:var(--good)"></i>obiettivo raggiunto</span></div><p class="small muted" style="margin:0">Tocca un giorno per inserire o correggere i passi, anche dei giorni passati.</p>' +
+      (hcCan() ? (S.hc && S.hc.on ? '<div class="spread small"><span class="muted">Passi letti da Connessione Salute (Samsung Health, Garmin…)' + (S.hc.at ? ', aggiornati alle ' + pad(new Date(S.hc.at).getHours()) + ':' + pad(new Date(S.hc.at).getMinutes()) : '') + '</span><button class="textlink small" id="hc-up">Aggiorna</button></div>'
+        : '<button class="btn sm" id="hc-go" style="align-self:flex-start">Collega i passi del telefono</button><p class="small muted" style="margin:0">Da Samsung Health, Garmin o altre app collegate a Connessione Salute. Solo lettura dei passi: restano sul telefono.</p>') : '') + '</div>' +
     '<div class="sec"><span class="label">Promemoria del benessere</span>' + (nativeRem() ? '<p class="small muted">Spunta un promemoria per ricevere la notifica all\'orario scelto.</p>' : '<p class="small muted">Per ricevere la notifica sul telefono, aggiungi ogni promemoria al tuo calendario.</p>') + remRows('well') + '</div></div>';
   const st = view.querySelector('#w-steps'); let stT;
   st.oninput = () => { clearTimeout(stT); stT = setTimeout(() => { W.steps = Math.max(0, parseInt(st.value.replace(/\D/g, '')) || 0); save(); if (W.steps >= 8000) toast('8.000 passi: ottimo!'); if (R.screen === 'well') renderWell(); }, 900); };
   view.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const n = +b.dataset.p; W.pause = (W.pause || 0) >= n ? n - 1 : n; save(); renderWell(); });
   bindRem(renderWell);
+  const hg = view.querySelector('#hc-go'); if (hg) hg.onclick = () => window.B4FNative.stepsConnect();
+  const hu = view.querySelector('#hc-up'); if (hu) hu.onclick = () => { toast('Aggiorno i passi…'); window.B4FNative.stepsRead(); };
+  if (hcCan() && S.hc && S.hc.on && Date.now() - (S.hc.at || 0) > 10 * 60e3) window.B4FNative.stepsRead(); /* all'apertura, al massimo ogni 10 minuti */
   /* passi dimenticati: si inseriscono o correggono toccando il giorno nel grafico */
   view.querySelectorAll('[data-sday]').forEach(b => b.onclick = () => { const d = b.dataset.sday, cur = (S.well[d] || {}).steps || '';
     catPop('<b style="font-size:1.1rem">Passi di ' + esc(dLabel(d)) + '</b><input id="sd-n" inputmode="numeric" placeholder="0" value="' + cur + '" aria-label="Passi"><button class="btn" id="sd-ok" style="width:100%">Salva</button><button class="textlink" data-x style="align-self:center">Annulla</button>', (o, close) => {

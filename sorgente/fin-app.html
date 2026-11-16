@@ -4663,7 +4663,7 @@ function diagText(){ const g = k => { try { return localStorage.getItem(k); } ca
   const L = (label, f) => { try { return label + ': ' + f(); } catch(e) { return label + ': (non disponibile: ' + (e && e.message) + ')'; } }, arr = v => Array.isArray(v) ? v.length : 0;
   const slow = J('b4f-slow', []), err = J('b4f-lasterr', null);
   return ['Buddy4Free Risparmio · segnalazione',
-    L('Versione', () => { const m = document.querySelector('meta[name="b4f-build"]'); return m ? m.content : 'anteprima'; }), L('Data', () => new Date().toLocaleString('it-IT')), L('Schermata', () => R.screen),
+    L('Versione', () => { const m = document.querySelector('meta[name="b4f-build"]'); return (m ? m.content : 'anteprima') + (window.B4FNative ? ' · app Android ' + window.B4FNative.version() : ''); }), L('Data', () => new Date().toLocaleString('it-IT')), L('Schermata', () => R.screen),
     L('Tema', () => themePref() + ' (' + document.documentElement.dataset.theme + ')'), L('Schermo', () => innerWidth + '×' + innerHeight), L('Telefono', () => navigator.userAgent),
     L('Dati', () => arr(S.tx) + ' movimenti, ' + arr(S.rec) + ' ricorrenti, ' + arr(S.moves) + ' movimenti dei pilastri, ' + arr(S.goals) + ' obiettivi, ' + arr(S.debts) + ' finanziamenti, ' + arr(S.dues) + ' scadenze, storico ' + Object.values(S.hist || {}).reduce((t, h) => t + arr(h), 0) + ' mesi'),
     L('Memoria usata', () => Math.round(((g('b4f-finanza-v1') || '').length) / 1024) + ' KB'), L('Copia offline', () => navigator.serviceWorker && navigator.serviceWorker.controller ? 'sì' : 'no'),

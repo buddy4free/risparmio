@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611121341">
+<meta name="b4f-build" content="202611160706">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-/F3J6Gnnpb2K64wS5RFoJ5gLGQeXaBHohMkgK9GPovE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-orGoCCgLyAFCYkZe+IEhiaK9UxdxiOQNKAOuJdVc2IU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1228,6 +1228,10 @@ let viewYM = curYM();
 
 let remote = null, writing = false, pending = false, saveTimer = null, downloads = {save:async ({filename, data}) => {
   const blob = data instanceof Blob ? data : new Blob([data], {type:/\.json$/.test(filename) ? 'application/json' : /\.csv$/.test(filename) ? 'text/csv' : 'application/octet-stream'});
+  if (window.B4FNative) { /* app Android: il file si salva dove sceglie l'utente, con la finestra di sistema */
+    const b64 = await new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = ko; r.readAsDataURL(blob); });
+    const id = 's' + Date.now() + Math.random().toString(36).slice(2, 6), res = await new Promise(ok => { (window.__b4fSaveCb = window.__b4fSaveCb || {})[id] = ok; window.B4FNative.saveFile(id, filename, blob.type || 'application/octet-stream', b64); });
+    if (res === 'declined') throw {code:'declined'}; if (res !== 'ok') throw new Error('salvataggio non riuscito'); return; }
   const f = new File([blob], filename, {type:blob.type});
   const mob = /Android|iPhone|iPad/.test(navigator.userAgent), alt = /\.json$/.test(filename) ? new File([blob], filename.replace(/\.json$/, '.txt'), {type:'text/plain'}) : null;
   for (const ff of [f, alt]) if (ff && mob && navigator.canShare && navigator.canShare({files:[ff]})) { try { await navigator.share({files:[ff], title:filename}); return; } catch(e) { if (e && e.name === 'AbortError') throw {code:'declined'}; } }
@@ -1655,7 +1659,7 @@ function bindMonth(){ view.querySelector('#m-prev').onclick = () => { viewYM = a
 const VIDEO_SHORT = '', VIDEO_LONG = '';
 const ideaMail = () => 'mailto:' + CONTACT_EMAIL + '?subject=' + encodeURIComponent('Un suggerimento per Buddy4Free Risparmio') + '&body=' + encodeURIComponent('Ciao Lorenzo,\n\nti suggerisco:\n\n\n(Telefono e versione Android, se vuoi: )');
 const videoLinks = () => !VIDEO_SHORT && !VIDEO_LONG ? '' : '<div class="vlinks"><span class="label">Guarda come funziona</span><div class="row">' + (VIDEO_SHORT ? '<a class="btn sm ghost" href="' + VIDEO_SHORT + '" target="_blank" rel="noopener">' + ic('play') + 'In 1 minuto</a>' : '') + (VIDEO_LONG ? '<a class="btn sm ghost" href="' + VIDEO_LONG + '" target="_blank" rel="noopener">' + ic('play') + 'Guida completa</a>' : '') + '</div></div>';
-const YT_URL = 'https://www.youtube.com/@Buddy4Free', APP_URL = location.origin + location.pathname.replace(/index\.html$/, ''), DONATE_URL = '';
+const YT_URL = 'https://www.youtube.com/@Buddy4Free', APP_URL = window.B4FNative ? 'https://buddy4free.github.io/risparmio/' : location.origin + location.pathname.replace(/index\.html$/, ''), DONATE_URL = '';
 function supportHTML(){
   return '<p>Questa app è <b class="y">gratuita</b>, senza pubblicità e senza abbonamenti, come tutto quello che nasce da Buddy4Free.</p>' +
     '<p class="muted">Usala, e falla girare a chi pensi ne abbia bisogno: un amico che vuole mettere ordine nei conti, un familiare, un collega.</p>' +
@@ -4687,7 +4691,7 @@ function diagText(){ const g = k => { try { return localStorage.getItem(k); } ca
   const L = (label, f) => { try { return label + ': ' + f(); } catch(e) { return label + ': (non disponibile: ' + (e && e.message) + ')'; } }, arr = v => Array.isArray(v) ? v.length : 0;
   const slow = J('b4f-slow', []), err = J('b4f-lasterr', null);
   return ['Buddy4Free Risparmio · segnalazione',
-    L('Versione', () => { const m = document.querySelector('meta[name="b4f-build"]'); return m ? m.content : 'anteprima'; }), L('Data', () => new Date().toLocaleString('it-IT')), L('Schermata', () => R.screen),
+    L('Versione', () => { const m = document.querySelector('meta[name="b4f-build"]'); return (m ? m.content : 'anteprima') + (window.B4FNative ? ' · app Android ' + window.B4FNative.version() : ''); }), L('Data', () => new Date().toLocaleString('it-IT')), L('Schermata', () => R.screen),
     L('Tema', () => themePref() + ' (' + document.documentElement.dataset.theme + ')'), L('Schermo', () => innerWidth + '×' + innerHeight), L('Telefono', () => navigator.userAgent),
     L('Dati', () => arr(S.tx) + ' movimenti, ' + arr(S.rec) + ' ricorrenti, ' + arr(S.moves) + ' movimenti dei pilastri, ' + arr(S.goals) + ' obiettivi, ' + arr(S.debts) + ' finanziamenti, ' + arr(S.dues) + ' scadenze, storico ' + Object.values(S.hist || {}).reduce((t, h) => t + arr(h), 0) + ' mesi'),
     L('Memoria usata', () => Math.round(((g('b4f-finanza-v1') || '').length) / 1024) + ' KB'), L('Copia offline', () => navigator.serviceWorker && navigator.serviceWorker.controller ? 'sì' : 'no'),
@@ -4887,7 +4891,9 @@ setTimeout(samsungPop, 300);
 /* l'apertura è arrivata in fondo: la prossima volta niente modalità sicura */
 try { localStorage.removeItem('b4f-boot'); } catch(e) {}
 /* app installabile: funziona anche offline */
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+/* nell'app Android la pagina è già dentro il pacchetto: niente copia offline del browser */
+window.__b4fSaveDone = (id, r) => { const f = (window.__b4fSaveCb || {})[id]; if (f) { delete window.__b4fSaveCb[id]; f(r); } };
+if ('serviceWorker' in navigator && !window.B4FNative) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 </script>
 

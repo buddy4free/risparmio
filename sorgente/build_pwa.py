@@ -19,13 +19,17 @@ rep("loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.mi
 # lettore degli scontrini incluso (vendor/ocr), attivo solo nell'app installata
 rep("const OCR_PATH = '';","const OCR_PATH = 'vendor/ocr/';")
 # link dell'app = indirizzo del sito
-rep("APP_URL = 'https://claude.ai/artifact/SKGYXcdzEhsYz7Btngm8hq'","APP_URL = location.origin + location.pathname.replace(/index\\.html$/, '')")
+rep("APP_URL = 'https://claude.ai/artifact/SKGYXcdzEhsYz7Btngm8hq'","APP_URL = window.B4FNative ? 'https://buddy4free.github.io/risparmio/' : location.origin + location.pathname.replace(/index\\.html$/, '')")
 rep('value="https://claude.ai/artifact/SKGYXcdzEhsYz7Btngm8hq"','value="\' + APP_URL + \'"')
 rep("Per invitare un amico, condividi l\\'app dal menu Condividi di questa pagina, poi mandagli il link. Ognuno vede solo i propri dati.","Per invitare un amico mandagli questo link. Ognuno vede solo i propri dati, salvati sul proprio telefono.")
 # salvataggio file senza la piattaforma claude.ai
 rep("let remote = null, writing = false, pending = false, saveTimer = null, downloads = null;",
 """let remote = null, writing = false, pending = false, saveTimer = null, downloads = {save:async ({filename, data}) => {
   const blob = data instanceof Blob ? data : new Blob([data], {type:/\\.json$/.test(filename) ? 'application/json' : /\\.csv$/.test(filename) ? 'text/csv' : 'application/octet-stream'});
+  if (window.B4FNative) { /* app Android: il file si salva dove sceglie l'utente, con la finestra di sistema */
+    const b64 = await new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = ko; r.readAsDataURL(blob); });
+    const id = 's' + Date.now() + Math.random().toString(36).slice(2, 6), res = await new Promise(ok => { (window.__b4fSaveCb = window.__b4fSaveCb || {})[id] = ok; window.B4FNative.saveFile(id, filename, blob.type || 'application/octet-stream', b64); });
+    if (res === 'declined') throw {code:'declined'}; if (res !== 'ok') throw new Error('salvataggio non riuscito'); return; }
   const f = new File([blob], filename, {type:blob.type});
   const mob = /Android|iPhone|iPad/.test(navigator.userAgent), alt = /\\.json$/.test(filename) ? new File([blob], filename.replace(/\\.json$/, '.txt'), {type:'text/plain'}) : null;
   for (const ff of [f, alt]) if (ff && mob && navigator.canShare && navigator.canShare({files:[ff]})) { try { await navigator.share({files:[ff], title:filename}); return; } catch(e) { if (e && e.name === 'AbortError') throw {code:'declined'}; } }
@@ -51,7 +55,9 @@ head='''<!doctype html>
 head=head.replace('__VER__',VER)
 assert s.count('</script>')==1, 'script'
 s=head+s.replace('</script>','''/* app installabile: funziona anche offline */
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+/* nell'app Android la pagina è già dentro il pacchetto: niente copia offline del browser */
+window.__b4fSaveDone = (id, r) => { const f = (window.__b4fSaveCb || {})[id]; if (f) { delete window.__b4fSaveCb[id]; f(r); } };
+if ('serviceWorker' in navigator && !window.B4FNative) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 </script>''',1)
 # il corpo: title e style restano, chiudiamo head prima del primo elemento visibile

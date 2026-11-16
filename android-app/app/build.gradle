@@ -1,0 +1,58 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.buddy4free.risparmio.app'
+    compileSdk 36
+    defaultConfig {
+        minSdk 26
+        targetSdk 36
+        // numero e nome della versione: arrivano dal workflow su GitHub
+        versionCode((System.getenv('VERSION_CODE') ?: '1') as int)
+        versionName(System.getenv('VERSION_NAME') ?: '2.0.0-prova')
+    }
+    flavorDimensions 'tipo'
+    productFlavors {
+        // "Prova": nome e pacchetto diversi, convive con l'app dei tester sullo stesso telefono
+        prova {
+            dimension 'tipo'
+            applicationId 'com.buddy4free.risparmio.prova'
+            resValue 'string', 'app_name', 'Risparmio Prova'
+        }
+        // "Finale": sostituirà l'app di sempre sul Play Store (fase 4)
+        finale {
+            dimension 'tipo'
+            applicationId 'com.buddy4free.risparmio'
+            resValue 'string', 'app_name', 'Buddy4Free'
+        }
+    }
+    signingConfigs {
+        release {
+            if (System.getenv('ANDROID_KEYSTORE_FILE')) {
+                storeFile file(System.getenv('ANDROID_KEYSTORE_FILE'))
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (System.getenv('ANDROID_KEYSTORE_FILE')) signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    androidResources {
+        // la pagina e le librerie sono già compresse dove serve; i file .gz del lettore scontrini restano così come sono
+        noCompress 'gz', 'wasm', 'woff2'
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+}

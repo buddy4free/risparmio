@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611160706">
+<meta name="b4f-build" content="202611160731">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-orGoCCgLyAFCYkZe+IEhiaK9UxdxiOQNKAOuJdVc2IU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-8QtY9GDKW2vNlreydtrKpgDj8jS59EQHtQg4lUEsByU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -3854,9 +3854,12 @@ function importBackup(file){
   if (file.size > 30e6) return toast('Questo file è troppo grande per essere un backup');
   const fr = new FileReader();
   const restore = d => { if (!d || !d.cats || !Array.isArray(d.tx)) return toast('Questo file non è un backup valido');
-      const box = document.getElementById('ask'); box.innerHTML = '<div class="card" style="border-color:var(--critical)"><p>Il backup del ' + (d.exported && !isNaN(new Date(d.exported)) ? new Date(d.exported).toLocaleDateString('it-IT') : '?') + ' contiene ' + d.tx.length + ' movimenti. Ripristinandolo sostituisci tutti i dati attuali. Continuare?</p><div class="row"><button class="btn danger" id="rb-yes">Sì, ripristina</button><button class="btn ghost" id="rb-no">Annulla</button></div></div>';
-      box.querySelector('#rb-no').onclick = () => box.innerHTML = '';
-      box.querySelector('#rb-yes').onclick = () => { delete d.app; delete d.exported; const keepLock = S.lock, keepDev = {notif:S.notif, samsungSeen:S.samsungSeen}; S = Object.assign(freshState(), clean(d)); S.lock = keepLock || {on:false, after:60}; Object.keys(keepDev).forEach(k => { if (keepDev[k] === undefined) delete S[k]; else S[k] = keepDev[k]; }); migrate(); remSync(); save(); toast('Backup ripristinato'); nav({screen:'home'}); }; };
+      /* la conferma compare in primo piano, al centro dello schermo: così non sfugge */
+      const pop = document.createElement('div'); pop.className = 'psheet pcenter'; pop.id = 'rbpop';
+      pop.innerHTML = '<div class="pin" style="border-color:var(--critical)"><b style="font-size:1.15rem">Ripristinare questo backup?</b><p style="margin:0">Backup del <b>' + (d.exported && !isNaN(new Date(d.exported)) ? new Date(d.exported).toLocaleDateString('it-IT') : '?') + '</b> con <b>' + d.tx.length + ' movimenti</b>.</p><p class="small muted" style="margin:0">Ripristinandolo sostituisci tutti i dati attuali dell\'app con quelli del backup.</p><button class="btn danger wide" id="rb-yes">Sì, ripristina</button><button class="btn ghost wide" id="rb-no">Annulla</button></div>';
+      document.body.appendChild(pop); const box = pop; box.querySelector('#rb-no').onclick = () => pop.remove();
+      pop.onclick = e => { if (e.target === pop) pop.remove(); };
+      box.querySelector('#rb-yes').onclick = () => { pop.remove(); delete d.app; delete d.exported; const keepLock = S.lock, keepDev = {notif:S.notif, samsungSeen:S.samsungSeen}; S = Object.assign(freshState(), clean(d)); S.lock = keepLock || {on:false, after:60}; Object.keys(keepDev).forEach(k => { if (keepDev[k] === undefined) delete S[k]; else S[k] = keepDev[k]; }); migrate(); remSync(); save(); toast('Backup ripristinato'); nav({screen:'home'}); }; };
   fr.onload = () => { let d; try { d = JSON.parse(fr.result); } catch(e) { return toast('Questo file non è un backup valido'); }
     if (!d || !d.enc) return restore(d);
     catPop('<b style="font-size:1.1rem">Backup protetto</b><p class="small muted" style="margin:0">Scrivi la password scelta quando hai salvato il backup.</p><input id="rb-pw" type="password" autocomplete="current-password" aria-label="Password del backup"><div class="row"><button class="btn" id="rb-ok">Apri</button><button class="btn ghost" data-x>Annulla</button></div>', (o, close) => {

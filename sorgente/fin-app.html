@@ -4725,6 +4725,8 @@ function checkTrouble(){ try { if (document.getElementById('upd') || document.ge
   u.innerHTML = '<span><b>L\'ultima volta l\'app ' + what + '</b> · i dettagli aiutano a sistemarla</span><button class="btn sm" id="tr-go">Segnala</button><button class="updx" id="tr-x" aria-label="Chiudi">×</button>';
   document.body.appendChild(u); u.querySelector('#tr-go').onclick = () => { u.remove(); diagPop(); }; u.querySelector('#tr-x').onclick = () => u.remove(); } catch(e) {} }
 setTimeout(checkTrouble, 2500);
+/* app Android: l'app ha scaricato e verificato schermate nuove firmate */
+window.__b4fUpd = () => { if (!document.getElementById('upd')) showUpd(); };
 setTimeout(checkNewer, 5000); setTimeout(checkNewer, 15000); setTimeout(checkNewer, 40000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewer(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { const g = e.data && e.data.go; if (GO_OK.includes(g)) nav({screen:g}); });

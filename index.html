@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611160850">
+<meta name="b4f-build" content="202611160900">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-qrz4M3c2TmnfS4M0tBeugl7ucVZg+kLzrtp0Kgq1Xak='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-WydaPsuxkDBVlWU9JIqyZxT3ztvDqUR8Lpgkm+8PKXo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -4753,6 +4753,8 @@ function checkTrouble(){ try { if (document.getElementById('upd') || document.ge
   u.innerHTML = '<span><b>L\'ultima volta l\'app ' + what + '</b> · i dettagli aiutano a sistemarla</span><button class="btn sm" id="tr-go">Segnala</button><button class="updx" id="tr-x" aria-label="Chiudi">×</button>';
   document.body.appendChild(u); u.querySelector('#tr-go').onclick = () => { u.remove(); diagPop(); }; u.querySelector('#tr-x').onclick = () => u.remove(); } catch(e) {} }
 setTimeout(checkTrouble, 2500);
+/* app Android: l'app ha scaricato e verificato schermate nuove firmate */
+window.__b4fUpd = () => { if (!document.getElementById('upd')) showUpd(); };
 setTimeout(checkNewer, 5000); setTimeout(checkNewer, 15000); setTimeout(checkNewer, 40000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewer(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { const g = e.data && e.data.go; if (GO_OK.includes(g)) nav({screen:g}); });

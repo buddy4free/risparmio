@@ -90,7 +90,7 @@ public class MainActivity extends Activity {
 
         // i file della pagina arrivano dal pacchetto, con un indirizzo https sicuro
         final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
-                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .addPathHandler("/assets/", new Aggiornamenti.Pagina(this)) // prima le schermate aggiornate e verificate, poi quelle incluse
                 .build();
         web.setWebViewClient(new WebViewClient() {
             @Override
@@ -166,6 +166,19 @@ public class MainActivity extends Activity {
         daImportare = leggiCondiviso(getIntent());
         Promemoria.canale(this);
         web.loadUrl(HOME);
+        controllaAggiornamenti(true);
+    }
+
+    /** Aggiornamenti firmati della pagina: all'apertura e, tornando nell'app, al massimo ogni 3 ore. */
+    private void controllaAggiornamenti(boolean subito) {
+        android.content.SharedPreferences sp = getSharedPreferences("aggiornamenti", MODE_PRIVATE);
+        long ora = System.currentTimeMillis();
+        if (!subito && ora - sp.getLong("ultimo", 0) < 3 * 3600_000L) return;
+        sp.edit().putLong("ultimo", ora).apply();
+        final android.content.Context c = getApplicationContext();
+        new Thread(() -> {
+            if (Aggiornamenti.controlla(c)) runOnUiThread(() -> { if (pronta) web.evaluateJavascript("window.__b4fUpd&&window.__b4fUpd()", null); });
+        }, "aggiornamenti").start();
     }
 
     @Override
@@ -503,6 +516,7 @@ public class MainActivity extends Activity {
         super.onResume();
         web.onResume();
         Promemoria.programma(getApplicationContext());
+        controllaAggiornamenti(false);
         if (pronta) web.evaluateJavascript("window.__b4fResume&&window.__b4fResume()", null);
     }
 

@@ -56,10 +56,16 @@ jobs:
       - name: Guardiano (blocca se cambiano regole di sicurezza, indirizzi esterni o librerie)
         if: steps.diff.outputs.nuove == '1'
         run: python3 sorgente/guardiano.py
+      - name: Firma l'aggiornamento per l'app Android
+        if: steps.diff.outputs.nuove == '1'
+        env:
+          B4F_FIRMA_PRIVATA: ${{ secrets.B4F_FIRMA_PRIVATA }}
+        run: python3 sorgente/firma_app.py
       - name: Pubblica
         if: steps.diff.outputs.nuove == '1'
         run: |
           git add index.html sw.js
+          [ -d app ] && git add app || true
           git commit -m "Pubblicazione per i tester $(TZ=Europe/Rome date '+%d/%m/%Y %H:%M')" || true
           git push origin HEAD:main
           git push origin HEAD:prossima || echo "prossima ha commit nuovi: verranno pubblicati la prossima volta"

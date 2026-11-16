@@ -7,8 +7,9 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- solo lettura dei passi da Health Connect, su richiesta dell'utente -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
-    <!-- nessun permesso di rete: la pagina è dentro il pacchetto e i dati restano sul telefono.
+    <!-- rete solo per scaricare le schermate aggiornate e firmate dal sito dell'app; i dati restano sul telefono.
          I link esterni (sito, mail, calendario) si aprono nelle altre app. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/estrazione_dati"

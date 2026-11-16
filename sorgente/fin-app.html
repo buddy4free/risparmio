@@ -415,7 +415,7 @@ i.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right
 .pill .marker{font-size:1.05rem}
 .note ul{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
 .steps7{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:150px}
-.steps7 div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
+.steps7 button{background:none;border:0;padding:0;color:inherit;font:inherit;height:100%}.steps7 div,.steps7 button{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
 .steps7 span{width:100%;max-width:28px;border-radius:4px 4px 1px 1px}
 .steps7 em{font-style:normal;font-size:.68rem;font-weight:700}
 .steps7 small{font-size:.7rem;color:var(--muted);text-transform:uppercase}
@@ -2885,12 +2885,17 @@ function renderWell(){
       '<div class="wrow"><span class="ic">' + ic('coffee') + '</span><span class="t"><b>Pause dal lavoro</b><span>Due pause di 5 minuti, lontano dalla scrivania</span></span><span class="row" style="gap:6px"><button class="tick" data-p="1" aria-pressed="' + ((W.pause || 0) >= 1) + '" aria-label="Prima pausa">1</button><button class="tick" data-p="2" aria-pressed="' + ((W.pause || 0) >= 2) + '" aria-label="Seconda pausa">2</button></span></div>' +
       '<button class="wrow" style="border-left:0;border-right:0;border-top:0;background:none;text-align:left;width:100%" ' + nav$({screen:'breath'}) + '><span class="ic' + (W.breath ? ' y' : '') + '">' + ic(W.breath ? 'check' : 'wave') + '</span><span class="t"><b>Respirazione guidata</b><span>' + (W.breath ? 'Fatta oggi' : '2, 5 o 10 minuti, con i suoni') + '</span></span>' + ic('right') + '</button>' +
     '</div></div>' +
-    '<div class="card"><span class="label">Passi, ultimi 7 giorni</span><div class="steps7" role="img" aria-label="Passi degli ultimi 7 giorni">' + days.map(d => { const s = (S.well[d] || {}).steps || 0; return '<div title="' + dshort(d) + ': ' + fmtN(s) + ' passi"><em>' + (s ? (s / 1000).toFixed(1).replace('.', ',') + 'k' : '') + '</em><span style="height:' + Math.max(2, s / maxS * 100) + 'px;background:' + (s >= 8000 ? 'var(--good)' : 'var(--yellow)') + '"></span><small>' + new Date(d + 'T12:00:00').toLocaleDateString('it-IT', {weekday:'narrow'}) + '</small></div>'; }).join('') + '<i class="goal8" style="bottom:' + (8000 / maxS * 100 + 20) + 'px"></i></div><div class="legend small muted"><span><i class="tgt-key"></i>8.000 passi</span><span><i class="sw" style="background:var(--good)"></i>obiettivo raggiunto</span></div></div>' +
+    '<div class="card"><span class="label">Passi, ultimi 7 giorni</span><div class="steps7" role="img" aria-label="Passi degli ultimi 7 giorni">' + days.map(d => { const s = (S.well[d] || {}).steps || 0; return '<button type="button" data-sday="' + d + '" title="' + dshort(d) + ': ' + fmtN(s) + ' passi, tocca per cambiare"><em>' + (s ? (s / 1000).toFixed(1).replace('.', ',') + 'k' : '') + '</em><span style="height:' + Math.max(2, s / maxS * 100) + 'px;background:' + (s >= 8000 ? 'var(--good)' : 'var(--yellow)') + '"></span><small>' + new Date(d + 'T12:00:00').toLocaleDateString('it-IT', {weekday:'narrow'}) + '</small></button>'; }).join('') + '<i class="goal8" style="bottom:' + (8000 / maxS * 100 + 20) + 'px"></i></div><div class="legend small muted"><span><i class="tgt-key"></i>8.000 passi</span><span><i class="sw" style="background:var(--good)"></i>obiettivo raggiunto</span></div><p class="small muted" style="margin:0">Tocca un giorno per inserire o correggere i passi, anche dei giorni passati.</p></div>' +
     '<div class="sec"><span class="label">Promemoria del benessere</span>' + (nativeRem() ? '<p class="small muted">Spunta un promemoria per ricevere la notifica all\'orario scelto.</p>' : '<p class="small muted">Per ricevere la notifica sul telefono, aggiungi ogni promemoria al tuo calendario.</p>') + remRows('well') + '</div></div>';
   const st = view.querySelector('#w-steps'); let stT;
   st.oninput = () => { clearTimeout(stT); stT = setTimeout(() => { W.steps = Math.max(0, parseInt(st.value.replace(/\D/g, '')) || 0); save(); if (W.steps >= 8000) toast('8.000 passi: ottimo!'); if (R.screen === 'well') renderWell(); }, 900); };
   view.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const n = +b.dataset.p; W.pause = (W.pause || 0) >= n ? n - 1 : n; save(); renderWell(); });
   bindRem(renderWell);
+  /* passi dimenticati: si inseriscono o correggono toccando il giorno nel grafico */
+  view.querySelectorAll('[data-sday]').forEach(b => b.onclick = () => { const d = b.dataset.sday, cur = (S.well[d] || {}).steps || '';
+    catPop('<b style="font-size:1.1rem">Passi di ' + esc(dLabel(d)) + '</b><input id="sd-n" inputmode="numeric" placeholder="0" value="' + cur + '" aria-label="Passi"><button class="btn" id="sd-ok" style="width:100%">Salva</button><button class="textlink" data-x style="align-self:center">Annulla</button>', (o, close) => {
+      const go = () => { const n = Math.max(0, Math.min(150000, parseInt(String(o.querySelector('#sd-n').value).replace(/\D/g, '')) || 0)); S.well[d] = S.well[d] || {}; S.well[d].steps = n; save(); close(); toast(n ? fmtN(n) + ' passi salvati' : 'Passi tolti'); renderWell(); };
+      o.querySelector('#sd-ok').onclick = go; o.querySelector('#sd-n').onkeydown = e => { if (e.key === 'Enter') go(); }; }); });
   const ks = Object.keys(S.well).sort(); while (ks.length > 60) delete S.well[ks.shift()];
 }
 

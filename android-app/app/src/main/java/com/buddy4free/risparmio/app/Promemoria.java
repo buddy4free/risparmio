@@ -55,12 +55,18 @@ public class Promemoria extends BroadcastReceiver {
             long t = prossimo(r.optString("at", "21:00"), r.optBoolean("m"));
             if (id.isEmpty() || t <= 0) continue;
             ora.add(id);
-            // suona anche con il telefono a riposo (risparmio energetico profondo); Android può spostarlo di qualche minuto
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, t, pi(c, id));
+            // suona anche con il telefono a riposo. Puntuale al minuto se l'utente ha concesso "Sveglie e promemoria",
+            // altrimenti Android può spostarlo di qualche minuto per risparmiare batteria
+            if (puntuali(am)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, t, pi(c, id));
+            else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, t, pi(c, id));
             try { prossimi.put(id, t); } catch (Exception ignored) { }
         }
         for (String id : prima) if (!ora.contains(id)) am.cancel(pi(c, id));
         sp.edit().putStringSet("attivi", ora).putString("prossimi", prossimi.toString()).apply();
+    }
+
+    static boolean puntuali(AlarmManager am) {
+        return Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms();
     }
 
     /** Per la pagina: quando suonerà ogni promemoria (millisecondi). */

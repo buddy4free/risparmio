@@ -4628,6 +4628,7 @@ function notifCard(){
       (n && window.B4FNative.nextReminders ? (() => { let J = {}; try { J = JSON.parse(window.B4FNative.nextReminders() || '{}'); } catch(e) {} const t0 = new Date(), dom = new Date(t0.getTime() + 864e5).toDateString();
         const rows = WELL.filter(w => (S.remOn || {})[w.id]).map(w => { const ms = J[w.id], d = ms ? new Date(ms) : null; return w.n + ': ' + (d ? (d.toDateString() === t0.toDateString() ? 'oggi' : d.toDateString() === dom ? 'domani' : d.toLocaleDateString('it-IT', {day:'numeric', month:'short'})) + ' alle ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) : 'in attesa'); });
         return '<p class="small" style="margin:0"><b>Prossimi avvisi</b><br>' + rows.map(esc).join('<br>') + '</p>'; })() : '') +
+      (n && window.B4FNative.exactAllowed && !window.B4FNative.exactAllowed() ? '<p class="small" style="margin:0;color:var(--ytext)">Gli avvisi possono arrivare con qualche minuto di ritardo: Android li raggruppa per risparmiare batteria. Per averli puntuali al minuto serve il permesso "Sveglie e promemoria".</p><button class="btn sm" id="nt-exact" style="align-self:flex-start">Rendi puntuali gli avvisi</button>' : '') +
       '<div class="row">' + (p === 'denied' ? '<button class="btn sm" id="nt-set">Sblocca le notifiche</button>' : '') + '<button class="btn sm ghost" id="nt-ntry">Notifica di prova</button></div></div>'; }
   if (!notifCan()) return '<div class="card"><b>Notifiche dell\'app</b><p class="small muted" style="margin:0">Disponibili nell\'app installata dal Play Store o dal sito. Qui usa il calendario.</p></div>';
   const on = S.notif && S.notif.on && Notification.permission === 'granted', den = Notification.permission === 'denied' || (!!(S.notif && S.notif.on) && Notification.permission !== 'granted');
@@ -4657,6 +4658,7 @@ async function notifEnable(){
     S.notif = {on:true, periodic}; save(); renderNotif(); toast('Notifiche attive'); notifTry('Notifiche attive: al massimo una al giorno.'); }
 function bindNotif(){
   const ns = document.getElementById('nt-set'); if (ns) ns.onclick = () => window.B4FNative.openNotifSettings();
+  const ne = document.getElementById('nt-exact'); if (ne) ne.onclick = () => { window.__b4fResume = () => { window.__b4fResume = null; if (R.screen === 'notif') { renderNotif(); if (window.B4FNative.exactAllowed()) toast('Avvisi puntuali attivi'); } }; window.B4FNative.askExact(); };
   const nt = document.getElementById('nt-ntry'); if (nt) nt.onclick = () => { if (window.B4FNative.notifPermission() !== 'granted') { window.__b4fNotifPerm = st => { if (st === 'granted') window.B4FNative.testNotification(); else notifHelpNative(); renderNotif(); }; return window.B4FNative.askNotif(); } window.B4FNative.testNotification(); toast('Notifica di prova inviata'); };
   const on = document.getElementById('nt-on'); if (on) on.onclick = async () => { if (Notification.permission === 'denied') return notifHelp(); let p = 'default'; try { p = await Notification.requestPermission(); } catch(e) {}
     if (p !== 'granted') return notifHelp();

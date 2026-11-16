@@ -281,6 +281,24 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public boolean exactAllowed() {
+            return Promemoria.puntuali((android.app.AlarmManager) getSystemService(ALARM_SERVICE));
+        }
+
+        /** Apre "Sveglie e promemoria" nelle impostazioni del telefono, per gli avvisi puntuali. */
+        @JavascriptInterface
+        public void askExact() {
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT < 31) return;
+                try {
+                    startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getPackageName())));
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "Impostazioni → App → Risparmio → Sveglie e promemoria", Toast.LENGTH_LONG).show();
+                }
+            });
+        }
+
+        @JavascriptInterface
         public String nextReminders() {
             return Promemoria.prossimi(getApplicationContext());
         }
@@ -399,6 +417,8 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         web.onResume();
+        Promemoria.programma(getApplicationContext());
+        if (pronta) web.evaluateJavascript("window.__b4fResume&&window.__b4fResume()", null);
     }
 
     @Override

@@ -3,6 +3,8 @@
     <!-- promemoria all'orario scelto, anche dopo il riavvio del telefono -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- facoltativo, concesso dall'utente: avvisi puntuali al minuto ("Sveglie e promemoria") -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- nessun permesso di rete: la pagina è dentro il pacchetto e i dati restano sul telefono.
          I link esterni (sito, mail, calendario) si aprono nelle altre app. -->
     <application

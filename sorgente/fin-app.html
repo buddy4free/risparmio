@@ -294,6 +294,7 @@ body.dragnow{user-select:none;-webkit-user-select:none;overscroll-behavior:none}
 .steps-in{width:96px;text-align:right}
 .rem{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:.92rem}
 .rem input{width:120px;padding:8px 10px}
+.rem.remn{grid-template-columns:auto 1fr auto}.rem.remn input[type=checkbox]{width:22px;height:22px;padding:0;accent-color:var(--yellow)}
 .trophy{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:26px 18px;border-radius:22px;border:2px solid var(--yellow);background:radial-gradient(circle at 50% 80%, rgba(255,201,10,.18), transparent 65%), #000}
 .trophy img{width:140px;height:auto}
 .trophy .big{font-family:var(--display);font-weight:900;font-size:clamp(2.6rem,12vw,3.6rem);color:var(--ytext);line-height:1}
@@ -806,7 +807,8 @@ const THEME_Q = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') 
 function themePref(){ try { return localStorage.getItem('b4f-theme') || 'auto'; } catch(e) { return 'auto'; } }
 function applyTheme(){ const p = themePref(), t = p === 'auto' ? (THEME_Q && THEME_Q.matches ? 'light' : 'dark') : p;
   document.documentElement.dataset.theme = t; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === 'light' ? '#F5F4EF' : '#000000';
-  const cs = document.querySelector('meta[name="color-scheme"]'); if (cs) cs.content = t === 'light' ? 'light only' : 'dark only'; }
+  const cs = document.querySelector('meta[name="color-scheme"]'); if (cs) cs.content = t === 'light' ? 'light only' : 'dark only';
+  try { if (window.B4FNative && window.B4FNative.setBars) window.B4FNative.setBars(t === 'light'); } catch(e) {} }
 applyTheme(); if (THEME_Q && THEME_Q.addEventListener) THEME_Q.addEventListener('change', () => { if (themePref() === 'auto') applyTheme(); });
 const IC = {
   dog:'<path d="M8 5.5C5.5 5.5 3.5 7.5 3.5 10.5c0 2 1 3.5 2.5 3.5M16 5.5c2.5 0 4.5 2 4.5 5 0 2-1 3.5-2.5 3.5"/><path d="M8 5.5h8c1.2 1.3 2 3 2 5V15a6 6 0 0 1-12 0v-4.5c0-2 .8-3.7 2-5z"/><path d="M10 11h.01M14 11h.01M10.5 15.5h3L12 17z"/>',
@@ -1210,7 +1212,7 @@ let viewYM = curYM();
 
 let remote = null, writing = false, pending = false, saveTimer = null, downloads = null;
 let remT = null;
-function remSync(){ clearTimeout(remT); remT = setTimeout(async () => { if (!('caches' in window) || !S.notif) return; try { const gd = gymDay();
+function remSync(){ clearTimeout(remT); remT = setTimeout(async () => { remNative(); if (!('caches' in window) || !S.notif) return; try { const gd = gymDay();
   const st = {on:!!S.notif.on, quiz:(S.qd || {}).last || null, gym:gd.doneToday ? today() : null, gymN:gd.idx < 21 ? gd.idx + 1 : 0, track:S.tx.map(x => x.d).filter(d => d <= today()).sort().pop() || null};
   await (await caches.open('b4f-rem')).put('rem.json', new Response(JSON.stringify(st), {headers:{'content-type':'application/json'}})); } catch(e) {} }, 1200); }
 /* dopo "Salva" si mostra subito la schermata e si scrive in memoria un attimo dopo; se l'app va in secondo piano si scrive subito */
@@ -2810,8 +2812,23 @@ function calLink(w){
   return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Buddy4Free: ' + w.n) + '&details=' + encodeURIComponent(w.d + '. Apri l\'app Buddy4Free Risparmio.') +
     '&dates=' + d + 'T' + h + m + '00/' + d + 'T' + pad(end.getHours()) + pad(end.getMinutes()) + '00&recur=' + encodeURIComponent('RRULE:FREQ=' + w.rec + (w.rec === 'MONTHLY' ? ';BYMONTHDAY=1' : ''));
 }
-function remRows(sec){ return '<div>' + WELL.filter(w => w.sec === sec).map(w => '<div class="rem"><span><b>' + w.n + '</b><br><span class="small muted">' + (w.rec === 'MONTHLY' ? 'Il 1° del mese' : 'Ogni giorno') + '</span></span><input type="time" data-time="' + w.id + '" value="' + S.times[w.id] + '" aria-label="Orario ' + w.n + '"><a class="small" href="' + calLink(w) + '" target="_blank" rel="noopener">Al calendario</a></div>').join('') + '</div>'; }
-function bindRem(again){ view.querySelectorAll('[data-time]').forEach(inp => inp.onchange = () => { S.times[inp.dataset.time] = inp.value || S.times[inp.dataset.time]; save(); again(); }); }
+/* nell'app Android i promemoria sono notifiche vere, all'orario scelto: un interruttore per ognuno al posto del calendario */
+const nativeRem = () => !!(window.B4FNative && window.B4FNative.setReminders);
+function remRows(sec){ const nat = nativeRem(); return '<div>' + WELL.filter(w => w.sec === sec).map(w => '<div class="rem' + (nat ? ' remn' : '') + '">' +
+  (nat ? '<input type="checkbox" data-remon="' + w.id + '"' + ((S.remOn || {})[w.id] ? ' checked' : '') + ' aria-label="Avvisami: ' + w.n + '">' : '') +
+  '<span><b>' + w.n + '</b><br><span class="small muted">' + (w.rec === 'MONTHLY' ? 'Il 1° del mese' : 'Ogni giorno') + (nat ? ((S.remOn || {})[w.id] ? ' · avviso attivo' : ' · spento') : '') + '</span></span><input type="time" data-time="' + w.id + '" value="' + S.times[w.id] + '" aria-label="Orario ' + w.n + '">' +
+  (nat ? '' : '<a class="small" href="' + calLink(w) + '" target="_blank" rel="noopener">Al calendario</a>') + '</div>').join('') + '</div>'; }
+function bindRem(again){ view.querySelectorAll('[data-time]').forEach(inp => inp.onchange = () => { S.times[inp.dataset.time] = inp.value || S.times[inp.dataset.time]; save(); again(); });
+  view.querySelectorAll('[data-remon]').forEach(cb => cb.onchange = () => { S.remOn = S.remOn || {}; S.remOn[cb.dataset.remon] = cb.checked; save();
+    if (cb.checked && window.B4FNative.notifPermission() !== 'granted') { window.__b4fNotifPerm = st => { if (st !== 'granted') notifHelpNative(); again(); }; window.B4FNative.askNotif(); } else { toast(cb.checked ? 'Promemoria attivo alle ' + S.times[cb.dataset.remon] : 'Promemoria spento'); again(); } }); }
+function notifHelpNative(){ catPop('<b style="font-size:1.1rem">Notifiche bloccate</b><p class="small" style="margin:0">Il telefono non permette all\'app di mandare notifiche. Si sbloccano nelle impostazioni dell\'app: Notifiche → attiva.</p><button class="btn" id="nh-go">Apri le impostazioni</button><button class="textlink small" data-x style="align-self:center">Più tardi</button>', (o, close) => { o.querySelector('#nh-go').onclick = () => { close(); window.B4FNative.openNotifSettings(); }; }, true); }
+/* l'elenco dei promemoria attivi va al telefono, con cosa risulta già fatto oggi (così non avvisa per niente) */
+function remNative(){ if (!nativeRem()) return; try { const on = S.remOn || {}, t = today(), gd = gymDay();
+  const list = WELL.filter(w => on[w.id]).map(w => ({id:w.id, t:w.n, d:w.d, at:S.times[w.id] || w.time, m:w.rec === 'MONTHLY'}));
+  const skip = {track:S.tx.some(x => x.d === t) ? t : '', quiz:(S.qd || {}).last === t ? t : '', gym:gd.doneToday ? t : ''};
+  window.B4FNative.setReminders(JSON.stringify({list, skip})); } catch(e) {} }
+/* toccando una notifica si apre la schermata giusta */
+window.__b4fGo = id => { const to = {track:{screen:'tx'}, quiz:{screen:'learn'}, gym:{screen:'gym'}, review:{screen:'review'}, steps:{screen:'well'}, pause:{screen:'well'}, breath:{screen:'breath'}}[id]; if (to && S.setup) nav(to); };
 function renderGym(){
   const g = gymDay();
   const found = g.log.reduce((s, e) => s + (e.found || 0), 0);
@@ -2864,7 +2881,7 @@ function renderWell(){
       '<button class="wrow" style="border-left:0;border-right:0;border-top:0;background:none;text-align:left;width:100%" ' + nav$({screen:'breath'}) + '><span class="ic' + (W.breath ? ' y' : '') + '">' + ic(W.breath ? 'check' : 'wave') + '</span><span class="t"><b>Respirazione guidata</b><span>' + (W.breath ? 'Fatta oggi' : '2, 5 o 10 minuti, con i suoni') + '</span></span>' + ic('right') + '</button>' +
     '</div></div>' +
     '<div class="card"><span class="label">Passi, ultimi 7 giorni</span><div class="steps7" role="img" aria-label="Passi degli ultimi 7 giorni">' + days.map(d => { const s = (S.well[d] || {}).steps || 0; return '<div title="' + dshort(d) + ': ' + fmtN(s) + ' passi"><em>' + (s ? (s / 1000).toFixed(1).replace('.', ',') + 'k' : '') + '</em><span style="height:' + Math.max(2, s / maxS * 100) + 'px;background:' + (s >= 8000 ? 'var(--good)' : 'var(--yellow)') + '"></span><small>' + new Date(d + 'T12:00:00').toLocaleDateString('it-IT', {weekday:'narrow'}) + '</small></div>'; }).join('') + '<i class="goal8" style="bottom:' + (8000 / maxS * 100 + 20) + 'px"></i></div><div class="legend small muted"><span><i class="tgt-key"></i>8.000 passi</span><span><i class="sw" style="background:var(--good)"></i>obiettivo raggiunto</span></div></div>' +
-    '<div class="sec"><span class="label">Promemoria del benessere</span><p class="small muted">Per ricevere la notifica sul telefono, aggiungi ogni promemoria al tuo calendario.</p>' + remRows('well') + '</div></div>';
+    '<div class="sec"><span class="label">Promemoria del benessere</span>' + (nativeRem() ? '<p class="small muted">Spunta un promemoria per ricevere la notifica all\'orario scelto.</p>' : '<p class="small muted">Per ricevere la notifica sul telefono, aggiungi ogni promemoria al tuo calendario.</p>') + remRows('well') + '</div></div>';
   const st = view.querySelector('#w-steps'); let stT;
   st.oninput = () => { clearTimeout(stT); stT = setTimeout(() => { W.steps = Math.max(0, parseInt(st.value.replace(/\D/g, '')) || 0); save(); if (W.steps >= 8000) toast('8.000 passi: ottimo!'); if (R.screen === 'well') renderWell(); }, 900); };
   view.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const n = +b.dataset.p; W.pause = (W.pause || 0) >= n ? n - 1 : n; save(); renderWell(); });
@@ -4593,13 +4610,17 @@ async function diagStorage(){
 }
 function renderNotif(){
   view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn('Impostazioni', {screen:'settings'}) + '<div class="intro"><span class="label">Impostazioni</span><h2>Notifiche e promemoria</h2></div>' + notifCard() +
-    '<p class="small muted" style="margin:0">Per un avviso all\'orario esatto, aggiungi i promemoria che vuoi al tuo calendario: ti avviserà all\'ora scelta.</p>' +
+    (nativeRem() ? '' : '<p class="small muted" style="margin:0">Per un avviso all\'orario esatto, aggiungi i promemoria che vuoi al tuo calendario: ti avviserà all\'ora scelta.</p>') +
     '<div class="sec"><span class="label">Soldi</span>' + remRows('money') + '</div><div class="sec"><span class="label">Benessere</span>' + remRows('well') + '</div></div>';
   bindRem(renderNotif); bindNotif();
 }
 /* notifiche dell'app installata: senza server, una al giorno quando il telefono risveglia l'app */
 const notifCan = () => 'serviceWorker' in navigator && 'Notification' in window && !!navigator.serviceWorker.controller;
 function notifCard(){
+  if (nativeRem()) { const p = window.B4FNative.notifPermission(), n = WELL.filter(w => (S.remOn || {})[w.id]).length;
+    return '<div class="card" style="gap:10px"><div class="spread"><b>Notifiche dell\'app</b><span class="chip" style="background:' + (p === 'granted' && n ? 'var(--green,#22A45D)' : 'var(--soft2)') + ';color:#fff">' + (p !== 'granted' ? 'Da permettere' : n ? n + ' attiv' + (n === 1 ? 'o' : 'i') : 'Nessuno') + '</span></div>' +
+      '<p class="small muted" style="margin:0">Spunta qui sotto i promemoria che vuoi ricevere, con l\'orario che preferisci. Arrivano all\'ora scelta, anche con l\'app chiusa. "Hai segnato tutto?", la domanda del giorno e la tappa della palestra non arrivano se le hai già fatte.</p>' +
+      '<div class="row">' + (p === 'denied' ? '<button class="btn sm" id="nt-set">Sblocca le notifiche</button>' : '') + '<button class="btn sm ghost" id="nt-ntry">Notifica di prova</button></div></div>'; }
   if (!notifCan()) return '<div class="card"><b>Notifiche dell\'app</b><p class="small muted" style="margin:0">Disponibili nell\'app installata dal Play Store o dal sito. Qui usa il calendario.</p></div>';
   const on = S.notif && S.notif.on && Notification.permission === 'granted', den = Notification.permission === 'denied' || (!!(S.notif && S.notif.on) && Notification.permission !== 'granted');
   return '<div class="card" style="gap:10px"><div class="spread"><b>Notifiche dell\'app</b><span class="chip" style="background:' + (on ? 'var(--green,#22A45D)' : 'var(--soft2)') + ';color:#fff">' + (on ? 'Attive' : 'Spente') + '</span></div>' +
@@ -4627,6 +4648,8 @@ async function notifEnable(){
     let periodic = false; try { const reg = await navigator.serviceWorker.ready; if (reg.periodicSync) { const st = await navigator.permissions.query({name:'periodic-background-sync'}); if (st.state === 'granted') { await reg.periodicSync.register('b4f-daily', {minInterval:12 * 3600e3}); periodic = true; } } } catch(e) {}
     S.notif = {on:true, periodic}; save(); renderNotif(); toast('Notifiche attive'); notifTry('Notifiche attive: al massimo una al giorno.'); }
 function bindNotif(){
+  const ns = document.getElementById('nt-set'); if (ns) ns.onclick = () => window.B4FNative.openNotifSettings();
+  const nt = document.getElementById('nt-ntry'); if (nt) nt.onclick = () => { if (window.B4FNative.notifPermission() !== 'granted') { window.__b4fNotifPerm = st => { if (st === 'granted') window.B4FNative.testNotification(); else notifHelpNative(); renderNotif(); }; return window.B4FNative.askNotif(); } window.B4FNative.testNotification(); toast('Notifica di prova inviata'); };
   const on = document.getElementById('nt-on'); if (on) on.onclick = async () => { if (Notification.permission === 'denied') return notifHelp(); let p = 'default'; try { p = await Notification.requestPermission(); } catch(e) {}
     if (p !== 'granted') return notifHelp();
     return notifEnable(); };

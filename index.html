@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611160921">
+<meta name="b4f-build" content="202611160924">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-d3tAYY/Cw3dBPVMj7CzpJf3tpi1tvq9L1UPBCy8abyQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-osWA8nCp5XikRglGXl7DBr3y4gCh86EG7br2U/YL2e8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -4767,7 +4767,7 @@ function diagText(){ const g = k => { try { return localStorage.getItem(k); } ca
   const L = (label, f) => { try { return label + ': ' + f(); } catch(e) { return label + ': (non disponibile: ' + (e && e.message) + ')'; } }, arr = v => Array.isArray(v) ? v.length : 0;
   const slow = J('b4f-slow', []), err = J('b4f-lasterr', null);
   return ['Buddy4Free Risparmio · segnalazione',
-    L('Versione', () => { const m = document.querySelector('meta[name="b4f-build"]'); return (m ? m.content : 'anteprima') + (window.B4FNative ? ' · app Android ' + window.B4FNative.version() : ''); }), L('Data', () => new Date().toLocaleString('it-IT')), L('Schermata', () => R.screen),
+    L('Versione', () => { const m = document.querySelector('meta[name="b4f-build"]'); return (m ? m.content : 'anteprima') + (window.B4FNative ? ' · app Android ' + window.B4FNative.version() : ''); }), ...(window.B4FNative && window.B4FNative.stepsDiag ? [L('Connessione Salute', () => window.B4FNative.stepsDiag())] : []), L('Data', () => new Date().toLocaleString('it-IT')), L('Schermata', () => R.screen),
     L('Tema', () => themePref() + ' (' + document.documentElement.dataset.theme + ')'), L('Schermo', () => innerWidth + '×' + innerHeight), L('Telefono', () => navigator.userAgent),
     L('Dati', () => arr(S.tx) + ' movimenti, ' + arr(S.rec) + ' ricorrenti, ' + arr(S.moves) + ' movimenti dei pilastri, ' + arr(S.goals) + ' obiettivi, ' + arr(S.debts) + ' finanziamenti, ' + arr(S.dues) + ' scadenze, storico ' + Object.values(S.hist || {}).reduce((t, h) => t + arr(h), 0) + ' mesi'),
     L('Memoria usata', () => Math.round(((g('b4f-finanza-v1') || '').length) / 1024) + ' KB'), L('Copia offline', () => navigator.serviceWorker && navigator.serviceWorker.controller ? 'sì' : 'no'),

@@ -232,6 +232,11 @@ public class MainActivity extends Activity {
     private void passi(boolean chiedi) {
         Passi.leggi(getApplicationContext(), 30, json -> runOnUiThread(() -> {
             if (chiedi && json.contains("\"permesso\"")) {
+                // Android 14 e successivi: il permesso "Passi" si chiede con la finestra dei permessi di sistema
+                if (Build.VERSION.SDK_INT >= 34) {
+                    requestPermissions(new String[]{"android.permission.health.READ_STEPS"}, REQ_PASSI);
+                    return;
+                }
                 try {
                     startActivityForResult(Passi.intentPermesso(this), REQ_PASSI);
                     return;
@@ -284,6 +289,10 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int req, String[] perm, int[] res) {
         super.onRequestPermissionsResult(req, perm, res);
+        if (req == REQ_PASSI) {
+            passi(false);
+            return;
+        }
         if (req == REQ_NOTIF) web.evaluateJavascript("window.__b4fNotifPerm&&window.__b4fNotifPerm(" + JSONObject.quote(permessoNotifiche()) + ")", null);
     }
 
@@ -366,6 +375,28 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void stepsRead() {
             passi(false);
+        }
+
+        /** Per "Segnala un problema": cosa vede il telefono del collegamento con Connessione Salute. */
+        @JavascriptInterface
+        public String stepsDiag() {
+            StringBuilder d = new StringBuilder();
+            try {
+                d.append("stato ").append(Passi.stato(getApplicationContext()));
+                d.append(" · Android ").append(Build.VERSION.SDK_INT);
+                boolean dich = false;
+                String[] req = getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_PERMISSIONS).requestedPermissions;
+                if (req != null) for (String r : req) if ("android.permission.health.READ_STEPS".equals(r)) dich = true;
+                d.append(" · permesso dichiarato ").append(dich ? "sì" : "no");
+                if (Build.VERSION.SDK_INT >= 34) d.append(" · concesso ").append(checkSelfPermission("android.permission.health.READ_STEPS") == PackageManager.PERMISSION_GRANTED ? "sì" : "no");
+                Intent v = new Intent("android.intent.action.VIEW_PERMISSION_USAGE").addCategory("android.intent.category.HEALTH_PERMISSIONS").setPackage(getPackageName());
+                d.append(" · informativa ").append(getPackageManager().queryIntentActivities(v, 0).isEmpty() ? "non trovata" : "trovata");
+                Intent r2 = new Intent("androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE").setPackage(getPackageName());
+                d.append("/").append(getPackageManager().queryIntentActivities(r2, 0).isEmpty() ? "no" : "sì");
+            } catch (Exception e) {
+                d.append(" · errore ").append(e.getClass().getSimpleName());
+            }
+            return d.toString();
         }
 
         /** Le autorizzazioni di Connessione Salute per questa app (lì si attiva "Passi" a mano). */

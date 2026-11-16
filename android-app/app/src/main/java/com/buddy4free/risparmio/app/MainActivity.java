@@ -2,11 +2,15 @@ package com.buddy4free.risparmio.app;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.util.Base64;
 import android.view.WindowInsets;
 import android.webkit.JavascriptInterface;
@@ -36,6 +40,7 @@ public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final String HOME = "https://" + HOST + "/assets/www/index.html";
     private static final int REQ_FILE = 1, REQ_SAVE = 2;
+    private static final String CARTELLA = "Buddy4Free";
 
     private WebView web;
     private ValueCallback<Uri[]> fileCb;
@@ -96,8 +101,12 @@ public class MainActivity extends Activity {
             public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {
                 if (fileCb != null) fileCb.onReceiveValue(null);
                 fileCb = cb;
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                i.setType("*/*"); // i backup salvati da altre app non sempre risultano "json": si sceglie tra tutti i file
+                if (Build.VERSION.SDK_INT >= 26) i.putExtra(DocumentsContract.EXTRA_INITIAL_URI, DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:" + Environment.DIRECTORY_DOWNLOADS + "/" + CARTELLA));
                 try {
-                    startActivityForResult(p.createIntent(), REQ_FILE);
+                    startActivityForResult(i, REQ_FILE);
                 } catch (ActivityNotFoundException e) {
                     fileCb = null;
                     return false;
@@ -147,6 +156,10 @@ public class MainActivity extends Activity {
                 fatto(id, "err");
                 return;
             }
+            if (Build.VERSION.SDK_INT >= 29) {
+                runOnUiThread(() -> fatto(id, salvaInDownload(name, mime, data) ? "ok" : "err"));
+                return;
+            }
             runOnUiThread(() -> {
                 saveId = id;
                 saveData = data;
@@ -171,6 +184,32 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 return "";
             }
+        }
+    }
+
+    /** Scrive il file in Download/Buddy4Free, senza chiedere la cartella. Se il nome esiste già, Android aggiunge un numero. */
+    private boolean salvaInDownload(String name, String mime, byte[] data) {
+        ContentValues v = new ContentValues();
+        v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+        v.put(MediaStore.MediaColumns.MIME_TYPE, mime == null || mime.isEmpty() ? "application/octet-stream" : mime);
+        v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/" + CARTELLA);
+        v.put(MediaStore.MediaColumns.IS_PENDING, 1);
+        Uri u = null;
+        try {
+            u = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+            if (u == null) return false;
+            try (OutputStream o = getContentResolver().openOutputStream(u, "w")) {
+                if (o == null) throw new java.io.IOException("nessun file");
+                o.write(data);
+            }
+            v.clear();
+            v.put(MediaStore.MediaColumns.IS_PENDING, 0);
+            getContentResolver().update(u, v, null, null);
+            Toast.makeText(this, "Salvato in Download/" + CARTELLA, Toast.LENGTH_LONG).show();
+            return true;
+        } catch (Exception e) {
+            if (u != null) try { getContentResolver().delete(u, null, null); } catch (Exception ignored) { }
+            return false;
         }
     }
 

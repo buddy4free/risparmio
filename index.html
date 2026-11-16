@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611160831">
+<meta name="b4f-build" content="202611160850">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+2/0VebQrqgrTVm3VdmDib1WVNuYYbBYq4y79jBbWMs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-qrz4M3c2TmnfS4M0tBeugl7ucVZg+kLzrtp0Kgq1Xak='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1648,7 +1648,7 @@ function render(){
   document.getElementById('topbar').hidden = R.screen === 'welcome' || R.screen === 'add';
   document.getElementById('gear').hidden = true; document.getElementById('help').hidden = true;
   ({welcome:renderWelcome, setup:renderSetup, home:renderHome, tx:renderTx, charts:renderStats, stats:renderStats, add:renderAdd, pillars:renderPillars, pillar:renderPillar, goal:renderGoal,
-    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, pay:renderPay, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, import:renderImport, cats:renderCats, an:renderAn, notif:renderNotif, legend:renderLegend, howto:renderHowto, sim:renderSim, dues:renderDues, rec:renderRec, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
+    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, pay:renderPay, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, trasloco:renderTrasloco, import:renderImport, cats:renderCats, an:renderAn, notif:renderNotif, legend:renderLegend, howto:renderHowto, sim:renderSim, dues:renderDues, rec:renderRec, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen]();
   postRender(); bindCarousels();
 }
 function demoBar(){ return S.demo ? '<div class="demo"><span>Stai guardando dati di esempio.</span><button id="demo-end">Inizia con i tuoi dati</button></div>' : ''; }
@@ -1703,12 +1703,29 @@ function renderWelcome(){
     '<img src="' + LOGO + '" alt="Buddy4Free">' +
     '<p class="muted">Traccia entrate e uscite, scopri dove sprechi, riempi i 4 pilastri della finanza personale e raggiungi il tuo obiettivo: un viaggio, un\'auto, la casa o la cifra che vuoi tu.</p>' + videoLinks() +
     '<label class="check small wterms"><input type="checkbox" id="w-terms"' + (termsOK() ? ' checked' : '') + '> <span>Ho letto e accetto i <button class="textlink" ' + nav$({screen:'terms'}) + '>Termini e condizioni</button>, ho letto l\'<button class="textlink" ' + nav$({screen:'privacy'}) + '>Informativa sulla privacy</button> e so che l\'app non fornisce consulenza finanziaria.</span></label>' +
+    (window.B4FNative ? '<div class="card" style="gap:8px;text-align:left;width:100%"><b>Usavi già Buddy4Free Risparmio?</b><p class="small muted" style="margin:0">Porta qui i tuoi dati in un minuto: movimenti, obiettivi, pilastri, tutto.</p><button class="btn" id="w-move">Porta qui i miei dati</button><label class="textlink small" for="w-file" style="align-self:flex-start;cursor:pointer">Ho un file di backup</label><input type="file" id="w-file" accept=".json,.txt" hidden></div>' : '') +
     '<button class="btn wide" id="w-start">Inizia, bastano 2 minuti</button>' +
     '<button class="btn ghost wide" id="demo">Prova con dati di esempio</button></div>';
   const cb = view.querySelector('#w-terms'), gate = f => () => { if (!cb.checked) { toast('Prima accetta i Termini e condizioni'); cb.closest('label').classList.add('shake'); setTimeout(() => cb.closest('label').classList.remove('shake'), 500); return; } acceptTerms(); f(); };
   view.querySelector('#w-start').onclick = gate(() => freePopup(() => nav({screen:'setup', i:0})));
   view.querySelector('#demo').onclick = gate(() => { loadDemo(); acceptTerms(); nav({screen:'home'}); });
+  const wm = view.querySelector('#w-move'); if (wm) wm.onclick = gate(() => catPop('<b style="font-size:1.1rem">Porta qui i tuoi dati</b><ol class="small" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px"><li>Tocca il pulsante qui sotto: si apre l\'app che usavi finora, nella schermata <b>Trasloco</b>.</li><li>Tocca <b>Manda i dati alla nuova app</b> e, nell\'elenco, scegli questa app.</li><li>Qui comparirà la conferma: <b>Sì, ripristina</b>.</li></ol><a class="btn" href="https://buddy4free.github.io/risparmio/#trasloco" style="width:100%;text-align:center">Apri l\'app di prima</a><button class="textlink" data-x style="align-self:center">Annulla</button>', () => {}, true));
+  const wf = view.querySelector('#w-file'); if (wf) { wf.closest('.card').querySelector('label[for="w-file"]').onclick = e => { if (!cb.checked) { e.preventDefault(); gate(() => {})(); } }; wf.onchange = e => { const f = e.target.files[0]; if (f) { acceptTerms(); importBackup(f); } }; }
 }
+/* trasloco verso l'app Android definitiva: dall'app di prima (sito in Chrome) i dati si mandano con Condividi */
+function renderTrasloco(){
+  view.innerHTML = '<div class="sec" style="gap:20px">' + backBtn('Home', {screen:'home'}) + '<div class="intro"><span class="label">Trasloco</span><h2>Porta i tuoi dati nella nuova app</h2></div>' +
+    (S.setup && !S.demo ? '<div class="card" style="gap:10px"><p style="margin:0">Su questo telefono ci sono <b>' + S.tx.length + ' movimenti</b>, con obiettivi, pilastri e impostazioni.</p><p class="small muted" style="margin:0">Tocca il pulsante e, nell\'elenco che si apre, scegli la nuova app Buddy4Free. I dati vanno direttamente all\'app, senza passare da internet.</p><button class="btn wide" id="tr-share">' + ic('repeat') + ' Manda i dati alla nuova app</button><button class="textlink small" id="tr-file" style="align-self:flex-start">Non compare la nuova app? Salva un file</button></div>' +
+      '<p class="small muted" style="margin:0">Qui i dati restano come sono: puoi continuare a usare quest\'app finché la nuova non ti convince.</p>'
+      : '<div class="note">In questa app non ci sono dati da portare' + (S.demo ? ' (stai guardando i dati di esempio)' : '') + '.</div>') + '</div>';
+  const raw = () => JSON.stringify(Object.assign({app:'buddy4free-risparmio', exported:new Date().toISOString()}, S)), name = 'buddy4free-trasloco-' + today() + '.txt';
+  const sh = view.querySelector('#tr-share'); if (sh) sh.onclick = async () => { const f = new File([raw()], name, {type:'text/plain'});
+    try { if (navigator.canShare && navigator.canShare({files:[f]})) { await navigator.share({files:[f], title:'Buddy4Free Risparmio'}); return; } } catch(e) { if (e && e.name === 'AbortError') return; }
+    toast('Qui la condivisione non funziona: salvo un file'); view.querySelector('#tr-file').click(); };
+  const tf = view.querySelector('#tr-file'); if (tf) tf.onclick = async () => { try { await downloads.save({filename:name, data:raw()}); catPop('<b style="font-size:1.1rem">File salvato</b><p class="small" style="margin:0">Ora apri la nuova app e tocca <b>Ho un file di backup</b>: scegli <b>' + name + '</b> nella cartella Download.</p><p class="small muted" style="margin:0">Il file non ha password: dopo il trasloco puoi cancellarlo.</p><button class="btn" data-x style="width:100%">Ho capito</button>', () => {}, true); } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare il file'); } };
+}
+/* dati arrivati da un'altra app con Condividi (trasloco): stessa conferma del ripristino da file */
+window.__b4fImport = text => { try { if (!termsOK()) acceptTerms(); importBackup(new File([text], 'trasloco.json', {type:'application/json'})); } catch(e) { toast('Questi dati non si leggono'); } };
 let SU = {};
 const SETUP_STEPS = 4;
 /* guida: un giro a schede con le immagini vere dell'app. Si resta nella guida finché non la chiudi:
@@ -4943,6 +4960,8 @@ render();
 if (lockDue()) showLock(); else lockSeen();
 setTimeout(samsungPop, 300);
 /* l'apertura è arrivata in fondo: la prossima volta niente modalità sicura */
+/* l'app nuova apre questa pagina su #trasloco: si va dritti alla schermata del trasloco */
+if (location.hash === '#trasloco' && !window.B4FNative) { try { history.replaceState(null, '', location.pathname + location.search); } catch(e) {} if (S.setup) nav({screen:'trasloco'}); }
 try { localStorage.removeItem('b4f-boot'); } catch(e) {}
 /* app installabile: funziona anche offline */
 /* nell'app Android la pagina è già dentro il pacchetto: niente copia offline del browser */

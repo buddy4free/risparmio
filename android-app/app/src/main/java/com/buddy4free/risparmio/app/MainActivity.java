@@ -53,6 +53,7 @@ public class MainActivity extends Activity {
     private byte[] saveData;
     private Uri fotoUri;          // foto dello scontrino appena scattata
     private String vaiA;          // schermata da aprire toccando una notifica
+    private String daImportare;   // dati arrivati con Condividi (trasloco)
     private boolean pronta;       // la pagina ha finito di caricarsi
     private FrameLayout root;
 
@@ -162,6 +163,7 @@ public class MainActivity extends Activity {
 
         vaiA = getIntent().getStringExtra("vai");
         if (perInformativa(getIntent())) vaiA = "privacy";
+        daImportare = leggiCondiviso(getIntent());
         Promemoria.canale(this);
         web.loadUrl(HOME);
     }
@@ -169,10 +171,42 @@ public class MainActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        String imp = leggiCondiviso(intent);
+        if (imp != null) {
+            daImportare = imp;
+            apriSchermata();
+            return;
+        }
         String v = perInformativa(intent) ? "privacy" : intent.getStringExtra("vai");
         if (v != null) {
             vaiA = v;
             apriSchermata();
+        }
+    }
+
+    /** Testo dei dati condivisi da un'altra app (file o testo), al massimo 30 MB. */
+    private String leggiCondiviso(Intent i) {
+        if (i == null || !Intent.ACTION_SEND.equals(i.getAction())) return null;
+        try {
+            Uri u = i.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (u != null) {
+                try (java.io.InputStream in = getContentResolver().openInputStream(u)) {
+                    if (in == null) return null;
+                    java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+                    byte[] buf = new byte[65536];
+                    int n;
+                    while ((n = in.read(buf)) > 0) {
+                        b.write(buf, 0, n);
+                        if (b.size() > 30_000_000) return null;
+                    }
+                    return b.toString("UTF-8");
+                }
+            }
+            CharSequence t = i.getCharSequenceExtra(Intent.EXTRA_TEXT);
+            return t == null ? null : t.toString();
+        } catch (Exception e) {
+            Toast.makeText(this, "Non riesco a leggere i dati ricevuti", Toast.LENGTH_LONG).show();
+            return null;
         }
     }
 
@@ -196,6 +230,11 @@ public class MainActivity extends Activity {
 
     /** Toccando un promemoria si apre la schermata giusta (domanda del giorno, palestra, revisione…). */
     private void apriSchermata() {
+        if (pronta && daImportare != null) {
+            String t = daImportare;
+            daImportare = null;
+            web.evaluateJavascript("window.__b4fImport&&window.__b4fImport(" + JSONObject.quote(t) + ")", null);
+        }
         if (!pronta || vaiA == null) return;
         String v = vaiA;
         vaiA = null;

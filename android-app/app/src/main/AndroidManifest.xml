@@ -39,11 +39,12 @@
             <!-- Health Connect (Android 13 e precedenti): spiegazione dell'uso dei dati = informativa privacy dell'app -->
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <!-- Health Connect (Android 14 e successivi): stessa informativa -->
         <activity-alias
-            android:name="UsoDeiPermessi"
+            android:name=".ViewPermissionUsageActivity"
             android:exported="true"
             android:targetActivity=".MainActivity"
             android:permission="android.permission.START_VIEW_PERMISSION_USAGE">

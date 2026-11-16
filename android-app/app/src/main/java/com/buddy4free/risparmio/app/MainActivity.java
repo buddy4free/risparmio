@@ -368,6 +368,25 @@ public class MainActivity extends Activity {
             passi(false);
         }
 
+        /** Le autorizzazioni di Connessione Salute per questa app (lì si attiva "Passi" a mano). */
+        @JavascriptInterface
+        public void stepsSettings() {
+            runOnUiThread(() -> {
+                Intent[] prove = {
+                        new Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS").putExtra(Intent.EXTRA_PACKAGE_NAME, getPackageName()),
+                        new Intent("android.health.connect.action.HEALTH_HOME_SETTINGS"),
+                        new Intent("androidx.health.ACTION_HEALTH_CONNECT_SETTINGS")
+                };
+                for (Intent i : prove) {
+                    try {
+                        startActivity(i);
+                        return;
+                    } catch (Exception ignored) { }
+                }
+                Toast.makeText(MainActivity.this, "Impostazioni → Connessione Salute → Autorizzazioni app", Toast.LENGTH_LONG).show();
+            });
+        }
+
         /** Health Connect da installare o aggiornare: la sua pagina nel Play Store. */
         @JavascriptInterface
         public void stepsInstall() {

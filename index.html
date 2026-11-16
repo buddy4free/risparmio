@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611160900">
+<meta name="b4f-build" content="202611160921">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-WydaPsuxkDBVlWU9JIqyZxT3ztvDqUR8Lpgkm+8PKXo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-d3tAYY/Cw3dBPVMj7CzpJf3tpi1tvq9L1UPBCy8abyQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -2884,7 +2884,10 @@ const hcCan = () => !!(window.B4FNative && window.B4FNative.stepsStatus);
 window.__b4fSteps = r => { try {
   if (r.stato === 'ok') { const G = r.giorni || {}; let n = 0; Object.keys(G).forEach(d => { const v = Math.round(+G[d] || 0); if (v > 0 && /^\d{4}-\d{2}-\d{2}$/.test(d)) { S.well[d] = S.well[d] || {}; S.well[d].steps = v; S.well[d].hc = 1; n++; } });
     const first = !(S.hc && S.hc.on); S.hc = {on:true, at:Date.now()}; save(); if (first) toast(n ? 'Passi collegati: ' + n + ' giorni letti' : 'Collegato: Connessione Salute non ha ancora passi da darmi'); if (R.screen === 'well') renderWell(); return; }
-  if (r.stato === 'permesso') { if (S.hc && S.hc.on) { S.hc.on = false; save(); } toast('Senza il permesso "Passi" non posso leggerli'); if (R.screen === 'well') renderWell(); return; }
+  if (r.stato === 'permesso') { if (S.hc && S.hc.on) { S.hc.on = false; save(); } if (R.screen === 'well') renderWell();
+    /* il telefono non ha mostrato la richiesta (o è stata rifiutata): il permesso si attiva a mano in Connessione Salute */
+    window.__b4fResume = () => { window.__b4fResume = null; window.B4FNative.stepsRead(); };
+    return catPop('<b style="font-size:1.1rem">Permesso "Passi"</b><p class="small" style="margin:0">Connessione Salute non ha ancora dato il permesso di leggere i passi. Si attiva così:</p><ol class="small" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px"><li>Tocca <b>Apri le autorizzazioni</b>.</li><li>Se serve, scegli <b>Autorizzazioni app</b> e poi questa app.</li><li>Attiva <b>Passi</b> e torna qui: i passi si caricano da soli.</li></ol><button class="btn" id="hc-set" style="width:100%">Apri le autorizzazioni</button><button class="textlink" data-x style="align-self:center">Più tardi</button>', (o, close) => { o.querySelector('#hc-set').onclick = () => { close(); if (window.B4FNative.stepsSettings) window.B4FNative.stepsSettings(); else window.B4FNative.stepsInstall(); }; }, true); }
   if (r.stato === 'nonDisponibile' || r.stato === 'aggiornare') return catPop('<b style="font-size:1.1rem">Serve Connessione Salute</b><p class="small" style="margin:0">I passi di Samsung Health, Garmin e altre app passano da Connessione Salute (Health Connect), l\'archivio salute di Android. ' + (r.stato === 'aggiornare' ? 'Sul telefono va aggiornato.' : 'Sul telefono non risulta installato.') + '</p><button class="btn" id="hc-inst" style="width:100%">Apri il Play Store</button><button class="textlink" data-x style="align-self:center">Più tardi</button>', (o, close) => { o.querySelector('#hc-inst').onclick = () => { close(); window.B4FNative.stepsInstall(); }; }, true);
   toast('Non riesco a leggere i passi' + (r.msg ? ': ' + String(r.msg).slice(0, 60) : '')); } catch(e) {} };
 function renderGym(){

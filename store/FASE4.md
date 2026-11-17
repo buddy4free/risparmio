@@ -39,11 +39,14 @@ note di rilascio (sotto) → Rivedi → Avvia l'implementazione.
 > dati" per portare i tuoi movimenti dalla versione di prima.
 
 ## 4. Messaggio per i tester
-> Ciao! Sul Play Store arriva la nuova versione di Buddy4Free Risparmio: un'app vera, che non dipende più dal browser.
+(17/11: il backup è la via più sicura; il trasloco con Condividi resta come alternativa)
+> Ciao! Sul Play Store è arrivata la nuova versione di Buddy4Free Risparmio: un'app vera, che non dipende più dal browser.
 > Novità: notifiche all'orario che scegli, foto degli scontrini, i passi letti da Samsung Health o Garmin.
-> **Importante, i vostri dati:** prima di aggiornare fate un backup (Impostazioni → Backup), per sicurezza.
-> Dopo l'aggiornamento l'app si apre vuota: toccate **"Porta qui i miei dati"** e seguite i 3 passi
-> (nell'elenco di Condividi scegliete **"Buddy4Free · ricevi i dati"**). In un minuto ritrovate tutto.
+> **Per portare i vostri dati, 3 passi:**
+> 1. **Prima di aggiornare**, aprite l'app e fate un backup: Impostazioni → Backup (il file va nella cartella Download).
+> 2. Aggiornate dal Play Store e aprite l'app: parte vuota, è normale.
+> 3. Accettate i termini, toccate **"Ho un file di backup"** e scegliete il file appena salvato → **Sì, ripristina**.
+> Prima di confermare l'app vi mostra la data dell'ultimo movimento: controllate che sia quella giusta.
 > Poi usatela come sempre e lasciate un commento dal Play Store: ci serve per l'uscita pubblica. Grazie!
 
 ## 5. Ripresentare la domanda di produzione

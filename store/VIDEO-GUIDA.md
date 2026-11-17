@@ -50,7 +50,7 @@ Posso montare io lo Short partendo dalle tue registrazioni dello schermo (testi 
 | 46–52 s | Schermata con il logo | **GRATIS · NIENTE PUBBLICITÀ · I DATI RESTANO SUL TUO TELEFONO** | hit |
 | 52–55 s | Logo + freccia in basso | **GUIDA COMPLETA 👇** | *(tua voce)* "La guida completa è nel video qui sotto." |
 
-**Descrizione:** "Buddy4Free Risparmio: segni entrate e uscite in pochi tocchi e scopri cosa succede davvero ai tuoi soldi. Gratis, senza pubblicità, i dati restano sul tuo telefono. Guida completa: [link al video lungo]. App: [link Play Store]"
+**Descrizione:** "Buddy4Free Risparmio: segni entrate e uscite in pochi tocchi e scopri cosa succede davvero ai tuoi soldi. Gratis, senza pubblicità, i dati restano sul tuo telefono. Guida completa: [link al video lungo]. Android: https://play.google.com/store/apps/details?id=com.buddy4free.risparmio · iPhone (web, da Safari): https://buddy4free.github.io/risparmio/"
 
 **Commento fissato:** il link al video lungo.
 
@@ -147,7 +147,8 @@ Posso montare io lo Short partendo dalle tue registrazioni dello schermo (testi 
 
 ### Descrizione del video lungo
 "Buddy4Free Risparmio è l'app gratuita che ho creato per capire cosa succede davvero ai nostri soldi: segni entrate e uscite al centesimo, ma il centro sono i 4 pilastri, gli obiettivi e un'analisi chiara di dove migliorare. Niente budget da rispettare, niente pubblicità, i dati restano sul tuo telefono.
-📲 App: [link Play Store]
+📲 Android (Play Store): https://play.google.com/store/apps/details?id=com.buddy4free.risparmio
+🍏 iPhone (versione web, da Safari: Condividi → Aggiungi alla schermata Home): https://buddy4free.github.io/risparmio/
 ⚡ La versione in 1 minuto: [link Short]
 💡 Hai un'idea? Dal menu dell'app: Dammi un suggerimento, oppure buddyforfree@gmail.com
 ⚠️ L'app non offre consulenza finanziaria né di investimento."

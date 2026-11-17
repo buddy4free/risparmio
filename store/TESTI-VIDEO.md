@@ -55,7 +55,7 @@ E ogni mese un resoconto che non è un elenco: è un'analisi di cosa sta succede
 
 ### Titolo e descrizione dello Short
 **Titolo:** Segni ogni spesa… e poi? 📊 #risparmio #finanzapersonale
-**Descrizione:** Buddy4Free Risparmio: segni entrate e uscite in pochi tocchi e scopri cosa succede davvero ai tuoi soldi. Gratis, senza pubblicità, i dati restano sul tuo telefono. Guida completa: [link video lungo] · App: [link Play Store]
+**Descrizione:** Buddy4Free Risparmio: segni entrate e uscite in pochi tocchi e scopri cosa succede davvero ai tuoi soldi. Gratis, senza pubblicità, i dati restano sul tuo telefono. Guida completa: [link video lungo] · Android: https://play.google.com/store/apps/details?id=com.buddy4free.risparmio · iPhone (web, da Safari): https://buddy4free.github.io/risparmio/
 
 ---
 
@@ -223,7 +223,8 @@ Ciao, e buon risparmio.
 
 **Descrizione:**
 Buddy4Free Risparmio è l'app gratuita che ho creato per capire cosa succede davvero ai nostri soldi: segni entrate e uscite al centesimo, ma il centro sono i 4 pilastri, gli obiettivi e un'analisi chiara di dove migliorare. Niente budget da rispettare, niente pubblicità, i dati restano sul tuo telefono.
-📲 App: [link Play Store]
+📲 Android (Play Store): https://play.google.com/store/apps/details?id=com.buddy4free.risparmio
+🍏 iPhone (versione web, da Safari: Condividi → Aggiungi alla schermata Home): https://buddy4free.github.io/risparmio/
 ⚡ La versione in 1 minuto: [link Short]
 💡 Hai un'idea? Dal menu dell'app: Dammi un suggerimento, oppure buddyforfree@gmail.com
 ⚠️ L'app non offre consulenza finanziaria né di investimento.

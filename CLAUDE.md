@@ -73,4 +73,5 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - Anteprima per Lorenzo (artifact https://claude.ai/artifact/SKGYXcdzEhsYz7Btngm8hq): `python3 sorgente/anteprima.py <file.html>` e poi pubblicare quel file sull'artifact (le immagini della guida `guida/` sono già caricate lì).
 - Pacchetto Android e rilasci: `android/`, `store/ANDROID.md`, workflow `.github/workflows/android.yml`.
 - Testi Play Store e tester: `store/SCHEDA-PLAY.md`, `store/POST-TESTER.md`.
+- Link nei testi pubblici (video, post, descrizioni): sempre sia Play Store (Android) sia versione web (iPhone), vedi `store/LINK.md` (deciso il 17/11/2026).
 - Mai inserire nel repository chiavi, keystore o password; non usare l'email personale di Lorenzo (usare buddyforfree@gmail.com).

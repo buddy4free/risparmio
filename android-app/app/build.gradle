@@ -20,12 +20,14 @@ android {
             dimension 'tipo'
             applicationId 'com.buddy4free.risparmio.prova'
             resValue 'string', 'app_name', 'Risparmio Prova'
+            resValue 'string', 'ricevi_dati', 'Risparmio Prova · ricevi i dati'
         }
         // "Finale": sostituirà l'app di sempre sul Play Store (fase 4)
         finale {
             dimension 'tipo'
             applicationId 'com.buddy4free.risparmio'
             resValue 'string', 'app_name', 'Buddy4Free'
+            resValue 'string', 'ricevi_dati', 'Buddy4Free · ricevi i dati'
         }
     }
     signingConfigs {

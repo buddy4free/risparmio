@@ -29,19 +29,27 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- trasloco: i dati dell'app di prima arrivano con Condividi -->
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/plain" />
-                <data android:mimeType="application/json" />
-            </intent-filter>
             <!-- Health Connect (Android 13 e precedenti): spiegazione dell'uso dei dati = informativa privacy dell'app -->
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <!-- trasloco: i dati dell'app di prima arrivano con Condividi. Nell'elenco di Condividi compare con un nome
+             inconfondibile ("Buddy4Free · ricevi i dati"), così si riconosce subito quale scegliere -->
+        <activity-alias
+            android:name=".RiceviDati"
+            android:exported="true"
+            android:label="@string/ricevi_dati"
+            android:icon="@mipmap/ic_launcher"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="application/json" />
+            </intent-filter>
+        </activity-alias>
         <!-- Health Connect (Android 14 e successivi): stessa informativa -->
         <activity-alias
             android:name=".ViewPermissionUsageActivity"

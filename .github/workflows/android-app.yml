@@ -1,12 +1,28 @@
-# App Android definitiva (motore interno WebView) · versione "Prova" da installare a mano (APK).
-# Si avvia a mano (deciso da Lorenzo il 16/11/2026: un APK per gruppo di modifiche):
-# Actions → "App Android definitiva (prova)" → Run workflow.
+# App Android definitiva (motore interno WebView).
+# Si avvia a mano: Actions → "App Android definitiva" → Run workflow, scegliendo il tipo:
+#  - prova:  APK "Risparmio Prova" da installare a mano (pacchetto diverso, convive con l'app dei tester);
+#  - finale: AAB per il Play Store con il nome e il pacchetto di sempre (com.buddy4free.risparmio), da caricare in
+#            Play Console come aggiornamento; il numero di versione deve essere più alto dell'ultimo caricato.
 # Il file da scaricare è in fondo alla pagina dell'esecuzione, sezione Artifacts.
 # La chiave di firma e le password stanno solo nei Secrets del repository.
-name: App Android definitiva (prova)
+name: App Android definitiva
 
 on:
-  workflow_dispatch:   # solo a mano, quando Lorenzo decide di provare un gruppo di modifiche
+  workflow_dispatch:   # solo a mano, quando Lorenzo decide
+    inputs:
+      tipo:
+        description: 'prova (APK da installare a mano) oppure finale (AAB per il Play Store)'
+        type: choice
+        options: [prova, finale]
+        default: prova
+      version_code:
+        description: 'Solo per finale: numero di versione, più alto dell''ultimo caricato sul Play Store'
+        required: false
+        default: '10'
+      version_name:
+        description: 'Solo per finale: nome della versione mostrato agli utenti'
+        required: false
+        default: '2.0.0'
 
 permissions:
   contents: read
@@ -16,8 +32,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  apk:
+  pacchetto:
     runs-on: ubuntu-latest
+    env:
+      TIPO: ${{ inputs.tipo || 'prova' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,32 +76,52 @@ jobs:
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          if [ -z "$KS" ]; then echo "::warning::Manca la chiave: APK di prova non firmato (non si installa)"; exit 0; fi
+          if [ -z "$KS" ]; then echo "::error::Manca la chiave di caricamento (ANDROID_KEYSTORE_BASE64)"; exit 1; fi
           echo "$KS" | base64 -d > "$RUNNER_TEMP/upload.keystore"
           echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/upload.keystore" >> "$GITHUB_ENV"
 
-      - name: Compila l'APK di prova
+      - name: Compila
         working-directory: android-app
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          VERSION_CODE: ${{ github.run_number }}
-          VERSION_NAME: 2.0.0-prova.${{ github.run_number }}
+          IN_CODE: ${{ inputs.version_code }}
+          IN_NAME: ${{ inputs.version_name }}
         run: |
           chmod +x gradlew
           set -o pipefail
-          if ! ./gradlew --no-daemon assembleProvaRelease 2>&1 | tee "$RUNNER_TEMP/gradle.log"; then
+          mkdir -p "$RUNNER_TEMP/out"
+          if [ "$TIPO" = finale ]; then
+            case "$IN_CODE" in ''|*[!0-9]*) echo "::error::Numero di versione non valido: $IN_CODE"; exit 1;; esac
+            export VERSION_CODE="$IN_CODE" VERSION_NAME="$IN_NAME"; TASK=bundleFinaleRelease
+          else
+            export VERSION_CODE="${{ github.run_number }}" VERSION_NAME="2.0.0-prova.${{ github.run_number }}"; TASK=assembleProvaRelease
+          fi
+          if ! ./gradlew --no-daemon "$TASK" 2>&1 | tee "$RUNNER_TEMP/gradle.log"; then
             grep -E "What went wrong|error:|Error|FAILURE|Exception|e: " "$RUNNER_TEMP/gradle.log" | head -20 | while IFS= read -r l; do echo "::error::$l"; done
             exit 1
           fi
+          if [ "$TIPO" = finale ]; then
+            F=app/build/outputs/bundle/finaleRelease/app-finale-release.aab
+            # deve essere firmato con la chiave di caricamento registrata sulla Play Console (come l'app di oggi)
+            FP=$(keytool -printcert -jarfile "$F" | grep -m1 "SHA256:" | awk '{print $2}')
+            if [ "$FP" != "C4:85:82:92:ED:F0:4F:EB:3F:F1:62:5F:D1:53:B9:A8:E1:CC:E4:0A:3E:34:78:DB:42:1B:B9:96:3B:41:17:3F" ]; then
+              echo "::error::Il pacchetto non è firmato con la chiave di caricamento registrata sulla Play Console"; exit 1
+            fi
+            cp "$F" "$RUNNER_TEMP/out/buddy4free-risparmio-v$VERSION_CODE.aab"
+            echo "::notice::Pacchetto per il Play Store pronto: buddy4free-risparmio-v$VERSION_CODE.aab (versione $VERSION_NAME)"
+            echo "NOME=buddy4free-risparmio-v$VERSION_CODE" >> "$GITHUB_ENV"
+          else
+            APK=$(ls app/build/outputs/apk/prova/release/*.apk | head -1)
+            cp "$APK" "$RUNNER_TEMP/out/risparmio-prova-${{ github.run_number }}.apk"
+            echo "::notice::APK pronto: risparmio-prova-${{ github.run_number }}.apk ($(du -h "$APK" | cut -f1))"
+            echo "NOME=risparmio-prova-${{ github.run_number }}" >> "$GITHUB_ENV"
+          fi
           rm -f "$ANDROID_KEYSTORE_FILE"
-          APK=$(ls app/build/outputs/apk/prova/release/*.apk | head -1)
-          mkdir -p "$RUNNER_TEMP/out" && cp "$APK" "$RUNNER_TEMP/out/risparmio-prova-${{ github.run_number }}.apk"
-          echo "::notice::APK pronto: risparmio-prova-${{ github.run_number }}.apk ($(du -h "$APK" | cut -f1))"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: risparmio-prova-${{ github.run_number }}
-          path: ${{ runner.temp }}/out/*.apk
+          name: ${{ env.NOME }}
+          path: ${{ runner.temp }}/out/*
           retention-days: 14

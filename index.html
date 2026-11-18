@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611181942">
+<meta name="b4f-build" content="202611181945">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-e7MEKpJjgoNgsUDNaPX5U0/tPk/W8l7JVtt4qXONddQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-iJ4kFObmsZXcPS7mF0a3ZzTPgasmsQzfvyjgNg6uijk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1236,7 +1236,10 @@ let remote = null, writing = false, pending = false, saveTimer = null, downloads
   if (window.B4FNative) { /* app Android: il file si salva dove sceglie l'utente, con la finestra di sistema */
     const b64 = await new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = ko; r.readAsDataURL(blob); });
     const id = 's' + Date.now() + Math.random().toString(36).slice(2, 6), res = await new Promise(ok => { (window.__b4fSaveCb = window.__b4fSaveCb || {})[id] = ok; window.B4FNative.saveFile(id, filename, blob.type || 'application/octet-stream', b64); });
-    if (res === 'declined') throw {code:'declined'}; if (res !== 'ok') throw new Error('salvataggio non riuscito'); return; }
+    if (res === 'declined') throw {code:'declined'}; if (res !== 'ok') throw new Error('salvataggio non riuscito');
+    /* PDF, CSV e immagini: si propone subito di aprirli o condividerli (il backup no: resta in Download) */
+    if (window.B4FNative.openSaved && !/\.(json|txt)$/i.test(filename)) setTimeout(() => { try { savedPop(filename); } catch(e) {} }, 250);
+    return; }
   const f = new File([blob], filename, {type:blob.type});
   const mob = /Android|iPhone|iPad/.test(navigator.userAgent), alt = /\.json$/.test(filename) ? new File([blob], filename.replace(/\.json$/, '.txt'), {type:'text/plain'}) : null;
   for (const ff of [f, alt]) if (ff && mob && navigator.canShare && navigator.canShare({files:[ff]})) { try { await navigator.share({files:[ff], title:filename}); return; } catch(e) { if (e && e.name === 'AbortError') throw {code:'declined'}; } }
@@ -2890,6 +2893,11 @@ function remAskOnce(){ try { if (!nativeRem() || !S.setup || S.demo || localStor
   setTimeout(() => catPop('<b style="font-size:1.1rem">Un avviso a fine giornata</b><p class="small" style="margin:0">Ogni sera alle <b>' + S.times.track + '</b> l\'app può ricordarti <b>«Hai segnato tutto?»</b>, per le spese sfuggite. Non arriva se hai già segnato i movimenti del giorno.</p><p class="small muted" style="margin:0">Si cambia quando vuoi in Impostazioni → Promemoria.</p><button class="btn" id="ra-yes">Sì, avvisami</button><button class="textlink small" id="ra-no" style="align-self:center">No, grazie</button>', (o, close) => {
     o.querySelector('#ra-yes').onclick = () => { close(); window.__b4fNotifPerm = st => { if (st !== 'granted') notifHelpNative(); else toast('Promemoria attivo alle ' + S.times.track); remNative(); }; window.B4FNative.askNotif(); };
     o.querySelector('#ra-no').onclick = () => { close(); S.remOn = Object.assign({}, S.remOn, {track:false}); save(); remNative(); toast('Va bene: nessun avviso'); }; }, true), 1200); } catch(e) {} }
+/* app Android: file appena salvato in Download/Buddy4Free, da aprire o condividere subito */
+function savedPop(name){ const k = /\.pdf$/i.test(name) ? 'PDF' : /\.csv$/i.test(name) ? 'File CSV' : /\.png$/i.test(name) ? 'Immagine' : 'File';
+  catPop('<b style="font-size:1.1rem">' + k + ' salvato</b><p class="small" style="margin:0">È nella cartella <b>Download/Buddy4Free</b>: <span class="muted">' + esc(name) + '</span></p><button class="btn" id="sv-open">Apri</button><button class="btn ghost" id="sv-share">Condividi</button><button class="textlink small" data-x style="align-self:center">Chiudi</button>', (o, close) => {
+    o.querySelector('#sv-open').onclick = () => { close(); window.B4FNative.openSaved(); };
+    o.querySelector('#sv-share').onclick = () => { close(); window.B4FNative.shareSaved(); }; }, true); }
 function notifHelpNative(){ catPop('<b style="font-size:1.1rem">Notifiche bloccate</b><p class="small" style="margin:0">Il telefono non permette all\'app di mandare notifiche. Si sbloccano nelle impostazioni dell\'app: Notifiche → attiva.</p><button class="btn" id="nh-go">Apri le impostazioni</button><button class="textlink small" data-x style="align-self:center">Più tardi</button>', (o, close) => { o.querySelector('#nh-go').onclick = () => { close(); window.B4FNative.openNotifSettings(); }; }, true); }
 /* l'elenco dei promemoria attivi va al telefono, con cosa risulta già fatto oggi (così non avvisa per niente) */
 function remNative(){ if (!nativeRem()) return; try { const on = S.remOn || {}, t = today(), gd = gymDay();

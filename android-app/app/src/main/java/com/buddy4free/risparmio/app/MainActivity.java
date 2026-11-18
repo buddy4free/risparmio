@@ -51,6 +51,9 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> fileCb;
     private String saveId;
     private byte[] saveData;
+    private String saveMime;
+    private Uri ultimoFile;       // l'ultimo file salvato (PDF, CSV, immagine): si può aprire o condividere subito
+    private String ultimoMime;
     private Uri fotoUri;          // foto dello scontrino appena scattata
     private String vaiA;          // schermata da aprire toccando una notifica
     private String daImportare;   // dati arrivati con Condividi (trasloco)
@@ -335,6 +338,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 saveId = id;
                 saveData = data;
+                saveMime = mime;
                 Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
                 i.addCategory(Intent.CATEGORY_OPENABLE);
                 i.setType(mime == null || mime.isEmpty() ? "application/octet-stream" : mime);
@@ -396,6 +400,27 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void copiaCancella() {
             Copia.cancella(getApplicationContext());
+        }
+
+        /** Apre l'ultimo file salvato (PDF, CSV, immagine) con un'app del telefono; se nessuna lo apre, si condivide. */
+        @JavascriptInterface
+        public void openSaved() {
+            runOnUiThread(() -> {
+                if (ultimoFile == null) return;
+                String m = ultimoMime == null || ultimoMime.isEmpty() ? "application/octet-stream" : ultimoMime;
+                Intent i = new Intent(Intent.ACTION_VIEW).setDataAndType(ultimoFile, m).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                try {
+                    startActivity(Intent.createChooser(i, "Apri con…"));
+                } catch (ActivityNotFoundException e) {
+                    condividiUltimo();
+                }
+            });
+        }
+
+        /** Manda l'ultimo file salvato a un'altra app (WhatsApp, mail, Drive…). */
+        @JavascriptInterface
+        public void shareSaved() {
+            runOnUiThread(MainActivity.this::condividiUltimo);
         }
 
         @JavascriptInterface
@@ -559,10 +584,25 @@ public class MainActivity extends Activity {
             v.put(MediaStore.MediaColumns.IS_PENDING, 0);
             getContentResolver().update(u, v, null, null);
             Toast.makeText(this, "Salvato in Download/" + CARTELLA, Toast.LENGTH_LONG).show();
+            ultimoFile = u;
+            ultimoMime = mime;
             return true;
         } catch (Exception e) {
             if (u != null) try { getContentResolver().delete(u, null, null); } catch (Exception ignored) { }
             return false;
+        }
+    }
+
+    private void condividiUltimo() {
+        if (ultimoFile == null) return;
+        Intent i = new Intent(Intent.ACTION_SEND)
+                .setType(ultimoMime == null || ultimoMime.isEmpty() ? "application/octet-stream" : ultimoMime)
+                .putExtra(Intent.EXTRA_STREAM, ultimoFile)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivity(Intent.createChooser(i, "Condividi con…"));
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, "Nessuna app per questo file", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -595,6 +635,8 @@ public class MainActivity extends Activity {
             try (OutputStream o = getContentResolver().openOutputStream(data.getData(), "wt")) {
                 if (o == null) throw new java.io.IOException("nessun file");
                 o.write(d);
+                ultimoFile = data.getData();
+                ultimoMime = saveMime;
                 fatto(id, "ok");
             } catch (Exception e) {
                 fatto(id, "err");

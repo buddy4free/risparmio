@@ -29,7 +29,10 @@ rep("let remote = null, writing = false, pending = false, saveTimer = null, down
   if (window.B4FNative) { /* app Android: il file si salva dove sceglie l'utente, con la finestra di sistema */
     const b64 = await new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = ko; r.readAsDataURL(blob); });
     const id = 's' + Date.now() + Math.random().toString(36).slice(2, 6), res = await new Promise(ok => { (window.__b4fSaveCb = window.__b4fSaveCb || {})[id] = ok; window.B4FNative.saveFile(id, filename, blob.type || 'application/octet-stream', b64); });
-    if (res === 'declined') throw {code:'declined'}; if (res !== 'ok') throw new Error('salvataggio non riuscito'); return; }
+    if (res === 'declined') throw {code:'declined'}; if (res !== 'ok') throw new Error('salvataggio non riuscito');
+    /* PDF, CSV e immagini: si propone subito di aprirli o condividerli (il backup no: resta in Download) */
+    if (window.B4FNative.openSaved && !/\\.(json|txt)$/i.test(filename)) setTimeout(() => { try { savedPop(filename); } catch(e) {} }, 250);
+    return; }
   const f = new File([blob], filename, {type:blob.type});
   const mob = /Android|iPhone|iPad/.test(navigator.userAgent), alt = /\\.json$/.test(filename) ? new File([blob], filename.replace(/\\.json$/, '.txt'), {type:'text/plain'}) : null;
   for (const ff of [f, alt]) if (ff && mob && navigator.canShare && navigator.canShare({files:[ff]})) { try { await navigator.share({files:[ff], title:filename}); return; } catch(e) { if (e && e.name === 'AbortError') throw {code:'declined'}; } }

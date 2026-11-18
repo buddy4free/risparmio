@@ -64,9 +64,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         root = new FrameLayout(this);
-        root.setBackgroundColor(Color.BLACK);
+        root.setBackgroundColor(getColor(R.color.sfondo));
         web = new WebView(this);
-        web.setBackgroundColor(Color.BLACK);
+        web.setBackgroundColor(getColor(R.color.sfondo));
         root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
 

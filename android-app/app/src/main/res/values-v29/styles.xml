@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- giorno/notte: così il tema "Automatico" dell'app segue il telefono anche dentro l'app Android -->
+    <!-- giorno/notte: così il tema "Automatico" dell'app segue il telefono anche dentro l'app Android;
+         la schermata di avvio è chiara o scura come il telefono -->
     <style name="Tema" parent="@android:style/Theme.DeviceDefault.DayNight">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
-        <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowBackground">@color/sfondo</item>
+        <item name="android:statusBarColor">@color/sfondo</item>
+        <item name="android:navigationBarColor">@color/sfondo</item>
+        <item name="android:windowLightStatusBar">@bool/barre_chiare</item>
+        <item name="android:windowLightNavigationBar">@bool/barre_chiare</item>
     </style>
 </resources>

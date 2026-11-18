@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- schermata di avvio: segue il tema del telefono (chiaro qui, scuro in values-night), poi la pagina applica il tema scelto nell'app -->
+<resources>
+    <color name="sfondo">#F5F4EF</color>
+    <bool name="barre_chiare">true</bool>
+</resources>

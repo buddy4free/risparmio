@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 e precedenti: nel backup automatico va solo la copia dei dati, se il backup è cifrato -->
+<full-backup-content>
+    <include domain="file" path="copia/dati.json" requireFlags="clientSideEncryption" />
+</full-backup-content>

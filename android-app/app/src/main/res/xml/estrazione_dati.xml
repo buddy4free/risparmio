@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- i dati finanziari non vanno nei backup automatici di Android: il backup è quello cifrato dell'app -->
+<!-- Android 12 e successivi. Nel backup automatico di Android va SOLO la copia dei dati (files/copia/dati.json),
+     e solo se il backup è cifrato con il blocco schermo del telefono (illeggibile anche per Google).
+     Nel passaggio diretto da un telefono all'altro (cavo o Wi-Fi) va la stessa copia. -->
 <data-extraction-rules>
-    <cloud-backup><exclude domain="root" /><exclude domain="database" /><exclude domain="sharedpref" /><exclude domain="file" /></cloud-backup>
-    <device-transfer><exclude domain="root" /><exclude domain="database" /><exclude domain="sharedpref" /><exclude domain="file" /></device-transfer>
+    <cloud-backup disableIfNoEncryptionCapabilities="true"><include domain="file" path="copia/dati.json" /></cloud-backup>
+    <device-transfer><include domain="file" path="copia/dati.json" /></device-transfer>
 </data-extraction-rules>

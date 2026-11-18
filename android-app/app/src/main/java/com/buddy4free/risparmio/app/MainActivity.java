@@ -349,6 +349,55 @@ public class MainActivity extends Activity {
             });
         }
 
+        /** Copia di un file (il backup) verso un'altra app scelta dall'utente: Google Drive, mail, WhatsApp… */
+        @JavascriptInterface
+        public void shareFile(String name, String mime, String b64) {
+            final byte[] data;
+            try {
+                data = Base64.decode(b64, Base64.DEFAULT);
+            } catch (IllegalArgumentException e) {
+                return;
+            }
+            final String nome = name == null ? "buddy4free.json" : name.replaceAll("[^A-Za-z0-9._-]", "_");
+            runOnUiThread(() -> {
+                try {
+                    File dir = new File(getCacheDir(), "condivisi");
+                    File[] vecchi = dir.listFiles();
+                    if (vecchi != null) for (File v : vecchi) v.delete();
+                    if (!dir.isDirectory() && !dir.mkdirs()) throw new java.io.IOException("cartella");
+                    File f = new File(dir, nome);
+                    try (OutputStream o = new java.io.FileOutputStream(f)) { o.write(data); }
+                    Uri u = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".foto", f);
+                    Intent i = new Intent(Intent.ACTION_SEND)
+                            .setType(mime == null || mime.isEmpty() ? "application/octet-stream" : mime)
+                            .putExtra(Intent.EXTRA_STREAM, u)
+                            .putExtra(Intent.EXTRA_TITLE, nome)
+                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(i, "Salva il backup in…"));
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "Non riesco a condividere il file", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        /** Copia dei dati per il backup automatico di Android (cifrato, nell'account Google dell'utente). */
+        @JavascriptInterface
+        public void copiaSalva(String json) {
+            if (json == null || json.length() > 30_000_000) return;
+            new Thread(() -> Copia.salva(getApplicationContext(), json)).start();
+        }
+
+        /** La copia ritrovata dopo un ripristino del telefono (vuota se non c'è). */
+        @JavascriptInterface
+        public String copiaLeggi() {
+            return Copia.leggi(getApplicationContext());
+        }
+
+        @JavascriptInterface
+        public void copiaCancella() {
+            Copia.cancella(getApplicationContext());
+        }
+
         @JavascriptInterface
         public void setBars(boolean chiaro) {
             runOnUiThread(() -> barre(chiaro));

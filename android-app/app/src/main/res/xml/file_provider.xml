@@ -1,3 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- solo la foto dello scontrino appena scattata, nella cache privata dell'app -->
-<paths><cache-path name="foto" path="foto/" /></paths>
+<!-- la foto dello scontrino appena scattata e il backup da mandare a Drive o altrove, nella cache privata dell'app -->
+<paths><cache-path name="foto" path="foto/" /><cache-path name="condivisi" path="condivisi/" /></paths>

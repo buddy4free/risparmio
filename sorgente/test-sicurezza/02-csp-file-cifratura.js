@@ -10,8 +10,8 @@ const P = `"'><img src=x onerror=__x(1)><svg/onload=__x(2)>`;
   hits.length = 0;
   // 2. uso normale e PDF: l'app non viola la propria CSP
   let saved = []; await p.exposeFunction('__save', (f, l) => saved.push(f + ':' + l)); await p.evaluate(() => { downloads.save = async o => { await window.__save(o.filename, String(o.data && o.data.size || o.data).slice(0, 2000)); }; });
-  for (const m of [['m', false], ['y', true]]) await p.evaluate(m => exportPDF(m[0], m[1]), m); await p.waitForTimeout(3000);
-  ok('PDF mese e anno generati', saved.filter(s => s.includes('.pdf')).length === 2, saved.join(' '));
+  for (const m of [['m', 's'], ['m', 'a'], ['y', 'a']]) await p.evaluate(m => exportPDF(m[0], m[1]), m); await p.waitForTimeout(3000);
+  ok('PDF generati (mese sintetico e approfondito, anno approfondito)', saved.filter(s => s.includes('.pdf')).length === 3, saved.join(' '));
   ok('nessuna violazione CSP da parte dell\'app', !hits.length, hits.join(' | '));
   // 3. CSV malevolo in importazione
   const csv = 'Data;Categoria;Valore;Nota\n' + ['01/03/2026;' + P + ';-10,00;=HYPERLINK("http://evil","x")', '02/03/2026;Spesa ' + P + ' :: Sub' + P + ';-20,00;+cmd|calc', '03/03/2026;"=1+1";-5;@SUM(A1)', 'xx/yy/zzzz;Boh;abc;' + P, '04/03/2026;' + 'A'.repeat(5000) + ';-1;' + 'B'.repeat(20000), '05/03/2026;Stipendio;1e308;', '06/03/2026;Stipendio;-1e309;', '07/03/2026;__proto__;-3;', '08/03/2026;constructor;-3;'].join('\n');

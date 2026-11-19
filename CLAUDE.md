@@ -71,8 +71,12 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - App Android 2.2 (v13): impronta nativa (`bioStatus`/`bioAuth`, BiometricPrompt di sistema, permesso USE_BIOMETRIC); la pagina la usa se c'è (`S.lock.bio = 'native'`).
 - In Home per tutti: schede "Scopri l'app" (`DISC`) per le funzioni non ancora usate; si tolgono con la X (`S.discX`). Escluse dallo scorrimento tra schermate.
 
+## Resoconto PDF (19/11/2026)
+- Tre livelli: Sintetico (2 pagine), Completo, Approfondito; niente più elenco dei movimenti, solo analisi e considerazioni. `exportPDF(mode, level)` con level 's'|'c'|'a'.
+
 ## Linguaggio dei testi (coach, suggerimenti, obiettivi)
 - Mai frasi che sembrino consigli finanziari o ordini ("fai questo", "sposta questo", "riduci", "imposta un bonifico"): l'app descrive i dati e le conseguenze ("al ritmo attuale…", "servirebbero…", "con il 30% in meno…"), la scelta resta all'utente.
+- Niente budget né regole tipo 50/30/20: Lorenzo lavora con la **capacità di risparmio** (entrate − spese essenziali) e con il confronto con se stessi (mese scorso, propria media, propri record), deciso il 19/11/2026.
 - I numeri del mese in corso sono reali a oggi; i movimenti programmati compaiono solo come previsione, dichiarata come tale.
 
 ## Dove stanno le cose

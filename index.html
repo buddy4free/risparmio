@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611191344">
+<meta name="b4f-build" content="202611191445">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-gK5poqDGHqjuWYswKnoi9FwG/lhnTkMeryEszsFcYD0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-dJgSXjAOW/wHex+zwoMB8E0DskZpN2CpHEnK/DLEnoY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -3926,14 +3926,15 @@ function renderWhatIf(){
 
 /* ---------- PDF e backup ---------- */
 function loadScript(src){ return new Promise((ok, ko) => { if (window.jspdf) return ok(); const t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = ko; document.head.appendChild(t); }); }
-async function exportPDF(mode, withTx){
+async function exportPDF(mode, level){
   if (!downloads) return toast('Il salvataggio dei file non è disponibile qui');
   try { await loadScript('vendor/jspdf.umd.min.js'); } catch(e) { return toast('Non riesco a preparare il PDF in questo momento'); }
+  const build = HT => { const CH = []; let CHI = -1;
   const doc = new window.jspdf.jsPDF({unit:'mm', format:'a4'}), M = 16, Wd = 210 - 2 * M; let y = 18;
   const E = n => (n < 0 ? '-' : '') + fmtN(n, 2) + ' EUR';
   const line = () => { doc.setDrawColor(220); doc.line(M, y, 210 - M, y); y += 4; };
   const need = h => { if (y + h > 285) { doc.addPage(); y = 18; } };
-  const h1 = t => { need(30); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(0); doc.text(t, M, y); y += 7; };
+  const h1 = t => { if (CHI >= 0) CH[CHI].end = {p:doc.getNumberOfPages(), y}; CHI++; const Hc = HT[CHI]; if (Hc != null) { if (y + Hc > 284 && Hc < 255 && y > 40) { doc.addPage(); y = 18; } else need(12); } else need(30); CH[CHI] = {p:doc.getNumberOfPages(), y}; doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(0); doc.text(t, M, y); y += 7; };
   const kv = (k, v, bold) => { need(7); doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(10); doc.setTextColor(40); doc.text(k, M, y); doc.text(v, 210 - M, y, {align:'right'}); y += 6; };
   const months = mode === 'y' ? Array.from({length:12}, (_, i) => curYM().slice(0, 4) + '-' + pad(i + 1)).filter(m => m <= curYM()) : [curYM()];
   const per = months.map(ym => stats(ym)); let inc = 0, out = 0; const byCat = {};
@@ -3969,7 +3970,7 @@ async function exportPDF(mode, withTx){
     const d0 = last.v - pts[0].v; doc.setFontSize(8.5); txt(d0 >= 0 ? '#0ca30c' : '#e5484d', (d0 >= 0 ? '+' : '-') + EU(Math.abs(d0)) + ' nel periodo', x0 + w, y - 1, {align:'right'}); y += ch + 8;
     if (note) { doc.setFontSize(7.5); txt('#888888', note, M, y); y += 5; } doc.setDrawColor(220); };
   doc.setFillColor(0, 0, 0); doc.rect(0, 0, 210, 30, 'F'); doc.setTextColor(255, 201, 10); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text('Buddy4Free Risparmio', M, 14);
-  doc.setTextColor(255); doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('Resoconto ' + (mode === 'y' ? 'anno ' + curYM().slice(0, 4) : ymLabel(curYM())) + ' · generato il ' + new Date().toLocaleDateString('it-IT'), M, 22); y = 40;
+  doc.setTextColor(255); doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('Resoconto ' + (mode === 'y' ? 'anno ' + curYM().slice(0, 4) : ymLabel(curYM())) + ' · ' + ({s:'sintetico', c:'completo', a:'approfondito'}[level] || 'completo') + ' · generato il ' + new Date().toLocaleDateString('it-IT'), M, 22); y = 40;
   /* tre riquadri: entrate, uscite, risparmio */
   const bw = (Wd - 8) / 3; [['Entrate', inc, '#22A45D'], ['Uscite', out, '#C98500'], ['Risparmio', sv, VAR[bd.c] || '#888888']].forEach(([l, v, c], i) => { const x = M + i * (bw + 4);
     doc.setFillColor(246, 246, 243); doc.roundedRect(x, y, bw, 22, 3, 3, 'F'); fill(c); doc.rect(x, y + 3, 1.6, 16, 'F');
@@ -3980,86 +3981,264 @@ async function exportPDF(mode, withTx){
   [[0, 10, '#e5484d'], [10, 25, '#ec835a'], [25, 40, '#fab219'], [40, 100, '#0ca30c']].forEach(([a0, a1, c]) => { fill(c); doc.rect(M + a0 / 100 * Wd, y, (a1 - a0) / 100 * Wd, 4, 'F'); });
   if (rate !== null) { const mx = M + Math.max(0, Math.min(100, rate)) / 100 * Wd; doc.setFillColor(0, 0, 0); doc.triangle(mx - 2, y - 2.2, mx + 2, y - 2.2, mx, y + 0.6, 'F'); doc.rect(mx - 0.4, y, 0.8, 4, 'F'); }
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7); [0, 10, 25, 40, 100].forEach(v => txt('#888888', v + '%', M + v / 100 * Wd, y + 8, {align:v === 0 ? 'left' : v === 100 ? 'right' : 'center'})); y += 14;
-  if (inc > 0) { const ndA = Object.entries(byCat).filter(([c]) => catOf('out', c).disc).reduce((t2, r2) => t2 + r2[1], 0);
-    pieBlock('Come usi le entrate', sv >= 0 ? [{n:'Spese essenziali', v:out - ndA, c:'#3987e5'}, {n:'Spese non essenziali', v:ndA, c:'#C98500'}, {n:'Risparmio', v:sv, c:'#22A45D'}] : [{n:'Spese essenziali', v:out - ndA, c:'#3987e5'}, {n:'Spese non essenziali', v:ndA, c:'#C98500'}], [rate === null ? '-' : Math.round(rate) + '%', 'risparmiato']); y += 2; }
-  /* anno: entrate e uscite mese per mese */
-  if (mode === 'y' && per.length > 1) { h1('Entrate e uscite mese per mese'); const ch = 38, mxv = Math.max(1, ...per.map(s => Math.max(s.inc, s.out))), cw = Wd / 12;
-    need(ch + 14); doc.setDrawColor(225); doc.line(M, y + ch, M + Wd, y + ch);
-    per.forEach((s2, i) => { const x = M + i * cw + cw * 0.18, w = cw * 0.3; bar(x, y + ch - s2.inc / mxv * ch, w, s2.inc / mxv * ch, '#22A45D'); bar(x + w + 0.6, y + ch - s2.out / mxv * ch, w, s2.out / mxv * ch, '#C98500');
-      doc.setFontSize(7); txt('#666666', ymLabel(months[i], {month:'short'}).slice(0, 3), M + i * cw + cw / 2, y + ch + 4, {align:'center'});
-      if (s2.rate !== null) { doc.setFontSize(6.5); txt(VAR[band(s2.rate).c] || '#666666', Math.round(s2.rate) + '%', M + i * cw + cw / 2, y + ch + 8, {align:'center'}); } });
-    y += ch + 11; doc.setFontSize(7.5); fill('#22A45D'); doc.rect(M, y - 2.4, 3, 3, 'F'); txt('#444444', 'Entrate', M + 4.5, y); fill('#C98500'); doc.rect(M + 22, y - 2.4, 3, 3, 'F'); txt('#444444', 'Uscite', M + 26.5, y); txt('#888888', 'sotto ogni mese: tasso di risparmio', M + 44, y); y += 6; line(); }
-  /* spese per categoria, con barre colorate */
+  /* ---------- livelli: s = sintetico, c = completo, a = approfondito (dal 19/11/2026; niente più elenco dei movimenti) ---------- */
+  const LV = {s:1, c:2, a:3}[level] || 2, C2 = LV >= 2, A3 = LV >= 3, isY = mode === 'y';
+  const sub = t => { doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2); const L = doc.splitTextToSize(t, Wd); need(L.length * 4 + 2); txt('#777777', L, M, y); y += L.length * 4 + 2; };
+  const para = (t, c, fs) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(fs || 9.2); const L = doc.splitTextToSize(t, Wd); need(L.length * 4.6 + 1); txt(c || '#262626', L, M, y); y += L.length * 4.6 + 1.5; };
+  const bullets = list => { doc.setFont('helvetica', 'normal'); doc.setFontSize(9.2); list.forEach(([c, t2]) => { const L = doc.splitTextToSize(t2, Wd - 8); need(L.length * 4.6 + 2); fill(c); doc.circle(M + 1.6, y - 1.2, 1.4, 'F'); txt('#262626', L, M + 6, y); y += L.length * 4.6 + 1.8; }); y += 1; };
+  const table = (head, rowsT, ws, al) => { const x0s = []; let xx = M; ws.forEach(w => { x0s.push(xx); xx += w; }); const X = (i) => al[i] === 'right' ? x0s[i] + ws[i] : x0s[i];
+    need(10); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.6); head.forEach((h, i) => txt('#888888', h.toUpperCase(), X(i), y, {align:al[i]})); y += 2; doc.setDrawColor(225); doc.line(M, y, M + Wd, y); y += 4.2;
+    doc.setFont('helvetica', 'normal'); rowsT.forEach(r => { need(6); doc.setFontSize(8.8); r.forEach((v, i) => { const o = typeof v === 'object' && v ? v : {t:v}; txt(o.c || '#262626', String(o.t == null ? '' : o.t), X(i), y, {align:al[i]}); }); y += 5.4; }); y += 2; };
+  const hbars = (rowsB, fmt) => { const mx = Math.max(1, ...rowsB.map(r => Math.abs(r.v))); rowsB.forEach(r => { need(8); doc.setFont('helvetica', 'normal'); doc.setFontSize(9); txt('#222222', String(r.n).slice(0, 30), M, y + 3); bar(M + 52, y, (Wd - 52 - 42) * Math.min(1, Math.abs(r.v) / mx), 4, r.c || '#3987e5');
+    txt('#222222', fmt ? fmt(r) : EU(r.v), M + Wd - 12, y + 3.2, {align:'right'}); if (r.p != null) { doc.setFontSize(7.5); txt('#888888', r.p, M + Wd, y + 3.2, {align:'right'}); } y += 7; }); };
+  const vbars = (labels, series, h, vals, topK) => { need(h + 18); if (topK != null) y += 4; const cw = Wd / labels.length, mx = Math.max(1, ...series.flatMap(s => s.v.map(Math.abs))); doc.setDrawColor(225); doc.line(M, y + h, M + Wd, y + h);
+    labels.forEach((lb, i) => { const bwid = cw * 0.62 / series.length; series.forEach((s, k) => { const v = Math.max(0, s.v[i] || 0); bar(M + i * cw + cw * 0.19 + k * (bwid + 0.4), y + h - v / mx * h, bwid, v / mx * h, s.c); });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.8); txt('#666666', lb, M + i * cw + cw / 2, y + h + 4, {align:'center'});
+      if (vals && vals[i] != null) { if (topK != null) { const v = Math.max(0, series[topK].v[i] || 0), bx = M + i * cw + cw * 0.19 + topK * (bwid + 0.4) + bwid / 2; doc.setFont('helvetica', 'bold'); doc.setFontSize(8.4); txt(vals[i][1] || '#222222', vals[i][0], bx, y + h - v / mx * h - 1.6, {align:'center'}); doc.setFont('helvetica', 'normal'); }
+        else { doc.setFontSize(6.3); txt(vals[i][1] || '#666666', vals[i][0], M + i * cw + cw / 2, y + h + 7.6, {align:'center'}); } } });
+    y += h + (vals && topK == null ? 11 : 8); doc.setFontSize(7.5); let lx = M; series.forEach(s => { fill(s.c); doc.rect(lx, y - 2.4, 3, 3, 'F'); txt('#444444', s.n, lx + 4.5, y); lx += 8 + doc.getTextWidth(s.n) + 6; }); y += 6; };
+  const lines2 = (series, n, labelOf, h) => { need(h + 16); const x0 = M + 14, w = Wd - 16, mx = Math.max(1, ...series.flatMap(s => s.v.filter(v => v != null))), X = i => x0 + i / Math.max(1, n - 1) * w, Y = v => y + h - v / mx * h;
+    doc.setLineWidth(0.15); doc.setDrawColor(225); doc.setFontSize(6.5); [0, 0.5, 1].forEach(f => { const yy = Y(mx * f); doc.line(x0, yy, x0 + w, yy); txt('#999999', fmtN(mx * f), x0 - 2, yy + 1, {align:'right'}); });
+    series.forEach(s => { const pts = s.v.map((v, i) => v == null ? null : [X(i), Y(v)]).filter(Boolean); if (pts.length < 2) return; doc.setDrawColor(...rgb(s.c)); doc.setLineWidth(s.w || 0.7); doc.lines(pts.slice(1).map((p2, i) => [p2[0] - pts[i][0], p2[1] - pts[i][1]]), pts[0][0], pts[0][1], [1, 1], 'S', false); });
+    doc.setLineWidth(0.2); const st = Math.max(1, Math.ceil(n / 8)); for (let i = 0; i < n; i += st) txt('#888888', labelOf(i), X(i), y + h + 4, {align:'center'});
+    y += h + 9; doc.setFontSize(7.5); let lx = M; series.forEach(s => { fill(s.c); doc.rect(lx, y - 2.4, 3, 3, 'F'); txt('#444444', s.n, lx + 4.5, y); lx += 8 + doc.getTextWidth(s.n) + 6; }); y += 6; doc.setDrawColor(220); };
+  const h2 = (t, hNext) => { need(8 + (hNext || 30)); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); txt('#222222', t, M, y); y += 5; };
+  const hbars2 = (rowsB, mxv, rw) => { const mx = mxv || Math.max(1, ...rowsB.map(r => r.v), ...rowsB.map(r => r.m || 0)); rowsB.forEach(r => { need(9); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.6); txt('#222222', String(r.n).slice(0, 34), M, y + 3);
+    const bx = M + 58, bwM = Wd - 58 - (rw || 52); doc.setFillColor(238, 238, 234); doc.roundedRect(bx, y, bwM, 4, 1, 1, 'F'); bar(bx, y, bwM * Math.min(1, r.v / mx), 4, r.c || '#3987e5');
+    if (r.m != null && r.m > 0) { const mxp = bx + bwM * Math.min(1, r.m / mx); doc.setFillColor(20, 20, 20); doc.rect(mxp - 0.35, y - 1.2, 0.7, 6.4, 'F'); }
+    if (r.tag) { const ex = bx + bwM * Math.min(1, Math.max(r.v, r.m || 0) / mx) + 1.6; doc.setFont('helvetica', 'bold'); doc.setFontSize(7.6); txt(r.tc || '#444444', r.tag, Math.min(ex, bx + bwM - 10), y + 3.1); }
+    doc.setFont('helvetica', r.b ? 'bold' : 'normal'); doc.setFontSize(8.2); txt(r.rc || '#222222', r.r, M + Wd, y + 3.2, {align:'right'}); doc.setFont('helvetica', 'normal'); y += 7.4; }); };
+  const card = (title, lines, bg) => { const L = lines.flatMap(t2 => doc.splitTextToSize(t2, Wd - 8)); const hh = 9 + L.length * 4.6; need(hh + 4); doc.setFillColor(...rgb(bg || '#FFF8DC')); doc.roundedRect(M, y, Wd, hh, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); txt('#222222', title, M + 4, y + 6); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.8); txt('#333333', L, M + 4, y + 11.5); y += hh + 5; };
+  const P = (a, b) => b ? Math.round(a / b * 100) + '%' : '–';
+  const MON = ym => ymLabel(ym, {month:'long', year:'numeric'}), ML = ym => ymLabel(ym, {month:'short'}).slice(0, 3);
+  const done = ym => ym < curYM(), lastFull = n => Array.from({length:n}, (_, i) => addMonths(curYM(), -n + i)).filter(ym => { const s2 = stats(ym); return s2.inc > 0 || s2.out > 0; });
+  /* dati comuni del periodo */
+  const L0 = [].concat(...months.map(ym => monthTx(ym).filter(x => !x.plan)));
+  const OUTX = L0.filter(x => x.t === 'out' && x.a > 0), disc = per.reduce((t, s2) => t + s2.disc, 0), essP = out - disc;
+  const cap = inc - essP, rows = Object.entries(byCat).filter(([, a]) => a > 0).sort((a, b) => b[1] - a[1]);
+  const ess = avgEssential(), aOut = avgOut(), totPil = PILLARS.reduce((t, q) => t + pilBalance(q.id), 0), debts = S.debts || [];
+  const rataM = debts.reduce((t, d) => t + (debtInfo(d).left > 0 ? +d.rata || 0 : 0), 0), l6 = lastFull(6), avgInc6 = l6.length ? l6.reduce((t, ym) => t + stats(ym).inc, 0) / l6.length : inc / months.length;
+  const avgSave6 = l6.length ? l6.reduce((t, ym) => t + stats(ym).save, 0) / l6.length : sv / months.length;
+  const autonomy = ess > 0 ? (pilBalance('liq') + pilBalance('emerg')) / ess : null, wb = typeof wbIndex === 'function' ? wbIndex() : null;
+  const keyPts = [];
+  const d0P = L0.map(x => x.d).sort()[0] || today(), dEnd = isY ? (curYM().slice(0, 4) + '-12-31' > today() ? today() : curYM().slice(0, 4) + '-12-31') : today(), nDays = Math.max(1, Math.round((new Date(dEnd + 'T12:00') - new Date(d0P + 'T12:00')) / 864e5) + 1), nWeeks = nDays / 7;
+  const m3 = [1, 2, 3].map(i => addMonths(curYM(), -i)), avgCat3 = {}; m3.forEach(ym => stats(ym).L.forEach(x => { if (x.t === 'out') avgCat3[x.c] = (avgCat3[x.c] || 0) + x.a / 3; }));
+  /* ===== frontespizio: tre riquadri e tasso (come prima) ===== */
+  /* ===== punti chiave, calcolati prima e messi in cima ===== */
+  if (rate !== null) keyPts.push([VAR[bd.c] || '#888888', 'Tasso di risparmio ' + Math.round(rate) + '% (' + bd.l.toLowerCase() + '): ' + (sv >= 0 ? 'rimasti ' + EU(sv) + ' su ' + EU(inc) + ' di entrate.' : 'uscite oltre le entrate di ' + EU(-sv) + '.')]);
+  if (inc > 0 && cap > 0) keyPts.push(['#22A45D', 'Capacità di risparmio ' + EU(cap) + ' (entrate meno spese essenziali): ne è diventato risparmio il ' + P(Math.max(0, sv), cap) + '.']);
+  if (out > 0 && rows.length) { const t3 = rows.slice(0, 3).reduce((t, r) => t + r[1], 0); keyPts.push(['#C98500', 'Le prime 3 voci (' + rows.slice(0, 3).map(r => catOf('out', r[0]).n).join(', ') + ') valgono il ' + P(t3, out) + ' delle uscite.']); }
+  { const cm = isY ? months.map(m => addMonths(m, -12)) : [1, 2, 3].map(i => addMonths(curYM(), -i)), pt = cm.reduce((t, ym) => t + stats(ym).out, 0) / (isY ? 1 : 3); if (pt > 0 && out > 0) keyPts.push([out > pt ? '#e5484d' : '#22A45D', 'Rispetto ' + (isY ? 'agli stessi mesi dell\'anno scorso' : 'alla media dei 3 mesi precedenti') + ' le uscite sono ' + (Math.abs(out / pt - 1) < 0.01 ? 'rimaste uguali.' : (out > pt ? 'cresciute del ' : 'calate del ') + Math.abs(Math.round((out / pt - 1) * 100)) + '%.')]); }
+  if (autonomy !== null) keyPts.push([autonomy >= S.emergMonths ? '#0ca30c' : autonomy >= 3 ? '#fab219' : '#e5484d', 'Conto e fondo di emergenza coprono ' + fmtN(autonomy, 1) + ' mesi di spese essenziali.']);
+  { const g = mainGoal(); if (g) { const pl = goalPlan(g); keyPts.push(['#3987e5', 'Obiettivo «' + g.name + '»: ' + Math.round(pl.pct) + '%' + (pl.left > 0 ? '; per la scadenza servirebbero ' + EU(pl.need) + ' al mese.' : ', raggiunto.')]); } }
+  if (keyPts.length) card('I punti chiave', keyPts.slice(0, 5).map(k => '• ' + k[1]));
+  /* ===== 1. pagella: gli indicatori principali con il loro colore ===== */
+  h1('La pagella del ' + (isY ? 'tuo anno' : 'mese'));
+  const pg = [];
+  pg.push(['Tasso di risparmio', rate === null ? '–' : Math.round(rate) + '%', VAR[bd.c] || '#888888', rate === null ? 'Nessuna entrata nel periodo.' : bd.l + ': su 100 € entrati ne sono rimasti ' + Math.max(0, Math.round(rate)) + '.']);
+  if (autonomy !== null) pg.push(['Mesi di autonomia', fmtN(autonomy, 1) + ' mesi', autonomy >= S.emergMonths ? '#0ca30c' : autonomy >= 3 ? '#fab219' : '#e5484d', 'Conto e fondo di emergenza coprono ' + fmtN(autonomy, 1) + ' mesi di spese essenziali (' + EU(ess) + ' al mese).']);
+  if (out > 0) pg.push(['Spese non essenziali', P(disc, out), '#3987e5', EU(disc) + ' su ' + EU(out) + ' di uscite.']);
+  if (rataM > 0) { const rr = avgInc6 > 0 ? rataM / avgInc6 * 100 : null; pg.push(['Rate sulle entrate', rr === null ? '–' : Math.round(rr) + '%', rr === null ? '#888888' : rr < 20 ? '#0ca30c' : rr < 35 ? '#fab219' : '#e5484d', EU(rataM) + ' di rate al mese su ' + EU(avgInc6) + ' di entrate medie.']); }
+  if (wb && wb.score != null) { const wbb = wbBand(wb.score); pg.push(['Indice di benessere', wb.score + '/100', '#3987e5', wbb[1] + '.']); }
+  pg.forEach(([k, v, c, d]) => { need(12); fill(c); doc.circle(M + 2.2, y - 1.3, 2.2, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); txt('#222222', k, M + 7, y); txt(c, v, M + Wd, y, {align:'right'}); y += 4.4; doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2); txt('#777777', doc.splitTextToSize(d, Wd - 7), M + 7, y); y += 6.5; });
+  line();
+  /* ===== 2. capacità di risparmio (al posto dei budget: entrate meno spese essenziali) ===== */
+  if (inc > 0) { h1('La tua capacità di risparmio');
+    sub('Capacità di risparmio = entrate meno spese essenziali: il massimo che il periodo permetteva di mettere da parte.');
+    pieBlock('', sv >= 0 ? [{n:'Spese essenziali', v:essP, c:'#3987e5'}, {n:'Spese non essenziali', v:disc, c:'#C98500'}, {n:'Risparmio', v:sv, c:'#22A45D'}] : [{n:'Spese essenziali', v:essP, c:'#3987e5'}, {n:'Spese non essenziali', v:disc, c:'#C98500'}], [rate === null ? '-' : Math.round(rate) + '%', 'risparmiato']);
+    para(cap > 0 ? 'Entrate ' + EU(inc) + ', spese essenziali ' + EU(essP) + ': capacità di risparmio ' + EU(cap) + '. Ne sono diventati risparmio ' + EU(Math.max(0, sv)) + ' (' + P(Math.max(0, sv), cap) + '); ' + EU(disc) + ' sono andati in spese non essenziali.' : 'Nel periodo le spese essenziali (' + EU(essP) + ') hanno superato le entrate (' + EU(inc) + '): la capacità di risparmio è stata negativa.');
+    if (C2) { const span12 = Array.from({length:12}, (_, i) => addMonths(curYM(), -11 + i)).filter(ym => { const s2 = stats(ym); return s2.inc > 0 || s2.out > 0; });
+      if (span12.length > 2) { y += 2; h2('Capacità e risparmio mese per mese', 52);
+        const ss = span12.map(ym => stats(ym)); vbars(span12.map(ML), [{n:'Capacità di risparmio', c:'#9fc3f0', v:ss.map(s2 => Math.max(0, s2.inc - (s2.out - s2.disc)))}, {n:'Risparmio', c:'#22A45D', v:ss.map(s2 => Math.max(0, s2.save))}], 30,
+          ss.map(s2 => { const cp = s2.inc - (s2.out - s2.disc); return cp > 0 ? [Math.round(Math.max(0, s2.save) / cp * 100) + '%', '#15803d'] : null; }), 1); sub('Sopra le barre verdi: quanta parte della capacità è diventata risparmio.'); } }
+    line(); }
+  /* ===== 3. dove vanno i soldi ===== */
   h1('Dove vanno i soldi');
-  const rows = Object.entries(byCat).filter(([, a]) => a > 0).sort((a, b) => b[1] - a[1]), top = rows.slice(0, 12), restV = rows.slice(12).reduce((t, r) => t + r[1], 0), mxc = Math.max(1, ...top.map(r => r[1]));
-  top.concat(restV > 0 ? [['__rest', restV]] : []).forEach(([c, a]) => { need(8); const k = c === '__rest' ? {n:'Le altre ' + (rows.length - 12), id:'x'} : catOf('out', c), col = c === '__rest' ? '#9a9a9a' : catColor('out', k);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); txt('#222222', k.n.slice(0, 30), M, y + 3); bar(M + 52, y, (Wd - 52 - 42) * Math.min(1, a / mxc), 4, col);
-    txt('#222222', E(a).replace(' EUR', ' €'), M + Wd - 12, y + 3.2, {align:'right'}); doc.setFontSize(7.5); txt('#888888', Math.round(a / out * 100) + '%', M + Wd, y + 3.2, {align:'right'}); y += 7; });
-  if (rows.length > 2) { y += 2; pieBlock('', rows.slice(0, 5).map(([c, a]) => ({n:catOf('out', c).n, v:a, c:catColor('out', catOf('out', c))})).concat(rows.length > 5 ? [{n:'Le altre ' + (rows.length - 5), v:rows.slice(5).reduce((t2, r2) => t2 + r2[1], 0), c:'#9a9a9a'}] : []), [EU(out).replace(/,\d\d €/, ' €'), 'uscite']); }
-  /* in sintesi */
-  if (out > 0) { const t3 = rows.slice(0, 3).reduce((t, r) => t + r[1], 0), nd = rows.filter(([c]) => catOf('out', c).disc).reduce((t, r) => t + r[1], 0);
-    need(26); y += 2; doc.setFillColor(255, 248, 220); doc.roundedRect(M, y, Wd, 22, 3, 3, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); txt('#222222', 'In sintesi', M + 4, y + 6);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.8);
-    txt('#333333', '- Le prime 3 voci valgono il ' + Math.round(t3 / out * 100) + '% delle spese (' + rows.slice(0, 3).map(r => catOf('out', r[0]).n).join(', ') + ').', M + 4, y + 12);
-    txt('#333333', '- Spese non essenziali: ' + E(nd).replace(' EUR', ' €') + ' (' + Math.round(nd / out * 100) + '%): è la parte su cui è più facile intervenire.', M + 4, y + 17.5); y += 27; }
+  const topN = LV === 1 ? 8 : 12, top = rows.slice(0, topN), restV = rows.slice(topN).reduce((t, r) => t + r[1], 0);
+  hbars(top.map(([c, a]) => ({n:catOf('out', c).n, v:a, c:catColor('out', catOf('out', c)), p:P(a, out)})).concat(restV > 0 ? [{n:'Le altre ' + (rows.length - topN), v:restV, c:'#9a9a9a', p:P(restV, out)}] : []));
+  if (rows.length > 2 && C2) { y += 2; pieBlock('', rows.slice(0, 5).map(([c, a]) => ({n:catOf('out', c).n, v:a, c:catColor('out', catOf('out', c))})).concat(rows.length > 5 ? [{n:'Le altre ' + (rows.length - 5), v:rows.slice(5).reduce((t2, r2) => t2 + r2[1], 0), c:'#9a9a9a'}] : []), [EU(out).replace(/,\d\d €/, ' €'), 'uscite']); }
   line();
-  /* da dove arrivano i soldi */
-  const byInc = {}; months.forEach(ym => monthTx(ym).forEach(x => { if (x.t === 'in' && !x.plan) byInc[x.c] = (byInc[x.c] || 0) + x.a; }));
+  /* ===== 4. confronto per categoria con te stesso ===== */
+  const cmpA = isY ? months.map(m => addMonths(m, -12)) : [addMonths(curYM(), -1)], cmpB = isY ? null : [1, 2, 3].map(i => addMonths(curYM(), -i));
+  const sumCat = ms => { const o = {}; ms.forEach(ym => stats(ym).L.forEach(x => { if (x.t === 'out') o[x.c] = (o[x.c] || 0) + x.a; })); return o; };
+  const cA = sumCat(cmpA), cB = cmpB ? sumCat(cmpB) : null, totA = Object.values(cA).reduce((t, v) => t + v, 0);
+  if (C2 && totA > 0) { h1('Confronto con te stesso'); sub(isY ? 'Uscite per voce: quest\'anno e gli stessi mesi dell\'anno scorso.' : 'Uscite per voce: questo mese e la media dei 3 mesi precedenti.');
+    const ids = [...new Set(rows.map(r => r[0]).concat(Object.keys(cA)))].slice(0, 12);
+    hbars2(ids.map(id => { const v = byCat[id] || 0, a = cA[id] || 0, b = cB ? (cB[id] || 0) / 3 : a, d = v - b, col = Math.abs(d) < 1 ? '#888888' : d > 0 ? '#e5484d' : '#15803d';
+      return {n:catOf('out', id).n, v, m:b, c:catColor('out', catOf('out', id)), r:EU(v), rc:'#222222', b:true, tag:Math.abs(d) < 1 || !(b > 0) ? (b > 0 ? '=' : 'nuova') : (d > 0 ? '+' : '') + Math.round(d / b * 100) + '%', tc:col}; }));
+    sub(isY ? 'Barra: quest\'anno · segno nero: gli stessi mesi dell\'anno scorso · accanto alla barra la differenza.' : 'Barra: questo mese · segno nero: media dei 3 mesi precedenti · accanto alla barra la differenza dalla media.');
+    line(); }
+  /* ===== 5. andamento: giorno per giorno (mese) o mese per mese (anno) ===== */
+  if (C2) { h1(isY ? 'Entrate e uscite mese per mese' : 'Andamento del mese');
+    if (isY) vbars(months.map(ML), [{n:'Entrate', c:'#22A45D', v:per.map(s2 => s2.inc)}, {n:'Uscite', c:'#C98500', v:per.map(s2 => s2.out)}], 34, per.map(s2 => s2.rate === null ? null : [Math.round(s2.rate) + '%', VAR[band(s2.rate).c] || '#666666']));
+    else { const [yy, mm] = curYM().split('-').map(Number), nd = new Date(yy, mm, 0).getDate(), td = new Date().getDate(), pym = addMonths(curYM(), -1), cum = (ym, upto) => { const d = {}; monthTx(ym).forEach(x => { if (x.t === 'out' && !x.plan && x.a > 0) { const k = +x.d.slice(8); d[k] = (d[k] || 0) + x.a; } }); let c = 0; return Array.from({length:nd}, (_, i) => i + 1 > upto ? null : (c += d[i + 1] || 0)); };
+      const c3 = m3.map(ym => cum(ym, 31)), pc = Array.from({length:nd}, (_, i) => c3.reduce((t, c) => t + (c[i] == null ? c[c.length - 1] || 0 : c[i]), 0) / 3), ly = addMonths(curYM(), -12), lyc = stats(ly).out > 0 ? cum(ly, 31) : null, cc = cum(curYM(), td);
+      lines2([{n:'Media dei 3 mesi precedenti', c:'#bbbbbb', v:pc, w:0.6}].concat(lyc ? [{n:ymLabel(ly, {month:'long', year:'numeric'}), c:'#8b5cf6', v:lyc, w:0.5}] : []).concat([{n:'Questo mese', c:'#C98500', v:cc}]), nd, i => String(i + 1), 30);
+      const atSame = pc[Math.min(td, nd) - 1]; if (atSame > 0) para('Al giorno ' + td + ' le uscite sono ' + EU(cc[td - 1] || 0) + ', contro ' + EU(atSame) + ' in media allo stesso giorno dei 3 mesi precedenti' + (lyc && lyc[td - 1] ? ' e ' + EU(lyc[td - 1]) + ' a ' + ymLabel(ly, {month:'long', year:'numeric'}) : '') + '.');
+      const wk = (ym, upto) => { const w = [0, 0, 0, 0, 0]; monthTx(ym).forEach(x => { const d = +x.d.slice(8); if (x.t === 'out' && !x.plan && x.a > 0 && d <= upto) w[Math.min(4, Math.floor((d - 1) / 7))] += x.a; }); return w; };
+      const wC = wk(curYM(), td), wP = [0, 1, 2, 3, 4].map(i => m3.reduce((t, ym) => t + wk(ym, 31)[i], 0) / 3); y += 2; h2('Settimana per settimana', 44);
+      vbars(['1-7', '8-14', '15-21', '22-28', '29-' + nd], [{n:'Media dei 3 mesi precedenti', c:'#cfcfcf', v:wP}, {n:'Questo mese', c:'#C98500', v:wC}], 30, wC.map((v, i) => i * 7 + 1 > td ? null : [fmtN(v) + ' €', '#C98500']), 1);
+      sub('Uscite di ogni settimana del mese, accanto alla media delle stesse settimane nei 3 mesi precedenti.'); }
+    line(); }
+  /* ===== 6. spese più grandi, ricorrenti e abbonamenti, eventi ===== */
+  if (C2 && OUTX.length) { const ag = {}; OUTX.forEach(x => { const nm = (x.n || x.s || catOf('out', x.c).n).trim(), k = nm.toLowerCase() + '|' + x.c, g = ag[k] = ag[k] || {n:nm, c:x.c, v:0, k:0}; g.v += x.a; g.k++; });
+    h1('Le 10 voci di spesa più grandi'); hbars2(Object.values(ag).sort((a, b) => b.v - a.v).slice(0, 10).map(g => ({n:g.n, v:g.v, c:catColor('out', catOf('out', g.c)), r:EU(g.v) + (g.k > 1 ? ' · ' + g.k + ' volte' : '') + ' · ' + catOf('out', g.c).n.slice(0, 14)})));
+    sub('Le spese con lo stesso nome sono sommate: per esempio tutte le volte al supermercato.'); y += 2; }
+  const recO = (S.rec || []).filter(r => r.t === 'out' && (!r.to || r.to >= curYM())), recM = r => r.unit === 'w' ? r.a * 52 / 12 / (r.every || 1) : r.a / (r.every || 1);
+  if (C2 && (recO.length || (S.dues || []).length)) { h1('Spese ricorrenti e scadenze'); const rws = recO.map(r => [(r.n || catOf('out', r.c).n).slice(0, 40), EU(recM(r)), EU(recM(r) * 12)]).concat((S.dues || []).map(d => [(d.n || '').slice(0, 40) + ' (scadenza)', EU(dueYear(d) / 12), EU(dueYear(d))]));
+    const tm = recO.reduce((t, r) => t + recM(r), 0) + (S.dues || []).reduce((t, d) => t + dueYear(d) / 12, 0);
+    hbars2(rws.slice(0, 14).map(r => ({n:r[0], v:parseAmt(r[2]), c:'#3987e5', r:r[1] + ' al mese · ' + r[2] + ' all\'anno'})), null, 64); para('In totale ' + EU(tm) + ' al mese, cioè ' + EU(tm * 12) + ' all\'anno' + (aOut > 0 ? ': il ' + P(tm, aOut) + ' delle uscite medie.' : '.'));
+    line(); }
+  const tagsP = {}; L0.forEach(x => { if (x.tag && x.t === 'out') { const g = tagsP[x.tag] = tagsP[x.tag] || {v:0, n:0}; g.v += x.a; g.n++; } });
+  if (C2 && Object.keys(tagsP).length) { h1('Eventi ed etichette'); table(['Etichetta', 'Movimenti', 'Spesa', 'Sulle uscite'], Object.entries(tagsP).sort((a, b) => b[1].v - a[1].v).map(([k, g]) => [k.slice(0, 40), g.n, EU(g.v), P(g.v, out)]), [90, 24, 36, 32], ['left', 'right', 'right', 'right']); line(); }
+  const FX = L0.filter(x => x.fx); if (C2 && FX.length) { h1('Spese in valuta estera'); table(['Data', 'Voce', 'Importo', 'Cambio', 'In euro'], FX.slice(0, 12).map(x => [x.d.slice(8) + '/' + x.d.slice(5, 7), (x.n || catOf(x.t, x.c).n).slice(0, 28), fxTxt(x.fx), fxNum(x.fx.r, 4), EU(x.a)]), [18, 64, 34, 30, 36], ['left', 'left', 'right', 'right', 'right']); }
+  /* ===== 7. entrate ===== */
+  const byInc = {}; L0.forEach(x => { if (x.t === 'in') byInc[x.c] = (byInc[x.c] || 0) + x.a; });
   const inRows = Object.entries(byInc).filter(([, a]) => a > 0).sort((a, b) => b[1] - a[1]);
-  if (inRows.length) { h1('Da dove arrivano i soldi'); const topI = inRows.slice(0, 8), restI = inRows.slice(8).reduce((t, r) => t + r[1], 0), mxi = Math.max(1, ...topI.map(r => r[1]));
-    topI.concat(restI > 0 ? [['__rest', restI]] : []).forEach(([c, a]) => { need(8); const k = c === '__rest' ? {n:'Le altre ' + (inRows.length - 8), id:'x'} : catOf('in', c), col = c === '__rest' ? '#9a9a9a' : catColor('in', k);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); txt('#222222', k.n.slice(0, 30), M, y + 3); bar(M + 52, y, (Wd - 52 - 42) * Math.min(1, a / mxi), 4, col);
-      txt('#222222', E(a).replace(' EUR', ' €'), M + Wd - 12, y + 3.2, {align:'right'}); doc.setFontSize(7.5); txt('#888888', Math.round(a / inc * 100) + '%', M + Wd, y + 3.2, {align:'right'}); y += 7; });
-    if (inRows.length > 1) { y += 2; pieBlock('', inRows.slice(0, 4).map(([c, a]) => ({n:catOf('in', c).n, v:a, c:catColor('in', catOf('in', c))})).concat(inRows.length > 4 ? [{n:'Le altre ' + (inRows.length - 4), v:inRows.slice(4).reduce((t2, r2) => t2 + r2[1], 0), c:'#9a9a9a'}] : []), [EU(inc).replace(/,\d\d €/, ' €'), 'entrate']); }
-    const t1 = inRows[0], p1 = Math.round(t1[1] / inc * 100); need(8); doc.setFontSize(8.8); txt('#333333', catOf('in', t1[0]).n + ' porta il ' + p1 + '% delle entrate' + (inRows.length > 1 ? ' su ' + inRows.length + ' fonti.' : '.') + (p1 >= 80 ? ' Dipendi quasi tutto da una fonte: il fondo di emergenza conta ancora di più.' : ''), M, y + 3); y += 9; line(); }
-  /* mini analisi: mesi migliori e peggiori, voci che crescono e calano */
-  const span = mode === 'y' ? months : Array.from({length:12}, (_, i) => addMonths(curYM(), -11 + i)), sp = span.map(ym => ({ym, s:stats(ym)})).filter(q => q.s.inc > 0 || q.s.out > 0);
-  const ins = [], dot = (c, t2) => ins.push([c, t2]), ml = ym => ymLabel(ym, {month:'long', year:'numeric'});
-  if (sp.length > 1) { const hi = sp.slice().sort((a, b) => b.s.out - a.s.out)[0], best = sp.slice().sort((a, b) => b.s.save - a.s.save)[0], worst = sp.slice().sort((a, b) => a.s.save - b.s.save)[0], avgO = sp.reduce((t, q) => t + q.s.out, 0) / sp.length, avgI = sp.reduce((t, q) => t + q.s.inc, 0) / sp.length;
-    const lab = mode === 'y' ? '' : ' (ultimi 12 mesi)';
-    dot('#C98500', 'Mese con più spese' + lab + ': ' + ml(hi.ym) + ', ' + E(hi.s.out).replace(' EUR', ' €') + ' (media ' + E(avgO).replace(' EUR', ' €') + ' al mese).');
-    dot('#22A45D', 'Mese con più risparmio' + lab + ': ' + ml(best.ym) + ', ' + E(best.s.save).replace(' EUR', ' €') + (best.s.rate !== null ? ' (' + Math.round(best.s.rate) + '% delle entrate).' : '.'));
-    if (worst.ym !== best.ym) dot(worst.s.save < 0 ? '#e5484d' : '#ec835a', 'Mese più difficile' + lab + ': ' + ml(worst.ym) + ', ' + (worst.s.save < 0 ? 'hai speso ' + E(-worst.s.save).replace(' EUR', ' €') + ' più di quanto è entrato.' : 'risparmio di ' + E(worst.s.save).replace(' EUR', ' €') + '.'));
-    dot('#3987e5', 'In media entrano ' + E(avgI).replace(' EUR', ' €') + ' ed escono ' + E(avgO).replace(' EUR', ' €') + ' al mese.'); }
-  if (mode !== 'y') { const [yy, mm] = curYM().split('-').map(Number), nd = curYM() === curYM() ? new Date().getDate() : new Date(yy, mm, 0).getDate(), daily = {}; monthTx(curYM()).forEach(x => { if (x.t === 'out' && !x.plan && x.a > 0) daily[x.d] = (daily[x.d] || 0) + x.a; });
-    const top = Object.entries(daily).sort((a, b) => b[1] - a[1])[0]; if (top) dot('#e5484d', 'Giorno più costoso: ' + new Date(top[0] + 'T12:00:00').toLocaleDateString('it-IT', {day:'numeric', month:'long'}) + ', ' + E(top[1]).replace(' EUR', ' €') + '. In media spendi ' + E(out / Math.max(1, nd)).replace(' EUR', ' €') + ' al giorno.'); }
-  const prevM = months.map(m => addMonths(m, mode === 'y' ? -12 : -1)), pOut = {}; let pTot = 0; prevM.forEach(ym => monthTx(ym).forEach(x => { if (x.t === 'out' && !x.plan) { pOut[x.c] = (pOut[x.c] || 0) + x.a; pTot += x.a; } }));
-  if (pTot > 0) { const ids = new Set(Object.keys(byCat).concat(Object.keys(pOut))), ch = [...ids].map(id => ({n:catOf('out', id).n, d:(byCat[id] || 0) - (pOut[id] || 0), p:pOut[id] || 0})).sort((a, b) => b.d - a.d), up = ch[0], dn = ch[ch.length - 1];
-    const pl = mode === 'y' ? 'agli stessi mesi del ' + (+curYM().slice(0, 4) - 1) : 'a ' + ymLabel(prevM[0], {month:'long'}), pc = q => q.p > 0 ? ' (' + (q.d > 0 ? '+' : '') + Math.round(q.d / q.p * 100) + '%)' : ' (nuova)';
-    const tch = Math.round((out / pTot - 1) * 100); dot(tch > 0 ? '#e5484d' : '#22A45D', 'Rispetto ' + pl + ' le spese sono ' + (tch > 0 ? 'cresciute del ' + tch + '%' : tch < 0 ? 'calate del ' + (-tch) + '%' : 'rimaste uguali') + '.');
-    if (up && up.d > 0) dot('#e5484d', 'Voce cresciuta di più: ' + up.n + ', +' + E(up.d).replace(' EUR', ' €') + pc(up) + '.');
-    if (dn && dn.d < 0) dot('#22A45D', 'Voce calata di più: ' + dn.n + ', -' + E(-dn.d).replace(' EUR', ' €') + pc(dn) + '.'); }
-  if (ins.length) { h1('La tua mini analisi'); doc.setFont('helvetica', 'normal'); doc.setFontSize(9.2);
-    ins.forEach(([c, t2]) => { const lines = doc.splitTextToSize(t2, Wd - 8); need(lines.length * 4.6 + 2); fill(c); doc.circle(M + 1.6, y - 1.2, 1.4, 'F'); txt('#262626', lines, M + 6, y); y += lines.length * 4.6 + 1.8; }); y += 2; line(); }
-  /* bilancio finanziario: quanto hai, quanto devi, quanto sei coperto */
+  if (C2 && inRows.length) { h1('Da dove arrivano i soldi'); hbars(inRows.slice(0, 8).map(([c, a]) => ({n:catOf('in', c).n, v:a, c:catColor('in', catOf('in', c)), p:P(a, inc)})));
+    const p1 = Math.round(inRows[0][1] / inc * 100); y += 2; para(catOf('in', inRows[0][0]).n + ' porta il ' + p1 + '% delle entrate' + (inRows.length > 1 ? ', su ' + inRows.length + ' fonti.' : ': è l\'unica fonte del periodo.'));
+    if (A3 && l6.length > 2) { const iv = l6.map(ym => stats(ym).inc), mI = iv.reduce((t, v) => t + v, 0) / iv.length, sdI = Math.sqrt(iv.reduce((t, v) => t + (v - mI) ** 2, 0) / iv.length); para('Negli ultimi ' + l6.length + ' mesi le entrate sono state in media ' + EU(mI) + ' al mese, con una variazione tipica di ' + EU(sdI) + ' (' + P(sdI, mI) + ').', '#555555', 8.6); }
+    try { if ((S.pays || []).length) { const exp = months.reduce((t, ym) => t + S.pays.reduce((t2, p) => t2 + payExp(p, ym).reduce((t3, e) => t3 + e.a, 0), 0), 0), got = L0.filter(x => x.t === 'in' && x.pay).reduce((t, x) => t + x.a, 0); if (exp > 0) para('Stipendio e pensione: previsti ' + EU(exp) + (got > 0 ? ', ricevuti ' + EU(got) + '.' : ', non ancora confermati.'), '#555555', 8.6); } } catch(e) {}
+    line(); }
+  /* ===== 8. analisi approfondita: come è fatta la spesa, quando si spende, tendenze ===== */
+  const say = [];
+  if (A3 && OUTX.length) { doc.addPage(); y = 18; doc.setFont('helvetica', 'bold'); doc.setFontSize(16); txt('#C98500', 'Analisi approfondita', M, y); y += 9;
+    h1('Come è fatta la spesa');
+    const fixed = OUTX.filter(x => x.rec).reduce((t, x) => t + x.a, 0), varb = out - fixed;
+    pieBlock('', [{n:'Spese fisse (ricorrenti)', v:fixed, c:'#3987e5'}, {n:'Spese variabili', v:Math.max(0, varb), c:'#C98500'}], [P(fixed, out), 'fisse']);
+    para('Spese fisse ' + EU(fixed) + ' (' + P(fixed, out) + '), variabili ' + EU(varb) + '. Il costo minimo della tua vita, cioè le spese essenziali medie, è di ' + EU(ess) + ' al mese.');
+    say.push('Le spese fisse sono il ' + P(fixed, out) + ' delle uscite: la parte che non cambia da sola di mese in mese.');
+    /* frequenza e scontrino medio */
+    const fq = {}; OUTX.forEach(x => { const g = fq[x.c] = fq[x.c] || {n:0, v:0}; g.n++; g.v += x.a; });
+    y += 1; h2('Quante volte e quanto ogni volta', 40);
+    hbars2(Object.entries(fq).sort((a, b) => b[1].n - a[1].n).slice(0, 10).map(([c, g]) => ({n:catOf('out', c).n, v:g.n, c:catColor('out', catOf('out', c)), r:g.n + (g.n === 1 ? ' volta' : ' volte') + ' · ' + (g.n / nWeeks >= 0.95 ? fmtN(g.n / nWeeks, 1) + ' a settimana' : fmtN(g.n / nWeeks * 4.33, 1) + ' al mese') + ' · media ' + EU(g.v / g.n)})), null, 72);
+    sub('Separa lo "spendo più spesso" dallo "spendo di più ogni volta".');
+    /* concentrazione e piccole spese */
+    let acc = 0, k80 = 0; for (const [, a] of rows) { acc += a; k80++; if (acc >= out * 0.8) break; }
+    const small = OUTX.filter(x => x.a < 10), smT = small.reduce((t, x) => t + x.a, 0);
+    bullets([['#C98500', k80 + (k80 === 1 ? ' voce fa' : ' voci fanno') + ' l\'80% delle uscite, su ' + rows.length + ' voci in tutto.'], ['#3987e5', small.length + ' spese sotto i 10 €, per un totale di ' + EU(smT) + ' (' + P(smT, out) + ' delle uscite).']]);
+    if (small.length >= 10) say.push(small.length + ' piccole spese sotto i 10 € hanno fatto ' + EU(smT) + ': una per una pesano poco, sommate si vedono.');
+    /* voci e negozi più frequenti, dalle note */
+    const nt = {}; OUTX.forEach(x => { const k = (x.n || '').trim().toLowerCase(); if (k.length > 2) { const g = nt[k] = nt[k] || {n:x.n.trim(), c:0, v:0}; g.c++; g.v += x.a; } });
+    const ntr = Object.values(nt).filter(g => g.c >= 2).sort((a, b) => b.c - a.c || b.v - a.v).slice(0, 6);
+    if (ntr.length) { y += 1; h2('Le voci che tornano più spesso', 20); table(['Voce (dalla nota)', 'Volte', 'Totale'], ntr.map(g => [g.n.slice(0, 40), g.c, EU(g.v)]), [110, 30, 42], ['left', 'right', 'right']); }
+    line();
+    /* quando si spende */
+    h1('Quando si spende');
+    const wd = [0, 0, 0, 0, 0, 0, 0], wn = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'], wc = [0, 0, 0, 0, 0, 0, 0]; OUTX.filter(x => !x.rec).forEach(x => { wd[(new Date(x.d + 'T12:00').getDay() + 6) % 7] += x.a; }); for (let t0 = new Date(d0P + 'T12:00'); t0 <= new Date(dEnd + 'T12:00'); t0.setDate(t0.getDate() + 1)) wc[(t0.getDay() + 6) % 7]++;
+    const wt = wd.reduce((t, v) => t + v, 0); if (wt > 0) { vbars(wn.map((d, i) => d + ' · ' + P(wd[i], wt)), [{n:'Spese variabili per giorno della settimana (sopra: media di quel giorno)', c:'#C98500', v:wd}], 26, wd.map((v, i) => [EU(wc[i] ? v / wc[i] : 0).replace(',00', ''), '#8a5a00']), 0);
+      const wk = wd[5] + wd[6]; para('Nel fine settimana (sabato e domenica) va il ' + P(wk, wt) + ' delle spese variabili, in 2 giorni su 7.'); }
+    /* effetto stipendio */
+    const pday = (S.pays || [])[0] && S.pays[0].day ? +S.pays[0].day : null;
+    if (pday && !isY) { const vv = OUTX.filter(x => !x.rec), first7 = vv.filter(x => { const d = +x.d.slice(8); return d >= pday && d < pday + 7; }).reduce((t, x) => t + x.a, 0), tv = vv.reduce((t, x) => t + x.a, 0);
+      if (tv > 0) para('Effetto stipendio: nei 7 giorni dopo l\'accredito (dal giorno ' + pday + ') è andato il ' + P(first7, tv) + ' delle spese variabili del mese.'); }
+    /* giorni senza spese */
+    { const days = [], d0 = L0.map(x => x.d).sort()[0] || today(); months.forEach(ym => { const [yy, mm] = ym.split('-').map(Number), nd = ym === curYM() ? new Date().getDate() : new Date(yy, mm, 0).getDate(); for (let d = 1; d <= nd; d++) { const k = ym + '-' + pad(d); if (k >= d0) days.push(k); } });
+      const spent = new Set(OUTX.filter(x => !x.rec).map(x => x.d)); let zero = 0, run = 0, best = 0; days.forEach(d => { if (spent.has(d)) run = 0; else { zero++; run++; best = Math.max(best, run); } });
+      para('Giorni senza spese variabili: ' + zero + ' su ' + days.length + '; la serie più lunga è di ' + best + (best === 1 ? ' giorno.' : ' giorni di fila.')); }
+    line();
+    /* tendenze */
+    h1('Tendenze');
+    const rAvg = n => { const ms = lastFull(n); const ii = ms.reduce((t, ym) => t + stats(ym).inc, 0), ss = ms.reduce((t, ym) => t + stats(ym).save, 0); return ii > 0 ? Math.round(ss / ii * 100) + '%' : '–'; };
+    table(['Tasso di risparmio medio', 'Ultimi 3 mesi', 'Ultimi 6 mesi', 'Ultimi 12 mesi'], [['', rAvg(3), rAvg(6), rAvg(12)]], [72, 36, 36, 38], ['left', 'right', 'right', 'right']);
+    const l12 = lastFull(12); if (l12.length >= 3) { const ov = l12.map(ym => stats(ym).out), mO = ov.reduce((t, v) => t + v, 0) / ov.length, sdO = Math.sqrt(ov.reduce((t, v) => t + (v - mO) ** 2, 0) / ov.length);
+      para('Le uscite oscillano in media di ' + EU(sdO) + ' da un mese all\'altro (' + P(sdO, mO) + ' della media di ' + EU(mO) + '): ' + (sdO / mO < 0.15 ? 'un andamento stabile.' : sdO / mO < 0.3 ? 'un andamento abbastanza variabile.' : 'un andamento molto variabile.')); }
+    if (l12.length >= 6) { const a = l12.slice(-3), b = l12.slice(-6, -3), avg = (ms, k) => ms.reduce((t, ym) => t + stats(ym)[k], 0) / ms.length, gi = avg(a, 'inc') / Math.max(1, avg(b, 'inc')) - 1, go = avg(a, 'out') / Math.max(1, avg(b, 'out')) - 1;
+      para('Ultimi 3 mesi rispetto ai 3 precedenti: entrate ' + (gi >= 0 ? '+' : '') + Math.round(gi * 100) + '%, uscite ' + (go >= 0 ? '+' : '') + Math.round(go * 100) + '%.' + (go > gi + 0.03 ? ' Le uscite crescono più delle entrate.' : gi > go + 0.03 ? ' Le entrate crescono più delle uscite.' : ''));
+      if (go > gi + 0.03) say.push('Negli ultimi 3 mesi le uscite sono cresciute più delle entrate (' + Math.round(go * 100) + '% contro ' + Math.round(gi * 100) + '%).'); }
+    if (sv > 0) para('Valore nel tempo: con un\'inflazione ipotetica del 2% all\'anno, i ' + EU(sv) + ' risparmiati nel periodo tra 10 anni comprerebbero quanto oggi ' + EU(sv / Math.pow(1.02, 10)) + ', se restassero fermi.', '#555555', 8.6);
+    /* anno: griglia mesi x categorie e record */
+    if (isY && per.length > 1) { y += 2; h2('Mesi e voci: dove si concentra la spesa', 60);
+      const tc = rows.slice(0, 8).map(r => r[0]), cw = (Wd - 40) / months.length, mxv = Math.max(1, ...per.flatMap(s2 => tc.map(c => s2.byCat[c] || 0)));
+      need(tc.length * 6 + 10); doc.setFontSize(6.6); months.forEach((ym, i) => txt('#888888', ML(ym), M + 40 + i * cw + cw / 2, y, {align:'center'})); y += 2;
+      tc.forEach(c => { doc.setFontSize(7.6); txt('#333333', catOf('out', c).n.slice(0, 20), M, y + 3.6); per.forEach((s2, i) => { const v = s2.byCat[c] || 0, f = v / mxv; doc.setFillColor(255, Math.round(248 - 120 * f), Math.round(225 - 210 * f)); doc.rect(M + 40 + i * cw + 0.3, y, cw - 0.6, 5, 'F'); }); y += 5.6; }); y += 3; sub('Più il colore è scuro, più si è speso in quella voce in quel mese.');
+      const valid = per.map((s2, i) => ({ym:months[i], s:s2})).filter(q => q.s.inc > 0 || q.s.out > 0);
+      if (valid.length > 1) { const bR = valid.filter(q => q.s.rate !== null).sort((a, b) => b.s.rate - a.s.rate)[0], lO = valid.slice().sort((a, b) => a.s.out - b.s.out)[0]; let run = 0, bestRun = 0; valid.forEach(q => { if (q.s.save > 0) { run++; bestRun = Math.max(bestRun, run); } else run = 0; });
+        bullets([bR ? ['#22A45D', 'Record di risparmio: ' + MON(bR.ym) + ', ' + Math.round(bR.s.rate) + '% delle entrate.'] : null, ['#3987e5', 'Mese con meno uscite: ' + MON(lO.ym) + ', ' + EU(lO.s.out) + '.'], ['#C98500', 'Mesi positivi di fila (risparmio sopra zero): al massimo ' + bestRun + '.']].filter(Boolean)); } }
+    line(); }
+  /* ===== 9. bilancio, pilastri, patrimonio, obiettivi, debiti ===== */
   h1('Il tuo bilancio finanziario');
-  const totPil = PILLARS.reduce((t, q) => t + pilBalance(q.id), 0), debt = (S.debts || []).reduce((t, d) => t + (debtInfo(d).pv || 0), 0), ess = avgEssential(), emo = ess > 0 ? pilBalance('emerg') / ess : null, wb = typeof wbIndex === 'function' ? wbIndex() : null;
-  kv('Patrimonio nei 4 pilastri', E(totPil)); if (debt > 0) kv('Debiti e finanziamenti da restituire', '-' + E(debt)); kv('Patrimonio netto', E(totPil - debt), true);
-  if (emo !== null) { need(7); kv('Il fondo di emergenza copre', emo.toFixed(1).replace('.', ',') + ' mesi di spese essenziali'); doc.setFontSize(7.8); txt(emo >= S.emergMonths ? '#0ca30c' : emo >= 3 ? '#e3a008' : '#e5484d', emo >= S.emergMonths ? 'In linea con il tuo obiettivo di ' + fmtMo(S.emergMonths) + '.' : 'Il tuo obiettivo è di ' + fmtMo(S.emergMonths) + ': mancano ' + E(Math.max(0, ess * S.emergMonths - pilBalance('emerg'))).replace(' EUR', ' €') + '.', M, y - 1.5); y += 3.5; }
-  if (rate !== null) kv('Tasso di risparmio del periodo', Math.round(rate) + '% (' + bd.l.toLowerCase() + ')');
-  if (wb && wb.score != null) { const wbb = wbBand(wb.score); need(8); kv('Indice di benessere finanziario', wb.score + '/100 · ' + wbb[1]); }
+  const debt = debts.reduce((t, d) => t + (debtInfo(d).pv || 0), 0);
+  kv('Patrimonio nei 4 pilastri', E(totPil)); { const pAt = ym => PILLARS.reduce((t2, q) => t2 + pilBalanceAt(q.id, ym), 0), base = pAt(addMonths(months[0], -1)), dP = totPil - base; kv(isY ? 'Variazione nell\'anno' : 'Variazione nel mese', (dP >= 0 ? '+' : '-') + E(Math.abs(dP))); } if (debt > 0) kv('Debiti e finanziamenti da restituire', '-' + E(debt)); kv('Patrimonio netto', E(totPil - debt), true);
+  if (autonomy !== null) kv('Mesi di autonomia (conto + fondo di emergenza)', fmtN(autonomy, 1) + ' mesi');
+  if (A3 && aOut > 0) kv('Mesi di spese coperti dal patrimonio', fmtN(totPil / aOut, 1) + ' mesi');
   y += 1; line();
-  /* pilastri: barra unica divisa per colore */
   need(55); h1('I 4 pilastri'); const pv = PILLARS.map(p => ({p, v:pilBalance(p.id)})), pt = pv.reduce((t, x) => t + Math.max(0, x.v), 0);
-  if (pt > 0) pieBlock('', pv.map(({p, v}) => ({n:p.n, v:Math.max(0, v), c:p.c})), [EU(pt).replace(/,\d\d €/, ' €'), 'totale']);
-  else pv.forEach(({p, v}) => kv(p.n, E(v)));
-  const pilAt = ym => PILLARS.reduce((t2, q) => t2 + pilBalanceAt(q.id, ym), 0), yr = curYM().slice(0, 4);
-  const firstYM = [...S.tx.filter(x => !x.imp).map(x => ymOf(x.d)), ...(S.moves || []).map(m => ymOf(m.d)), ...Object.values(S.hist || {}).flat().map(a => a.ym), ymOf(pilFrom())].filter(Boolean).sort()[0] || curYM();
-  const rng = (a, b) => { const o2 = []; for (let m2 = a; m2 <= b; m2 = addMonths(m2, 1)) o2.push(m2); return o2; };
-  const yPts = rng(yr + '-01' < firstYM ? firstYM : yr + '-01', curYM()).map(ym => ({ym, v:pilAt(ym)}));
-  let allM = rng(firstYM, curYM()); if (allM.length > 48) { const st = Math.ceil(allM.length / 48); allM = allM.filter((m2, i) => i % st === 0 || i === allM.length - 1); }
-  y += 2; lineChart('Patrimonio nel ' + yr, yPts.length > 1 ? yPts : [{ym:addMonths(curYM(), -1), v:pilAt(addMonths(curYM(), -1))}, {ym:curYM(), v:pilAt(curYM())}]);
-  if (allM.length > yPts.length) lineChart('Patrimonio da sempre', allM.map(ym => ({ym, v:pilAt(ym)})), 'Dal ' + ymLabel(firstYM, {month:'long', year:'numeric'}) + ': i saldi a fine mese di tutti e 4 i pilastri.');
-  else { doc.setFontSize(7.5); txt('#888888', 'Lo storico parte da ' + ymLabel(firstYM, {month:'long', year:'numeric'}) + ': con il passare dei mesi qui comparirà anche la linea "da sempre".', M, y); y += 5; }
+  if (pt > 0) pieBlock('', pv.map(({p, v}) => ({n:p.n, v:Math.max(0, v), c:p.c})), [EU(pt).replace(/,\d\d €/, ' €'), 'totale']); else pv.forEach(({p, v}) => kv(p.n, E(v)));
+  if (A3) { const T = targets(), ln = [['Liquidità', pilBalance('liq'), T.liq], ['Fondo di emergenza', pilBalance('emerg'), T.emerg]].map(([n, v, t]) => [n, EU(v), t ? EU(t) : '–', t ? {t:v >= t ? 'completo' : P(v, t), c:v >= t ? '#0ca30c' : '#C98500'} : '–']);
+    table(['Pilastro', 'Oggi', 'Obiettivo scelto', 'Stato'], ln, [70, 36, 40, 36], ['left', 'right', 'right', 'right']); sub('I pilastri si riempiono in ordine: prima la liquidità, poi il fondo di emergenza, poi obiettivi e investimenti.'); }
+  if (C2) { const pilAt = ym => PILLARS.reduce((t2, q) => t2 + pilBalanceAt(q.id, ym), 0), yr = curYM().slice(0, 4);
+    const firstYM = [...S.tx.filter(x => !x.imp).map(x => ymOf(x.d)), ...(S.moves || []).map(m => ymOf(m.d)), ...Object.values(S.hist || {}).flat().map(a => a.ym), ymOf(pilFrom())].filter(Boolean).sort()[0] || curYM();
+    const rng = (a, b) => { const o2 = []; for (let m2 = a; m2 <= b; m2 = addMonths(m2, 1)) o2.push(m2); return o2; };
+    const yPts = rng(yr + '-01' < firstYM ? firstYM : yr + '-01', curYM()).map(ym => ({ym, v:pilAt(ym)}));
+    const yPts2 = yPts.length > 1 ? yPts : [{ym:addMonths(curYM(), -1), v:pilAt(addMonths(curYM(), -1))}, {ym:curYM(), v:pilAt(curYM())}];
+    const mPts = rng(addMonths(curYM(), -5) < firstYM ? firstYM : addMonths(curYM(), -5), curYM()).map(ym => ({ym, v:pilAt(ym)}));
+    y += 2; lineChart(isY ? 'Patrimonio nel ' + yr : 'Patrimonio negli ultimi mesi', isY || mPts.length < 2 ? yPts2 : mPts);
+    let allM = rng(firstYM, curYM()); if (allM.length > 48) { const st = Math.ceil(allM.length / 48); allM = allM.filter((m2, i) => i % st === 0 || i === allM.length - 1); }
+    if (allM.length > 1) lineChart('Patrimonio da sempre', allM.map(ym => ({ym, v:pilAt(ym)})), 'Dal ' + ymLabel(firstYM, {month:'long', year:'numeric'}) + ': i saldi a fine mese di tutti e 4 i pilastri.'); }
   line();
-  if (S.goals.length) { h1('Obiettivi'); S.goals.forEach(g => { const pl = goalPlan(g), pc = Math.max(0, Math.min(100, pl.pct)); need(14);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); txt('#282828', g.name + ' (entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + ')', M, y); txt('#282828', E(goalSaved(g)) + ' di ' + E(goalTarget(g)), 210 - M, y, {align:'right'}); y += 2.5;
-      doc.setFillColor(235, 235, 232); doc.roundedRect(M, y, Wd, 3.5, 1.5, 1.5, 'F'); bar(M, y, Wd * pc / 100, 3.5, VAR[goalStatus(g).c] || goalStatus(g).c || '#199e70'); doc.setFontSize(7.5); txt('#666666', Math.round(pl.pct) + '%', 210 - M, y + 7.5, {align:'right'}); y += 11; }); line(); }
-  if ((S.debts || []).length) { h1('Finanziamenti'); S.debts.forEach(d => { const c = debtInfo(d); kv((d.n || 'Finanziamento') + ' (TAEG ' + d.taeg + '%)', 'residuo ' + E(c.pv) + ' · ' + c.left + ' rate · interessi e costi ' + E(c.int)); }); line(); }
-  if (withTx) { h1('Movimenti'); doc.setFontSize(8.5); }
-  if (withTx) months.slice().reverse().forEach(ym => monthTx(ym).filter(x => !x.plan).forEach(x => { need(6); doc.setFont('helvetica', 'normal'); doc.setTextColor(60); doc.text(x.d.split('-').reverse().join('/'), M, y); doc.text((catOf(x.t, x.c).n + (x.s ? ' - ' + x.s : '') + (x.n ? ' - ' + x.n : '')).slice(0, 70), M + 22, y); const pos = x.t === 'in' || x.a < 0; doc.setTextColor(pos ? 20 : 120, pos ? 140 : 80, pos ? 70 : 0); doc.text((pos ? '+' : '-') + E(Math.abs(x.a)), 210 - M, y, {align:'right'}); y += 5; }));
-  need(14); y += 6; doc.setFontSize(8); doc.setTextColor(120); doc.text('Documento generato dall\'app per uso personale. Le informazioni non costituiscono consulenza finanziaria.', M, y);
-  try { await downloads.save({filename:'buddy4free-resoconto-' + (mode === 'y' ? curYM().slice(0, 4) : curYM()) + '.pdf', data:doc.output('blob')}); toast('PDF salvato'); } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare il PDF'); }
+  if (S.goals.length) { h1('Obiettivi'); S.goals.forEach(g => { const pl = goalPlan(g), pc = Math.max(0, Math.min(100, pl.pct)); need(16);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); txt('#282828', g.name + ' (entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + ')', M, y); txt('#282828', EU(goalSaved(g)) + ' di ' + EU(goalTarget(g)), 210 - M, y, {align:'right'}); y += 2.5;
+      doc.setFillColor(235, 235, 232); doc.roundedRect(M, y, Wd, 3.5, 1.5, 1.5, 'F'); bar(M, y, Wd * pc / 100, 3.5, VAR[goalStatus(g).c] || goalStatus(g).c || '#199e70'); y += 7.5;
+      if (C2 && pl.left > 0) { doc.setFontSize(8.2); const eta = avgSave6 > 0 ? addMonths(curYM(), Math.ceil(pl.left / avgSave6)) : null;
+        const gl2 = doc.splitTextToSize('Per la scadenza servirebbero ' + EU(pl.need) + ' al mese' + (eta ? '; con tutto il risparmio medio degli ultimi mesi (' + EU(avgSave6) + ') si arriverebbe a ' + MON(eta) + (eta > g.date ? ', dopo la scadenza.' : ', prima della scadenza.') : '.'), Wd); need(gl2.length * 4 + 2); txt('#666666', gl2, M, y); y += gl2.length * 4 + 2; } }); line(); }
+  if (debts.length) { h1('Finanziamenti'); debts.forEach(d => { const c = debtInfo(d); kv((d.n || 'Finanziamento') + ' (TAEG ' + d.taeg + '%)', 'residuo ' + EU(c.pv) + ' · ' + c.left + ' rate'); if (C2) { doc.setFontSize(8.2); const dl2 = doc.splitTextToSize('Rata ' + EU(d.rata) + ' · interessi e costi ancora da pagare ' + EU(c.int) + ' · ultima rata ' + MON(c.end) + '.', Wd); txt('#666666', dl2, M, y); y += dl2.length * 4 + 2; } }); line(); }
+  /* ===== 10. sguardo avanti e proiezioni (sempre dichiarate come previsioni) ===== */
+  if (C2) { h1('Uno sguardo avanti'); sub('Previsioni basate sui movimenti programmati e sul ritmo degli ultimi mesi: non sono dati reali.');
+    const nx = addMonths(curYM(), 1), nxOut = monthTx(nx).filter(x => x.t === 'out').reduce((t, x) => t + x.a, 0), nxDues = (S.dues || []).filter(d => ymOf(d.date) === nx);
+    const bl = []; if (nxOut > 0) bl.push(['#C98500', ymLabel(nx, {month:'long'}) + ': ' + EU(nxOut) + ' di uscite già programmate (ricorrenti e scadenze).']);
+    nxDues.forEach(d => bl.push(['#e5484d', 'Scadenza: ' + d.n + ', ' + EU(d.a) + ' il ' + dshort(d.date) + '.']));
+    try { const px = (S.pays || []).reduce((t, p) => t + payExp(p, nx).reduce((t2, e) => t2 + e.a, 0), 0); if (px > 0) bl.push(['#22A45D', 'Stipendio e pensione previsti a ' + ymLabel(nx, {month:'long'}) + ': ' + EU(px) + '.']); } catch(e) {}
+    if (avgSave6 !== 0) { const left = 12 - +curYM().slice(5); bl.push([avgSave6 > 0 ? '#22A45D' : '#e5484d', 'Al ritmo degli ultimi mesi (' + EU(avgSave6) + ' di risparmio medio al mese), a fine anno il patrimonio sarebbe di circa ' + EU(totPil + avgSave6 * left) + '.']); }
+    if (bl.length) bullets(bl);
+    if (A3 && aOut > 0) { y += 1; h2('Patrimonio tra 12 mesi: alcuni scenari dai tuoi dati', 60);
+      /* scenari concreti, dai tuoi dati: sempre descritti, mai consigliati */
+      const perM = nDays / 30.44, mA = c => isY ? (byCat[c] || 0) / Math.max(1, months.length) : (avgCat3[c] || byCat[c] || 0), sc = [['Al ritmo attuale', avgSave6, '#3987e5', 'Il risparmio medio degli ultimi mesi, ' + EU(avgSave6) + ' al mese.']];
+      const fq2 = {}; OUTX.forEach(x => { fq2[x.c] = (fq2[x.c] || 0) + 1; }); const topF = Object.entries(fq2).filter(([c]) => catOf('out', c).disc || !OUTX.some(x => x.c === c && x.rec)).sort((a, b) => b[1] - a[1])[0];
+      if (topF) { const g = mA(topF[0]) * 0.3; if (g > 1) sc.push([catOf('out', topF[0]).n + ' -30%', avgSave6 + g, '#22A45D', catOf('out', topF[0]).n + ' è la voce più frequente (' + topF[1] + ' volte nel periodo): con il 30% in meno, ' + EU(g) + ' al mese restano disponibili.']); }
+      const wdS = [0, 0, 0, 0, 0, 0, 0]; OUTX.filter(x => !x.rec).forEach(x => { wdS[(new Date(x.d + 'T12:00').getDay() + 6) % 7] += x.a; }); const wi = wdS.indexOf(Math.max(...wdS)), wNm = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'][wi];
+      if (wdS[wi] > 0) { const g = wdS[wi] / perM * 0.25; if (g > 1) sc.push(['Il ' + wNm + ' -25%', avgSave6 + g, '#0e9aa7', 'Il ' + wNm + ' è il giorno in cui si spende di più: con un quarto in meno, ' + EU(g) + ' al mese restano disponibili.']); }
+      const smM = OUTX.filter(x => x.a < 10).reduce((t, x) => t + x.a, 0) / perM * 0.5; if (smM > 1) sc.push(['Piccole spese a metà', avgSave6 + smM, '#C98500', 'Le spese sotto i 10 € valgono ' + EU(smM * 2) + ' al mese: con la metà, ' + EU(smM) + ' al mese restano disponibili.']);
+      const fun = rows.filter(([c]) => /svago|tempo libero|formaz|istruz|corsi|libri|viagg|vacanz|cultur|hobby|sport/i.test(catOf('out', c).n)), funV = fun.reduce((t, r) => t + r[1], 0);
+      sc.push(['Con 50 € al mese per te', avgSave6 - 50, '#8b5cf6', (fun.length ? fun.map(r => catOf('out', r[0]).n).join(', ') + ' pesano il ' + P(funV, out) + ' delle uscite. ' : 'Svago, formazione e viaggi quasi non compaiono nelle uscite. ') + 'Con 50 € al mese dedicati a queste voci il patrimonio crescerebbe comunque: anche il tempo per sé fa parte di un equilibrio che dura.']);
+      hbars2(sc.map(([n, m, c], k) => ({n, v:Math.max(0, totPil + m * 12), m:totPil, c, r:EU(totPil + m * 12) + (k ? ' (' + (m - avgSave6 >= 0 ? '+' : '-') + EU(Math.abs(m - avgSave6) * 12).replace(/,\d\d/, '') + ')' : ''), b:k === 0, rc:k ? (m - avgSave6 >= 0 ? '#15803d' : '#8b5cf6') : '#222222'})), null, 62);
+      sub('Segno nero: il patrimonio di oggi (' + EU(totPil) + '). A destra il patrimonio tra 12 mesi in ogni scenario.');
+      bullets(sc.slice(1).map(q => [q[2], q[3]]));
+      if (avgSave6 > 0) { const fv = (m, n, r) => r ? m * ((Math.pow(1 + r / 12, n * 12) - 1) / (r / 12)) : m * n * 12;
+        h2('L\'effetto del tempo', 26);
+        lines2([{n:'Senza rendimento', c:'#9a9a9a', v:Array.from({length:21}, (_, k) => fv(avgSave6, k, 0))}, {n:'Con un rendimento ipotetico del 4%', c:'#22A45D', v:Array.from({length:21}, (_, k) => fv(avgSave6, k, 0.04))}], 21, k => k + ' a', 34);
+        table(['Mettendo da parte ' + EU(avgSave6) + ' al mese per', '5 anni', '10 anni', '20 anni'], [['Senza rendimento', EU(fv(avgSave6, 5, 0)), EU(fv(avgSave6, 10, 0)), EU(fv(avgSave6, 20, 0))], ['Con un rendimento ipotetico del 4%', EU(fv(avgSave6, 5, 0.04)), EU(fv(avgSave6, 10, 0.04)), EU(fv(avgSave6, 20, 0.04))]], [72, 36, 36, 38], ['left', 'right', 'right', 'right']);
+        sub('Esempio educativo con ipotesi dichiarate, come nel simulatore: i rendimenti reali non sono garantiti e possono essere negativi.');
+        say.push('Al ritmo attuale, in 10 anni si metterebbero da parte ' + EU(fv(avgSave6, 10, 0)) + ', prima di qualsiasi rendimento.'); } }
+    line(); }
+  /* ===== 11. quanto lavoro costa, palestra, benessere ===== */
+  if (A3) { const hourly = (S.pays || []).reduce((t, p) => t + (+p.net || 0) * ((+p.mens || 12) / 12), 0) / 160;
+    if (hourly > 0 && rows.length) { h1('Quanto lavoro costa'); sub('Le uscite convertite in ore di lavoro, partendo dallo stipendio netto inserito (circa 160 ore al mese).');
+      table(['Voce', 'Spesa', 'Ore di lavoro'], rows.slice(0, 8).map(([c, a]) => [catOf('out', c).n.slice(0, 30), EU(a), fmtN(a / hourly, 1) + ' ore']), [90, 46, 46], ['left', 'right', 'right']);
+      say.push('Le uscite del periodo valgono circa ' + Math.round(out / hourly) + ' ore di lavoro.'); line(); }
+    const gl = S.gym && S.gym.log || [], found = Array.isArray(gl) ? gl.reduce((t, e) => t + (e.found || 0), 0) : 0, mDone = ((S.mis || {}).done || []).length;
+    if (gl.length || mDone) { h1('Palestra e missioni'); bullets([['#C98500', 'Tappe della palestra completate: ' + (Array.isArray(gl) ? gl.length : Object.keys(gl).length) + ' su 21' + (found > 0 ? '; risparmi trovati: ' + EU(found) + ' all\'anno.' : '.')], ['#3987e5', 'Missioni completate: ' + mDone + '.']]); }
+    const W2 = S.well || {}, sd = Object.keys(W2).filter(d => W2[d] && W2[d].steps > 0 && months.includes(ymOf(d)));
+    if (sd.length >= 10) { const med = sd.map(d => W2[d].steps).sort((a, b) => a - b)[Math.floor(sd.length / 2)], outDay = d => OUTX.filter(x => x.d === d && catOf('out', x.c).disc).reduce((t, x) => t + x.a, 0);
+      const hi = sd.filter(d => W2[d].steps >= med), lo = sd.filter(d => W2[d].steps < med), av = L => L.length ? L.reduce((t, d) => t + outDay(d), 0) / L.length : 0;
+      h1('Passi e spese: una curiosità'); para('Nei giorni con più passi (almeno ' + fmtN(med) + ') le spese non essenziali sono state in media ' + EU(av(hi)) + ' al giorno; negli altri giorni ' + EU(av(lo)) + '. È solo un confronto tra i tuoi dati, non un rapporto di causa.'); }
+    line(); }
+  /* ===== 12. cosa dicono i numeri, note ===== */
+  if (A3) { const all = keyPts.map(k => k[1]).concat(say).slice(0, 7); if (all.length) { need(40); h1('Cosa dicono i numeri'); const cols = ['#C98500', '#3987e5', '#22A45D', '#e5484d', '#8b5cf6', '#0e9aa7', '#C98500'];
+      all.forEach((t2, k) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(9.6); const L = doc.splitTextToSize(t2, Wd - 22), hh = Math.max(13, L.length * 4.8 + 7); need(hh + 3);
+        doc.setFillColor(247, 246, 241); doc.roundedRect(M, y, Wd, hh, 3, 3, 'F'); fill(cols[k % cols.length]); doc.rect(M, y, 1.8, hh, 'F'); doc.circle(M + 9, y + hh / 2, 4.2, 'F');
+        doc.setFontSize(10); txt('#ffffff', String(k + 1), M + 9, y + hh / 2 + 1.3, {align:'center'}); doc.setFontSize(9.6); txt('#1f1f1f', L, M + 17, y + (hh - L.length * 4.8) / 2 + 3.6); y += hh + 3; }); doc.setFont('helvetica', 'normal'); y += 2; }
+    need(60); h1('Le tue note per il prossimo periodo'); doc.setDrawColor(210); for (let i = 0; i < 7; i++) { doc.line(M, y + 2, M + Wd, y + 2); y += 8; } y += 2; }
+  need(14); y += 4; doc.setFontSize(8); doc.setTextColor(120); doc.text('Documento generato dall\'app per uso personale. Descrive i tuoi dati: non è una consulenza finanziaria.', M, y);
+  if (CHI >= 0) CH[CHI].end = {p:doc.getNumberOfPages(), y};
+  return {doc, CH}; };
+  /* impaginazione: si misura l'altezza di ogni capitolo, poi un capitolo va a pagina nuova solo se non entra nello spazio che resta */
+  let HT = {}, R0 = build(HT);
+  for (let pass = 0; pass < 4; pass++) { const N = {}; R0.CH.forEach((c, i) => { if (c && c.end) N[i] = Math.round((c.end.p - c.p) * 267 + c.end.y - c.y); }); if (JSON.stringify(N) === JSON.stringify(HT)) break; HT = N; R0 = build(HT); }
+  const doc = R0.doc, LV = {s:1, c:2, a:3}[level] || 2, isY = mode === 'y';
+  { const np = doc.getNumberOfPages(); for (let i = 1; i <= np; i++) { doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(150); doc.text('Buddy4Free Risparmio · ' + ({1:'Sintetico', 2:'Completo', 3:'Approfondito'})[LV] + ' · pagina ' + i + ' di ' + np, 105, 292, {align:'center'}); } }
+  try { await downloads.save({filename:'buddy4free-resoconto-' + (isY ? curYM().slice(0, 4) : curYM()) + '-' + ({1:'sintetico', 2:'completo', 3:'approfondito'})[LV] + '.pdf', data:doc.output('blob')}); toast('PDF salvato'); } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare il PDF'); }
 }
 /* ---------- cifratura: backup protetti da password (AES-GCM a 256 bit, chiave da PBKDF2-SHA256) ---------- */
 const b64e = u8 => { let s2 = ''; for (let i = 0; i < u8.length; i += 0x8000) s2 += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s2); };
@@ -4993,8 +5172,9 @@ function renderSettings(){
   const sd = view.querySelector('#s-report'); if (sd) sd.onclick = () => { try { diagPop(); } catch(e) { toast('Segnala un problema non si apre: ' + (e && e.message)); try { localStorage.setItem('b4f-lasterr', JSON.stringify({m:'diag: ' + (e && e.message), s:String(e && e.stack).slice(0, 800), t:new Date().toISOString()})); } catch(x) {} } };
   bindRem(renderSettings);
   const c = view.querySelector('#s-csv'); if (c) c.onclick = exportCSV;
-  view.querySelectorAll('[data-pdf]').forEach(b => b.onclick = () => catPop('<b style="font-size:1.1rem">Resoconto PDF ' + (b.dataset.pdf === 'y' ? 'dell\'anno' : 'del mese') + '</b><p class="small muted" style="margin:0">Riepilogo, grafici, categorie, pilastri e obiettivi.</p><div class="actopts"><button class="actopt" data-pk="0"><b>Solo sintesi e grafici</b><span>Poche pagine, da leggere o condividere</span></button><button class="actopt" data-pk="1"><b>Sintesi + elenco di tutti i movimenti</b><span>Più lungo: utile come archivio</span></button></div><button class="textlink" data-x style="align-self:flex-start">Annulla</button>', (o, close) => {
-    o.querySelectorAll('[data-pk]').forEach(x => x.onclick = () => { close(); exportPDF(b.dataset.pdf, x.dataset.pk === '1'); }); }));
+  view.querySelectorAll('[data-pdf]').forEach(b => b.onclick = () => catPop('<b style="font-size:1.1rem">Resoconto PDF ' + (b.dataset.pdf === 'y' ? 'dell\'anno' : 'del mese') + '</b><p class="small muted" style="margin:0">Analisi e considerazioni sui tuoi dati. I singoli movimenti restano nell\'app.</p><div class="actopts">' +
+      [['s', 'Sintetico', 'Pagella, capacità di risparmio, dove vanno i soldi, pilastri e obiettivi · 2 pagine'], ['c', 'Completo', 'In più confronti con te stesso, andamento, spese più grandi, ricorrenti, entrate e uno sguardo avanti'], ['a', 'Approfondito', 'Tutto, più abitudini di spesa, tendenze, scenari, quanto lavoro costa e cosa dicono i numeri']].map(o => '<button class="actopt" data-pk="' + o[0] + '"><b>' + o[1] + '</b><span>' + o[2] + '</span></button>').join('') + '</div><button class="textlink" data-x style="align-self:flex-start">Annulla</button>', (o, close) => {
+    o.querySelectorAll('[data-pk]').forEach(x => x.onclick = () => { close(); exportPDF(b.dataset.pdf, x.dataset.pk); }); }));
   const bk = view.querySelector('#s-bk'); if (bk) bk.onclick = exportBackup; lockCard();
   (view.querySelector('#s-rs') || {}).onchange = e => { const f = e.target.files[0]; if (f) importBackup(f); };
   (view.querySelector('#s-snd') || {}).onchange = e => { S.sound = e.target.checked; save(); };

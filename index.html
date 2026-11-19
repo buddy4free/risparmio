@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611191136">
+<meta name="b4f-build" content="202611191247">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-fPLcyR7v29+1xZN4bIEZ5cURlfEpO+r0s4J3UrtvVJs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-q4O8wx3cqDe9DIyJ4A/upmOrm8/srW1YZ/8V7d/v/DY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -4976,7 +4976,7 @@ function renderSettings(){
       '<button class="item" ' + nav$({screen:'terms'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Termini e condizioni</b><span class="sub">Versione ' + TERMS_V + (S.termsAt ? ', accettata il ' + dshort(S.termsAt) : '') + '</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'privacy'}) + '><span class="ic">' + ic('shield') + '</span><span class="t"><b>Informativa sulla privacy</b><span class="sub">I tuoi dati restano sul tuo dispositivo</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'howto'}) + '><span class="ic">' + ic('book') + '</span><span class="t"><b>Guida</b><span class="sub">Il metodo, le schermate e tutte le funzioni</span></span>' + ic('right') + '</button>' +
-      '<button class="item" id="s-tips"><span class="ic">' + ic('sparkle') + '</span><span class="t"><b>Rivedi i suggerimenti a fumetto</b><span class="sub">I fumetti che spiegano i pulsanti principali, uno alla volta</span></span>' + ic('right') + '</button>' +
+      '<button class="item" id="s-guida"><span class="ic">' + ic('sparkle') + '</span><span class="t"><b>Rivedi i suggerimenti a fumetto</b><span class="sub">I fumetti che spiegano i pulsanti principali, uno alla volta</span></span>' + ic('right') + '</button>' +
       '<button class="item" id="s-report"><span class="ic">' + ic('shield') + '</span><span class="t"><b>Segnala un problema</b><span class="sub">Dettagli tecnici da mandare a Buddy4Free, senza i tuoi dati · versione ' + esc((document.querySelector('meta[name="b4f-build"]') || {}).content || 'anteprima') + '</span></span>' + ic('right') + '</button>' +
       '<button class="item" ' + nav$({screen:'legend'}) + '><span class="ic">' + ic('book') + '</span><span class="t"><b>Legenda</b><span class="sub">Cosa significano colori, pilastri e voci dell\'app</span></span>' + ic('right') + '</button>' +
       '<button class="item" data-ask="demo"><span class="ic">' + ic('star') + '</span><span class="t"><b>Carica il conto di esempio</b><span class="sub">Tre mesi di movimenti per provare l\'app</span></span>' + ic('right') + '</button>' +
@@ -4986,7 +4986,7 @@ function renderSettings(){
     '<div class="sec"><span class="label">Suono</span><label class="check"><input type="checkbox" id="s-snd"' + (S.sound ? ' checked' : '') + '> Suoni nella respirazione guidata</label></div>' +
     '<p class="small muted">Sincronizzazione: se usi l\'app con il tuo account Claude, i dati si salvano nel tuo account e li ritrovi su telefono e computer. In più puoi fare un backup su file quando vuoi. I dati restano nel tuo account e su questo dispositivo. Le informazioni su risparmio e investimenti sono educative e non sono una consulenza finanziaria.</p></div>';
   /* "Segnala un problema" si collega per primo: deve funzionare anche se qualcos'altro qui sotto va storto */
-  const stp = view.querySelector('#s-tips'); if (stp) stp.onclick = () => { try { localStorage.setItem('b4f-guida', '1'); localStorage.removeItem('b4f-tips'); } catch(e) {} toast('Fatto: i fumetti ricompaiono da adesso'); nav({screen:'home'}); };
+  const stp = view.querySelector('#s-guida'); if (stp) stp.onclick = () => { try { localStorage.setItem('b4f-guida', '1'); localStorage.removeItem('b4f-tips'); } catch(e) {} toast('Fatto: i fumetti ricompaiono da adesso'); nav({screen:'home'}); };
   const sd = view.querySelector('#s-report'); if (sd) sd.onclick = () => { try { diagPop(); } catch(e) { toast('Segnala un problema non si apre: ' + (e && e.message)); try { localStorage.setItem('b4f-lasterr', JSON.stringify({m:'diag: ' + (e && e.message), s:String(e && e.stack).slice(0, 800), t:new Date().toISOString()})); } catch(x) {} } };
   bindRem(renderSettings);
   const c = view.querySelector('#s-csv'); if (c) c.onclick = exportCSV;

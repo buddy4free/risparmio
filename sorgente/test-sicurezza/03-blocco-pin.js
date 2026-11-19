@@ -6,7 +6,7 @@ const {OUT, ok, fine, apri, demo, fs} = require('./comune');
   const locked = () => p.evaluate(() => !!document.getElementById('lock'));
   const reopen = async (agoMin) => { await p.addInitScript(m => { if (m != null && !sessionStorage['r' + m]) { sessionStorage['r' + m] = 1; localStorage.setItem('b4f-lock-seen', String(Date.now() - m * 60000)); } }, agoMin); await p.reload(); await p.waitForTimeout(900); };
   const type = async pin => { for (const k of pin) await p.click('[data-k="' + k + '"]'); await p.waitForTimeout(450); };
-  await p.evaluate(() => nav({screen:'settings'})); await p.waitForTimeout(400);
+  await p.evaluate(() => nav({screen:'settings', sec:'sicurezza'})); await p.waitForTimeout(400);
   await p.click('#lk-on'); await p.fill('#pn1', '2580'); await p.fill('#pn2', '2580'); await p.click('#pn-ok'); await p.waitForTimeout(700);
   ok('PIN salvato solo come impronta (hash)', await p.evaluate(() => S.lock.on && S.lock.hash && !JSON.stringify(S).includes('"2580"')));
   // tempo "Richiedi dopo"
@@ -31,10 +31,10 @@ const {OUT, ok, fine, apri, demo, fs} = require('./comune');
   await p.evaluate(() => localStorage.removeItem('b4f-lock-fails')); await reopen(0); await type('2580'); ok('sblocco dopo l\'attesa', !(await locked()));
   // backup con un altro PIN
   const evil = await p.evaluate(() => { const d = JSON.parse(JSON.stringify(S)); d.lock = {on:true, len:4, salt:'AAAAAAAAAAAAAAAAAAAAAA==', hash:'xxxx', after:0}; return JSON.stringify(d); }); fs.writeFileSync(OUT + 'evil-lock.json', evil);
-  await p.evaluate(() => nav({screen:'settings'})); await p.waitForTimeout(300); await p.setInputFiles('#s-rs', OUT + 'evil-lock.json'); await p.waitForTimeout(400); await p.click('#rb-yes'); await p.waitForTimeout(400);
+  await p.evaluate(() => nav({screen:'settings', sec:'sicurezza'})); await p.waitForTimeout(300); await p.setInputFiles('#s-rs', OUT + 'evil-lock.json'); await p.waitForTimeout(400); await p.click('#rb-yes'); await p.waitForTimeout(400);
   ok('un backup non sostituisce il PIN del telefono', await p.evaluate(() => S.lock.hash !== 'xxxx' && S.lock.on));
   // impronta
-  await p.evaluate(() => nav({screen:'settings'})); await p.waitForTimeout(400); await p.check('#lk-bio'); await p.waitForTimeout(1200);
+  await p.evaluate(() => nav({screen:'settings', sec:'sicurezza'})); await p.waitForTimeout(400); await p.check('#lk-bio'); await p.waitForTimeout(1200);
   ok('impronta attivata', await p.evaluate(() => !!S.lock.bio));
   await reopen(0); await p.waitForTimeout(1500); ok('impronta sblocca', !(await locked()));
   ok('nessun codice eseguito o iniettato', !hits.length, hits.join(' | '));

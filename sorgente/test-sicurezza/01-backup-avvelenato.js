@@ -11,11 +11,11 @@ const SEL = '#view button:not(.danger), #view [data-nav], #view .chip, #view [da
       if (typeof o === 'number' && V === 'B' && ['a', 'target', 'saved', 'v'].includes(k)) return String(o) + P; return o; };
     walk(d, ''); d.app = 'buddy4free-risparmio'; d.exported = '2026-01-01' + P; d.XPROTOX = {polluted:1}; return JSON.stringify(d); }, [PAYLOAD, V]);
   fs.writeFileSync(OUT + 'evil-' + V + '.json', bk.replace('"XPROTOX"', '"__proto__"'));
-  await p.evaluate(() => nav({screen:'settings'})); await p.waitForTimeout(400); await p.setInputFiles('#s-rs', OUT + 'evil-' + V + '.json'); await p.waitForTimeout(500); await p.click('#rb-yes'); await p.waitForTimeout(600);
+  await p.evaluate(() => nav({screen:'settings', sec:'sicurezza'})); await p.waitForTimeout(400); await p.setInputFiles('#s-rs', OUT + 'evil-' + V + '.json'); await p.waitForTimeout(500); await p.click('#rb-yes'); await p.waitForTimeout(600);
   ok(V + ' backup ripristinato', await p.evaluate(() => S.tx.length > 50));
   ok(V + ' nessun __proto__ inquinato', await p.evaluate(() => Object.getPrototypeOf(S) === Object.prototype && ({}).polluted === undefined));
   const q = await p.evaluate(() => ({g:(S.goals[0] || {}).id, c:(S.cats.out[0] || {}).id, ci:(S.cats.in[0] || {}).id, d:(S.debts[0] || {}).id, du:(S.dues[0] || {}).id}));
-  const routes = SCREENS.map(s => ({screen:s})).concat([{screen:'goal', id:q.g}, {screen:'cats', t:'out', id:q.c}, {screen:'cats', t:'in', id:q.ci}, {screen:'cats', t:'out'}, {screen:'pillar', id:'liq'}, {screen:'pillar', id:'emerg'}, {screen:'pillar', id:'inv'}, {screen:'debts', open:q.d}, {screen:'dues', form:q.du}, {screen:'lesson', i:0}, {screen:'read', i:0}]);
+  const routes = SCREENS.map(s => ({screen:s})).concat(['profilo','aspetto','sicurezza','dati','aiuto','info','avanzate'].map(k => ({screen:'settings', sec:k}))).concat([{screen:'tags'}, {screen:'goal', id:q.g}, {screen:'cats', t:'out', id:q.c}, {screen:'cats', t:'in', id:q.ci}, {screen:'cats', t:'out'}, {screen:'pillar', id:'liq'}, {screen:'pillar', id:'emerg'}, {screen:'pillar', id:'inv'}, {screen:'debts', open:q.d}, {screen:'dues', form:q.du}, {screen:'lesson', i:0}, {screen:'read', i:0}]);
   let clicks = 0;
   for (const r of routes) { try { await p.evaluate(r => nav(r), r); await p.waitForTimeout(200); } catch (e) { errs.push('nav ' + JSON.stringify(r) + ' ' + e.message.split('\n')[0]); continue; }
     const n = await p.evaluate(s => document.querySelectorAll(s).length, SEL);

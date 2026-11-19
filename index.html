@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611191445">
+<meta name="b4f-build" content="202611191703">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-dJgSXjAOW/wHex+zwoMB8E0DskZpN2CpHEnK/DLEnoY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-2qV2Ip0cqYOP51QEF47G1vShsY3XW+kqbJ1Sp/rZ+aM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -4237,7 +4237,7 @@ async function exportPDF(mode, level){
   let HT = {}, R0 = build(HT);
   for (let pass = 0; pass < 4; pass++) { const N = {}; R0.CH.forEach((c, i) => { if (c && c.end) N[i] = Math.round((c.end.p - c.p) * 267 + c.end.y - c.y); }); if (JSON.stringify(N) === JSON.stringify(HT)) break; HT = N; R0 = build(HT); }
   const doc = R0.doc, LV = {s:1, c:2, a:3}[level] || 2, isY = mode === 'y';
-  { const np = doc.getNumberOfPages(); for (let i = 1; i <= np; i++) { doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(150); doc.text('Buddy4Free Risparmio · ' + ({1:'Sintetico', 2:'Completo', 3:'Approfondito'})[LV] + ' · pagina ' + i + ' di ' + np, 105, 292, {align:'center'}); } }
+  { const np = doc.getNumberOfPages(); for (let i = 1; i <= np; i++) { doc.setPage(i); /* logo Buddy4Free in basso a destra, tondo */ try { doc.saveGraphicsState(); doc.circle(189.5, 287.5, 4.5, null); doc.clip(); doc.discardPath(); doc.addImage(LOGO, 'JPEG', 185, 283, 9, 9); doc.restoreGraphicsState(); } catch(e) {} doc.setFontSize(7.5); doc.setTextColor(150); doc.text('Buddy4Free Risparmio · ' + ({1:'Sintetico', 2:'Completo', 3:'Approfondito'})[LV] + ' · pagina ' + i + ' di ' + np, 105, 292, {align:'center'}); } }
   try { await downloads.save({filename:'buddy4free-resoconto-' + (isY ? curYM().slice(0, 4) : curYM()) + '-' + ({1:'sintetico', 2:'completo', 3:'approfondito'})[LV] + '.pdf', data:doc.output('blob')}); toast('PDF salvato'); } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare il PDF'); }
 }
 /* ---------- cifratura: backup protetti da password (AES-GCM a 256 bit, chiave da PBKDF2-SHA256) ---------- */

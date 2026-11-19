@@ -16,10 +16,10 @@ LIBRERIE = ['vendor/jspdf.umd.min.js', 'vendor/ocr/tesseract.min.js', 'vendor/oc
             'fonts/permanentmarker.woff2']
 # la regola di sicurezza della pagina: deve restare esattamente questa (cambia solo l'impronta dello script)
 CSP = ("default-src 'self'; script-src 'self' 'sha256-*'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
-       "font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; "
+       "font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; "
        "object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'")
 # siti esterni che l'app può solo aprire come link (nessun dato viene inviato)
-SITI = {'calendar.google.com', 'www.youtube.com', 'youtube.com', 'www.garanteprivacy.it', 'buddy4free.github.io'}
+SITI = {'calendar.google.com', 'api.frankfurter.dev', 'www.youtube.com', 'youtube.com', 'www.garanteprivacy.it', 'buddy4free.github.io'}
 VIETATI = ['eval(', 'new Function', 'sendBeacon', 'WebSocket', 'EventSource', 'importScripts', 'XMLHttpRequest',
            'document.write', 'setTimeout("', "setTimeout('", 'setInterval("', "setInterval('"]
 

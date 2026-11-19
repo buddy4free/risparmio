@@ -65,6 +65,10 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - DA RIPROPORRE A LORENZO (01/11/2026, collegata allo stipendio): parte "Far crescere le entrate" (formazione, corsi, competenze, come prepararsi a chiedere un aumento, feedback), con linguaggio descrittivo: ottimizzate le spese, il tasso di risparmio cresce soprattutto con le entrate.
 - Altre idee proposte, da valutare: lista dei desideri con pausa; "quante ore di lavoro costa"; umore dell'acquisto; spese annuali spalmate sui mesi dalle Scadenze; educare i figli ai soldi; video del canale collegati alle lezioni; sfida del mese condivisa.
 
+## Primi passi (deciso con Lorenzo il 19/11/2026, ispirato a Wallet)
+- Chi inizia da zero: avvio in 2 passi (saldo del conto, spesa mensile stimata; `renderSetupLight`), tema chiaro, fumetti guida uno alla volta (`TIPS`, attivi con `b4f-guida`=1, visti in `b4f-tips`; "Rivedi i suggerimenti a fumetto" in Impostazioni). Il vecchio avvio in 4 passi resta nel codice ma non si usa.
+- In Home per tutti: schede "Scopri l'app" (`DISC`) per le funzioni non ancora usate; si tolgono con la X (`S.discX`). Escluse dallo scorrimento tra schermate.
+
 ## Linguaggio dei testi (coach, suggerimenti, obiettivi)
 - Mai frasi che sembrino consigli finanziari o ordini ("fai questo", "sposta questo", "riduci", "imposta un bonifico"): l'app descrive i dati e le conseguenze ("al ritmo attuale…", "servirebbero…", "con il 30% in meno…"), la scelta resta all'utente.
 - I numeri del mese in corso sono reali a oggi; i movimenti programmati compaiono solo come previsione, dichiarata come tale.

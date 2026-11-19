@@ -1519,8 +1519,8 @@ function nextMove(){
   const T = targets();
   if (!stats(curYM()).n) return {t:'Nessun movimento registrato questo mese', d:'I calcoli dell\'app partono dai movimenti registrati: con le prime spese di ' + ymLabel(curYM(), {month:'long'}) + ' compaiono qui i numeri del mese.', go:{screen:'add'}};
   const L = pilBalance('liq'), E = pilBalance('emerg');
-  if (L < T.liq) return {t:'Liquidità: ' + eur(L) + ' su ' + eur(T.liq), d:'Sul conto hai meno della soglia che hai scelto (' + S.liqMonths + (S.liqMonths === 1 ? ' mese' : ' mesi') + ' di spese). Mancano ' + eur(T.liq - L) + ': le prossime entrate la faranno salire.', go:{screen:'pillars'}};
-  if (E < T.emerg) return {t:'Fondo di emergenza: ' + eur(E) + ' su ' + eur(T.emerg), d:'Mancano ' + eur(T.emerg - E) + ' alla cifra che copre ' + S.emergMonths + ' mesi di spese essenziali. Sei tu a decidere quanto e quando aggiungere.', go:{screen:'pillars'}};
+  if (L < T.liq) return {t:'Liquidità: ' + eur(L) + ' su ' + eur(T.liq), d:'Sul conto hai meno della soglia che hai scelto (' + fmtMo(S.liqMonths) + ' di spese). Mancano ' + eur(T.liq - L) + ': le prossime entrate la faranno salire.', go:{screen:'pillars'}};
+  if (E < T.emerg) return {t:'Fondo di emergenza: ' + eur(E) + ' su ' + eur(T.emerg), d:'Mancano ' + eur(T.emerg - E) + ' alla cifra che copre ' + fmtMo(S.emergMonths) + ' di spese essenziali. Sei tu a decidere quanto e quando aggiungere.', go:{screen:'pillars'}};
   const g = S.goals.find(x => !linkedGoal(x) && goalPlan(x).left > 0);
   if (g) return {t:'Obiettivo «' + g.name + '»', d:'Per arrivare entro ' + ymLabel(g.date) + ' il passo è di ' + eur(goalPlan(g).need) + ' al mese. Puoi vedere a che punto sei e le idee per arrivarci prima.', go:{screen:'goal', id:g.id}};
   return {t:'Liquidità, emergenza e obiettivi sono in pari', d:'Il quarto pilastro sono gli investimenti a lungo termine. In Palestra → Impara ci sono lezioni su come funzionano; per scelte personali esiste la consulenza finanziaria indipendente.', go:{screen:'learn'}};
@@ -2230,14 +2230,14 @@ document.addEventListener('keydown', e => { if (!document.getElementById('kpad')
 let PS = null;
 function padSheet(inp){ if (document.getElementById('kpsheet')) return; const neg = inp.dataset.pad === 'neg';
   const lab = (inp.closest('.field') || inp.parentElement).querySelector('label'), title = lab ? lab.textContent : (inp.getAttribute('placeholder') || 'Importo');
-  PS = {inp, s:String(inp.value || '').replace(/\./g, '').replace(/-/g, '−'), neg, int:inp.dataset.pad === 'int', fresh:!!inp.value};
+  PS = {inp, s:String(inp.value || '').replace(/\./g, '').replace(/-/g, '−'), neg, int:inp.dataset.pad === 'int', unit:inp.dataset.unit ? ' ' + inp.dataset.unit : ' €', fresh:!!inp.value};
   const o = document.createElement('div'); o.id = 'kpsheet'; o.className = 'kpsheet';
   o.innerHTML = '<div class="kpsbg" data-ps="x"></div><div class="kpsbox"><div class="kpshead"><span class="small muted">' + esc(title) + '</span><b class="num" id="ps-v"></b><em id="ps-x" class="amtx" style="position:static"></em></div>' + padHTML().replace('id="kpad"', 'id="kpad2"').replace(/data-k2=/g, 'data-k3=') + '</div>';
   document.body.appendChild(o); histPush(); psShow(); if (PS.int) { const c = o.querySelector('[data-k3=","]'); if (c) { c.disabled = true; c.style.opacity = '.25'; } }
   o.querySelector('[data-ps="x"]').onclick = psClose;
   o.querySelectorAll('[data-k3]').forEach(b => keyTap(b, () => psPress(b.dataset.k3))); }
 function psEval(s){ s = s.replace(/−/g, '-'); if (!s || s === '-') return null; const lead = s[0] === '-' ? -1 : 1, body = s.replace(/^-/, ''); const n = padEval(body); return n === null ? null : (lead < 0 ? -(padEval(body.split(/[+-]/)[0]) || 0) * 2 + n : n); }
-function psShow(){ if (!PS) return; const v = document.getElementById('ps-v'), x = document.getElementById('ps-x'); v.textContent = (PS.s || '0') + ' €'; const n = /[+−-]./.test(PS.s.replace(/^−/, '')) ? psEval(PS.s) : null; x.textContent = n === null ? '' : '= ' + eur2(n); }
+function psShow(){ if (!PS) return; const v = document.getElementById('ps-v'), x = document.getElementById('ps-x'); v.textContent = (PS.s || '0') + PS.unit; const n = /[+−-]./.test(PS.s.replace(/^−/, '')) ? psEval(PS.s) : null; x.textContent = n === null ? '' : '= ' + eur2(n); }
 function psPress(k){ if (!PS) return; if (PS.fresh) { PS.fresh = false; if (/^[\d,]$/.test(k)) PS.s = ''; } let s = PS.s.replace(/−/g, '-'); const cur = padNums(s.replace(/^-/, '')).pop();
   if (/^\d$/.test(k)) { if (/,\d{2}$/.test(cur) || (!cur.includes(',') && cur.replace(/^0+/, '').length >= 8)) return; s = (cur === '0' ? s.slice(0, -1) : s) + k; }
   else if (k === ',') { if (PS.int || cur.includes(',')) return; s += cur === '' ? '0,' : ','; }
@@ -2391,13 +2391,15 @@ function pillarEquity(){
     '<div class="legend small muted">' + PILLARS.map(p => '<span><i class="sw" style="background:' + p.c + '"></i>' + p.short + '</span>').join('') + '</div>' +
     '<p class="small muted">' + (EQ === 'y' ? 'Da inizio anno' : 'Da ' + ymLabel(months[0], {month:'long', year:'numeric'})) + ': <b style="color:' + (d >= 0 ? IN_COL : OUT_COL) + '">' + (d >= 0 ? '+' : '−') + eur(Math.abs(d)) + '</b>. La linea bianca è il totale.</p>';
 }
+/* mesi di copertura scritti all'italiana: 1 mese, 1,5 mesi, 4 mesi */
+const fmtMo = m => String(Math.round(m * 10) / 10).replace('.', ',') + (m === 1 ? ' mese' : ' mesi');
 function targetBox(k){
   const sug = k === 'liq' ? avgOut() * S.liqMonths : avgEssential() * S.emergMonths, sugR = Math.round(sug / 50) * 50;
   const custom = S.tgt[k], months = k === 'liq' ? S.liqMonths : S.emergMonths, base = k === 'liq' ? avgOut() : avgEssential();
   const opts = k === 'liq' ? [1, 2] : [3, 4, 6];
   return '<div class="tbox"><p class="small">' + (custom ? '<b>Il tuo obiettivo: ' + eur(custom) + '</b>, scelto da te. <button class="textlink" data-tgt-auto="' + k + '">Torna al suggerito (' + eur(sugR) + ')</button>'
-      : '<b>Obiettivo suggerito dall\'app: ' + eur(sugR) + '</b> = ' + months + (months === 1 ? ' mese' : ' mesi') + ' di ' + (k === 'liq' ? 'spese medie' : 'spese essenziali') + ' (' + eur(Math.round(base)) + ' al mese, calcolato dai tuoi ultimi movimenti).') + '</p>' +
-    (custom ? '' : '<div class="row small"><span class="muted">Quanti mesi coprire?</span>' + opts.map(m => '<button class="chip" data-tm="' + k + ':' + m + '" style="' + (months === m ? 'background:var(--yellow);color:#000' : '') + '">' + m + '</button>').join('') + '<button class="textlink" data-tgt-own="' + k + '">Scegli tu la cifra</button></div>') +
+      : '<b>Obiettivo suggerito dall\'app: ' + eur(sugR) + '</b> = ' + fmtMo(months) + ' di ' + (k === 'liq' ? 'spese medie' : 'spese essenziali') + ' (' + eur(Math.round(base)) + ' al mese, calcolato dai tuoi ultimi movimenti).') + '</p>' +
+    (custom ? '' : '<div class="row small"><span class="muted">Quanti mesi coprire?</span>' + opts.map(m => '<button class="chip" data-tm="' + k + ':' + m + '" style="' + (months === m ? 'background:var(--yellow);color:#000' : '') + '">' + m + '</button>').join('') + '<button class="chip" data-tmo="' + k + '" style="' + (!opts.includes(months) ? 'background:var(--yellow);color:#000' : '') + '">' + (!opts.includes(months) ? String(Math.round(months * 10) / 10).replace('.', ',') : 'Altro') + '</button><button class="textlink" data-tgt-own="' + k + '">Scegli tu la cifra</button></div>') +
     '<div id="tgt-' + k + '"></div></div>';
 }
 function renderPillars(){
@@ -2418,6 +2420,10 @@ const prevMonthName = () => ymLabel(addMonths(curYM(), -1), {month:'long'});
 function bindPil(again){
   view.querySelectorAll('[data-tm]').forEach(b => b.onclick = () => { const [k, m] = b.dataset.tm.split(':'); if (k === 'liq') S.liqMonths = +m; else S.emergMonths = +m; save(); again(); });
   view.querySelectorAll('[data-tgt-auto]').forEach(b => b.onclick = () => { S.tgt[b.dataset.tgtAuto] = null; save(); again(); });
+  /* mesi a piacere, anche con la virgola (1,5 mesi) */
+  view.querySelectorAll('[data-tmo]').forEach(b => b.onclick = () => { const k = b.dataset.tmo, box = document.getElementById('tgt-' + k), lo = k === 'liq' ? 0.5 : 1, hi = k === 'liq' ? 12 : 36;
+    box.innerHTML = '<div class="row"><div style="flex:1"><input id="tm-in" inputmode="none" readonly data-pad data-unit="mesi" placeholder="Mesi, per esempio ' + (k === 'liq' ? '1,5' : '8') + '" aria-label="Quanti mesi coprire"></div><button class="btn sm" id="tm-ok">Salva</button></div><p class="small muted" style="margin:6px 0 0">Da ' + String(lo).replace('.', ',') + ' a ' + hi + ' mesi, anche con la virgola.</p>';
+    box.querySelector('#tm-ok').onclick = () => { const m = Math.round(parseAmt(val('tm-in')) * 10) / 10; if (!(m >= lo && m <= hi)) return toast('Scegli tra ' + String(lo).replace('.', ',') + ' e ' + hi + ' mesi'); if (k === 'liq') S.liqMonths = m; else S.emergMonths = m; save(); again(); }; });
   view.querySelectorAll('[data-tgt-own]').forEach(b => b.onclick = () => { const k = b.dataset.tgtOwn, box = document.getElementById('tgt-' + k);
     box.innerHTML = '<div class="row"><div class="eur" style="flex:1"><input id="tg-in" inputmode="none" readonly data-pad placeholder="La tua cifra"></div><button class="btn sm" id="tg-ok">Salva</button></div>';
     box.querySelector('#tg-ok').onclick = () => { const a = parseAmt(val('tg-in')); if (!(a > 0)) return; S.tgt[k] = a; save(); again(); }; });
@@ -3854,7 +3860,7 @@ async function exportPDF(mode, withTx){
   h1('Il tuo bilancio finanziario');
   const totPil = PILLARS.reduce((t, q) => t + pilBalance(q.id), 0), debt = (S.debts || []).reduce((t, d) => t + (debtInfo(d).pv || 0), 0), ess = avgEssential(), emo = ess > 0 ? pilBalance('emerg') / ess : null, wb = typeof wbIndex === 'function' ? wbIndex() : null;
   kv('Patrimonio nei 4 pilastri', E(totPil)); if (debt > 0) kv('Debiti e finanziamenti da restituire', '-' + E(debt)); kv('Patrimonio netto', E(totPil - debt), true);
-  if (emo !== null) { need(7); kv('Il fondo di emergenza copre', emo.toFixed(1).replace('.', ',') + ' mesi di spese essenziali'); doc.setFontSize(7.8); txt(emo >= S.emergMonths ? '#0ca30c' : emo >= 3 ? '#e3a008' : '#e5484d', emo >= S.emergMonths ? 'In linea con il tuo obiettivo di ' + S.emergMonths + ' mesi.' : 'Il tuo obiettivo è di ' + S.emergMonths + ' mesi: mancano ' + E(Math.max(0, ess * S.emergMonths - pilBalance('emerg'))).replace(' EUR', ' €') + '.', M, y - 1.5); y += 3.5; }
+  if (emo !== null) { need(7); kv('Il fondo di emergenza copre', emo.toFixed(1).replace('.', ',') + ' mesi di spese essenziali'); doc.setFontSize(7.8); txt(emo >= S.emergMonths ? '#0ca30c' : emo >= 3 ? '#e3a008' : '#e5484d', emo >= S.emergMonths ? 'In linea con il tuo obiettivo di ' + fmtMo(S.emergMonths) + '.' : 'Il tuo obiettivo è di ' + fmtMo(S.emergMonths) + ': mancano ' + E(Math.max(0, ess * S.emergMonths - pilBalance('emerg'))).replace(' EUR', ' €') + '.', M, y - 1.5); y += 3.5; }
   if (rate !== null) kv('Tasso di risparmio del periodo', Math.round(rate) + '% (' + bd.l.toLowerCase() + ')');
   if (wb && wb.score != null) { const wbb = wbBand(wb.score); need(8); kv('Indice di benessere finanziario', wb.score + '/100 · ' + wbb[1]); }
   y += 1; line();

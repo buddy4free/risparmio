@@ -3898,6 +3898,8 @@ function loadScript(src){ return new Promise((ok, ko) => { if (window.jspdf) ret
 async function exportPDF(mode, level){
   if (!downloads) return toast('Il salvataggio dei file non è disponibile qui');
   try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'); } catch(e) { return toast('Non riesco a preparare il PDF in questo momento'); }
+  /* icona dell'app per il piede di pagina (quadrata con angoli tondi); se non si carica, il logo tondo */
+  let ICO = null; try { const rb = await fetch('icons/icon-192.png'); if (rb.ok) ICO = await new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = ko; rb.blob().then(b => fr.readAsDataURL(b)); }); } catch(e) {}
   const build = HT => { const CH = []; let CHI = -1;
   const doc = new window.jspdf.jsPDF({unit:'mm', format:'a4'}), M = 16, Wd = 210 - 2 * M; let y = 18;
   const E = n => (n < 0 ? '-' : '') + fmtN(n, 2) + ' EUR';
@@ -4206,7 +4208,7 @@ async function exportPDF(mode, level){
   let HT = {}, R0 = build(HT);
   for (let pass = 0; pass < 4; pass++) { const N = {}; R0.CH.forEach((c, i) => { if (c && c.end) N[i] = Math.round((c.end.p - c.p) * 267 + c.end.y - c.y); }); if (JSON.stringify(N) === JSON.stringify(HT)) break; HT = N; R0 = build(HT); }
   const doc = R0.doc, LV = {s:1, c:2, a:3}[level] || 2, isY = mode === 'y';
-  { const np = doc.getNumberOfPages(); for (let i = 1; i <= np; i++) { doc.setPage(i); /* logo Buddy4Free in basso a destra, tondo */ try { doc.saveGraphicsState(); doc.circle(189.5, 287.5, 4.5, null); doc.clip(); doc.discardPath(); doc.addImage(LOGO, 'JPEG', 185, 283, 9, 9); doc.restoreGraphicsState(); } catch(e) {} doc.setFontSize(7.5); doc.setTextColor(150); doc.text('Buddy4Free Risparmio · ' + ({1:'Sintetico', 2:'Completo', 3:'Approfondito'})[LV] + ' · pagina ' + i + ' di ' + np, 105, 292, {align:'center'}); } }
+  { const np = doc.getNumberOfPages(); for (let i = 1; i <= np; i++) { doc.setPage(i); /* logo Buddy4Free in basso a destra, tondo */ try { doc.saveGraphicsState(); if (ICO) { doc.roundedRect(181, 280, 13, 13, 3, 3, null); doc.clip(); doc.discardPath(); doc.addImage(ICO, 'PNG', 181, 280, 13, 13); } else { doc.circle(189.5, 287.5, 4.5, null); doc.clip(); doc.discardPath(); doc.addImage(LOGO, 'JPEG', 185, 283, 9, 9); } doc.restoreGraphicsState(); } catch(e) {} doc.setFontSize(7.5); doc.setTextColor(150); doc.text('Buddy4Free Risparmio · ' + ({1:'Sintetico', 2:'Completo', 3:'Approfondito'})[LV] + ' · pagina ' + i + ' di ' + np, 105, 292, {align:'center'}); } }
   try { await downloads.save({filename:'buddy4free-resoconto-' + (isY ? curYM().slice(0, 4) : curYM()) + '-' + ({1:'sintetico', 2:'completo', 3:'approfondito'})[LV] + '.pdf', data:doc.output('blob')}); toast('PDF salvato'); } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare il PDF'); }
 }
 /* ---------- cifratura: backup protetti da password (AES-GCM a 256 bit, chiave da PBKDF2-SHA256) ---------- */

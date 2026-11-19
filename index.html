@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611191102">
+<meta name="b4f-build" content="202611191116">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-YKvoY24Cnf0bsbDwCbIrM7WkFXi76EQu9akwfrNTLWA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-k6rlqs8Kbm3H/viNGzbYS6iq2UmNORGY6BHFJQvUpTk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -826,6 +826,8 @@ const LOGO = document.getElementById('logo-full').src;
 document.querySelector('#logo .lgr').src = LOGO;
 /* tema: è una preferenza di questo telefono (non va nei backup); predefinito automatico, segue il telefono */
 const THEME_Q = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
+/* chi installa da adesso parte con il tema chiaro (deciso il 19/11/2026); chi usava già l'app resta come aveva scelto (o Automatico) */
+try { if (!localStorage.getItem('b4f-theme') && !localStorage.getItem('b4f-finanza-v1') && !localStorage.getItem('b4f-first')) localStorage.setItem('b4f-theme', 'light'); } catch(e) {}
 function themePref(){ try { return localStorage.getItem('b4f-theme') || 'auto'; } catch(e) { return 'auto'; } }
 function applyTheme(){ const p = themePref(), t = p === 'auto' ? (THEME_Q && THEME_Q.matches ? 'light' : 'dark') : p;
   document.documentElement.dataset.theme = t; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === 'light' ? '#F5F4EF' : '#000000';

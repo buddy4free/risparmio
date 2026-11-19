@@ -808,6 +808,8 @@ const LOGO = document.getElementById('logo-full').src;
 document.querySelector('#logo .lgr').src = LOGO;
 /* tema: è una preferenza di questo telefono (non va nei backup); predefinito automatico, segue il telefono */
 const THEME_Q = window.matchMedia ? matchMedia('(prefers-color-scheme: light)') : null;
+/* chi installa da adesso parte con il tema chiaro (deciso il 19/11/2026); chi usava già l'app resta come aveva scelto (o Automatico) */
+try { if (!localStorage.getItem('b4f-theme') && !localStorage.getItem('b4f-finanza-v1') && !localStorage.getItem('b4f-first')) localStorage.setItem('b4f-theme', 'light'); } catch(e) {}
 function themePref(){ try { return localStorage.getItem('b4f-theme') || 'auto'; } catch(e) { return 'auto'; } }
 function applyTheme(){ const p = themePref(), t = p === 'auto' ? (THEME_Q && THEME_Q.matches ? 'light' : 'dark') : p;
   document.documentElement.dataset.theme = t; const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === 'light' ? '#F5F4EF' : '#000000';

@@ -67,6 +67,8 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 
 ## Primi passi (deciso con Lorenzo il 19/11/2026, ispirato a Wallet)
 - Chi inizia da zero: avvio in 2 passi (saldo del conto, spesa mensile stimata; `renderSetupLight`), tema chiaro, fumetti guida uno alla volta (`TIPS`, attivi con `b4f-guida`=1, visti in `b4f-tips`; "Rivedi i suggerimenti a fumetto" in Impostazioni). Il vecchio avvio in 4 passi resta nel codice ma non si usa.
+- Dopo l'avvio: "Ultimi due tocchi" (`lastTouches`: promemoria serale e blocco con PIN/impronta). Impostazioni raggruppate in 7 voci con sottopagine (`R.sec`: profilo, aspetto, sicurezza, dati, aiuto, info, avanzate; notifiche apre `notif`); menu laterale ridotto.
+- App Android 2.2 (v13): impronta nativa (`bioStatus`/`bioAuth`, BiometricPrompt di sistema, permesso USE_BIOMETRIC); la pagina la usa se c'è (`S.lock.bio = 'native'`).
 - In Home per tutti: schede "Scopri l'app" (`DISC`) per le funzioni non ancora usate; si tolgono con la X (`S.discX`). Escluse dallo scorrimento tra schermate.
 
 ## Linguaggio dei testi (coach, suggerimenti, obiettivi)

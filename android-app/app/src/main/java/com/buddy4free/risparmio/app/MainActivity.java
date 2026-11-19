@@ -423,6 +423,43 @@ public class MainActivity extends Activity {
             runOnUiThread(MainActivity.this::condividiUltimo);
         }
 
+        /** Impronta o volto disponibili? "ok", "none" (nessuna impronta registrata o niente sensore), "old" (Android troppo vecchio). */
+        @JavascriptInterface
+        public String bioStatus() {
+            if (Build.VERSION.SDK_INT < 29) return "old";
+            try {
+                android.hardware.biometrics.BiometricManager bm = getSystemService(android.hardware.biometrics.BiometricManager.class);
+                if (bm == null) return "none";
+                int r = Build.VERSION.SDK_INT >= 30
+                        ? bm.canAuthenticate(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK)
+                        : bm.canAuthenticate();
+                return r == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS ? "ok" : "none";
+            } catch (Exception e) {
+                return "none";
+            }
+        }
+
+        /** Chiede l'impronta (o il volto) con la finestra di sistema; la risposta torna alla pagina: ok, cancel, err. */
+        @JavascriptInterface
+        public void bioAuth(String id) {
+            if (Build.VERSION.SDK_INT < 29) { bioFatto(id, "err"); return; }
+            runOnUiThread(() -> {
+                try {
+                    android.hardware.biometrics.BiometricPrompt.Builder b = new android.hardware.biometrics.BiometricPrompt.Builder(MainActivity.this)
+                            .setTitle(getString(R.string.app_name))
+                            .setSubtitle("Sblocca con l'impronta")
+                            .setNegativeButton("Usa il PIN", getMainExecutor(), (d, w) -> bioFatto(id, "cancel"));
+                    if (Build.VERSION.SDK_INT >= 30) b.setAllowedAuthenticators(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK);
+                    b.build().authenticate(new android.os.CancellationSignal(), getMainExecutor(), new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                        @Override public void onAuthenticationSucceeded(android.hardware.biometrics.BiometricPrompt.AuthenticationResult r) { bioFatto(id, "ok"); }
+                        @Override public void onAuthenticationError(int code, CharSequence msg) { bioFatto(id, "cancel"); }
+                    });
+                } catch (Exception e) {
+                    bioFatto(id, "err");
+                }
+            });
+        }
+
         @JavascriptInterface
         public void setBars(boolean chiaro) {
             runOnUiThread(() -> barre(chiaro));
@@ -591,6 +628,10 @@ public class MainActivity extends Activity {
             if (u != null) try { getContentResolver().delete(u, null, null); } catch (Exception ignored) { }
             return false;
         }
+    }
+
+    private void bioFatto(String id, String esito) {
+        runOnUiThread(() -> web.evaluateJavascript("window.__b4fBio&&window.__b4fBio(" + JSONObject.quote(id == null ? "" : id) + "," + JSONObject.quote(esito) + ")", null));
     }
 
     private void condividiUltimo() {

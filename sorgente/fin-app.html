@@ -180,6 +180,8 @@ i.lg{display:inline-block;width:12px;height:10px;border-radius:3px;background:va
 .disc .dcard .dx{position:absolute;top:8px;right:8px;border:0;background:none;color:var(--muted);font-size:1.3rem;line-height:1;padding:6px;cursor:pointer}
 .disc .dcard p{margin:0}.disc .dcard .btn{align-self:flex-start;margin-top:auto}
 .discdots{display:flex;justify-content:center;gap:6px}.discdots i{width:7px;height:7px;border-radius:99px;background:var(--line)}.discdots i.on{background:var(--yellow);width:18px}
+.stiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px;margin-bottom:10px}.stile{background:var(--soft2);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:2px}.stile b{font-family:var(--display);font-size:1.45rem;line-height:1.1}.stile span{font-size:.75rem;color:var(--muted);line-height:1.25}.stack.ess{margin-top:10px}
+.donut svg{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}.donut .drot{transition:transform .25s ease}.donut.drag .drot{transition:none}.donut circle.on{stroke-width:32}
 .amount{position:relative;cursor:pointer}.amount input{cursor:pointer;caret-color:transparent}.amtx{position:absolute;right:0;bottom:-22px;font-style:normal;font-size:.85rem;font-weight:700;color:var(--ytext)}
 .kpad{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 12px calc(12px + env(safe-area-inset-bottom,0px));background:#0b0b0b;border-top:1px solid var(--line);max-width:560px;margin:0 auto}
 .kpad button{height:58px;border:0;border-radius:16px;background:var(--soft);color:var(--fg);font-family:var(--display);font-size:1.55rem;font-weight:800;display:grid;place-items:center;-webkit-user-select:none;user-select:none;touch-action:manipulation}
@@ -2756,23 +2758,35 @@ function hbarsHTML(rows, total, mx){
 function donutHTML(rows, total){
   const top = rows.slice(0, 7), rest = rows.slice(7).reduce((t, r) => t + r.v, 0), segs = top.map(r => ({n:r.n, v:r.v, c:r.c})).concat(rest > 0 ? [{n:'Le altre', v:rest, c:'#5f5f5a'}] : []);
   const R0 = 70, C = 2 * Math.PI * R0; let off = 0;
-  const arcs = segs.map(sg => { const len = sg.v / total * C, gap = segs.length > 1 ? Math.min(3, len * .3) : 0; const el = '<circle r="' + R0 + '" cx="90" cy="90" fill="none" stroke="' + sg.c + '" stroke-width="26" stroke-dasharray="' + Math.max(0, len - gap) + ' ' + C + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 90 90)"><title>' + esc(sg.n) + ': ' + eur2(sg.v) + '</title></circle>'; off += len; return el; }).join('');
-  return '<div class="donut"><svg viewBox="0 0 180 180" role="img" aria-label="Grafico circolare">' + arcs + '<text x="90" y="86" text-anchor="middle" font-size="12" fill="var(--muted)">Totale</text><text x="90" y="106" text-anchor="middle" font-size="18" font-weight="800" fill="var(--fg)">' + eur(total) + '</text></svg><div class="dlegend">' + segs.map(sg => '<span><i style="background:' + sg.c + '"></i>' + esc(sg.n) + ' <b>' + Math.round(sg.v / total * 100) + '%</b></span>').join('') + '</div></div>';
+  const arcs = segs.map(sg => { const len = sg.v / total * C, gap = segs.length > 1 ? Math.min(3, len * .3) : 0; const el = '<circle data-dn="' + esc(sg.n) + '" data-dv="' + sg.v + '" r="' + R0 + '" cx="90" cy="90" fill="none" stroke="' + sg.c + '" stroke-width="26" stroke-dasharray="' + Math.max(0, len - gap) + ' ' + C + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 90 90)"><title>' + esc(sg.n) + ': ' + eur2(sg.v) + '</title></circle>'; off += len; return el; }).join('');
+  return '<div class="donut" data-tot="' + total + '"><svg viewBox="0 0 180 180" role="img" aria-label="Grafico circolare: trascina per girarlo, tocca uno spicchio per i dettagli"><g class="drot">' + arcs + '</g><text class="dct1" x="90" y="86" text-anchor="middle" font-size="12" fill="var(--muted)">Totale</text><text class="dct2" x="90" y="106" text-anchor="middle" font-size="18" font-weight="800" fill="var(--fg)">' + eur(total) + '</text></svg><div class="dlegend">' + segs.map(sg => '<span><i style="background:' + sg.c + '"></i>' + esc(sg.n) + ' <b>' + Math.round(sg.v / total * 100) + '%</b></span>').join('') + '</div></div>';
 }
 /* al posto del cerchio, quando le voci sono tante: una lettura in poche righe */
+(() => { let D = null; const ang = (svg, e) => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - r.top - r.height / 2, e.clientX - r.left - r.width / 2) * 180 / Math.PI; };
+  document.addEventListener('pointerdown', e => { const svg = e.target.closest && e.target.closest('.donut svg'); if (!svg) return; const g = svg.querySelector('.drot'); D = {svg, g, a0:ang(svg, e), r0:+(g.dataset.r || 0), moved:0, t:e.target}; svg.parentNode.classList.add('drag'); try { svg.setPointerCapture(e.pointerId); } catch(x) {} });
+  document.addEventListener('pointermove', e => { if (!D) return; let d = ang(D.svg, e) - D.a0; if (d > 180) d -= 360; if (d < -180) d += 360; D.moved = Math.max(D.moved, Math.abs(d)); const r = D.r0 + d; D.g.dataset.r = r; D.g.setAttribute('transform', 'rotate(' + r + ' 90 90)'); });
+  const end = () => { if (!D) return; const d = D; D = null; d.svg.parentNode.classList.remove('drag'); if (d.moved > 4) return;
+    const c = d.t.closest && d.t.closest('circle[data-dn]'), box = d.svg.parentNode, t1 = d.svg.querySelector('.dct1'), t2 = d.svg.querySelector('.dct2'), tot = +box.dataset.tot || 0;
+    d.svg.querySelectorAll('circle.on').forEach(x => x.classList.remove('on'));
+    if (c && !c.dataset.sel) { d.svg.querySelectorAll('circle[data-sel]').forEach(x => delete x.dataset.sel); c.dataset.sel = 1; c.classList.add('on'); t1.textContent = c.dataset.dn.slice(0, 18); t2.textContent = eur(+c.dataset.dv) + ' · ' + (tot ? Math.round(+c.dataset.dv / tot * 100) : 0) + '%'; t2.setAttribute('font-size', '14'); }
+    else { d.svg.querySelectorAll('circle[data-sel]').forEach(x => delete x.dataset.sel); t1.textContent = 'Totale'; t2.textContent = eur(tot); t2.setAttribute('font-size', '18'); } };
+  document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end); })();
 function synthHTML(t, rows, total, prev, prevLabel){
   if (!(total > 0)) return '<p class="small muted">Niente da analizzare nel periodo.</p>';
+  /* sintesi a colpo d'occhio: tre numeri grandi, una barra, cosa è cambiato */
   const pos = rows.filter(r => r.v > 0), top = pos.slice(0, 3), topV = top.reduce((a, r) => a + r.v, 0), rest = Math.max(0, total - topV), pc = v => Math.round(v / total * 100);
   const stack = segs => '<div class="stack">' + segs.filter(g => g.v > 0).map(g => '<i style="width:' + (g.v / segs.reduce((a, x) => a + Math.max(0, x.v), 0) * 100) + '%;background:' + g.c + '" title="' + esc(g.n) + '"></i>').join('') + '</div><div class="stackl">' + segs.filter(g => g.v > 0).map(g => '<span><i style="background:' + g.c + '"></i>' + esc(g.n) + ' <b>' + pc(g.v) + '%</b></span>').join('') + '</div>';
-  let h = '<div class="synth"><p><b>' + (top.length === 1 ? esc(top[0].n) + '</b> è tutto: ' : (top.length < 3 ? 'Le prime ' + top.length : 'Le prime 3') + ' voci</b> valgono <b>il ' + pc(topV) + '%</b> ') + (t === 'out' ? 'delle spese.' : 'delle entrate.') + '</p>' + stack(top.map(r => ({n:r.n, v:r.v, c:r.c})).concat(rest > 0 ? [{n:'Le altre ' + (pos.length - top.length), v:rest, c:'#5f5f5a'}] : []));
-  if (t === 'out') { const nd = rows.filter(r => r.disc).reduce((a, r) => a + r.v, 0);
-    h += '<p><b>Non essenziali: ' + eur(nd) + '</b> (' + pc(nd) + '%). È la parte su cui è più facile intervenire.</p>' + stack([{n:'Essenziali', v:total - nd, c:'#3987e5'}, {n:'Non essenziali', v:nd, c:OUT_COL}]); }
-  else if (top[0]) h += '<p><b>' + esc(top[0].n) + '</b> porta il ' + pc(top[0].v) + '% delle entrate' + (pos.length > 1 ? ' su ' + pos.length + ' fonti.' : '.') + (pc(top[0].v) >= 80 ? ' Dipendi quasi tutto da una sola fonte: il fondo di emergenza conta ancora di più.' : '') + '</p>';
-  const pt = Object.values(prev).reduce((a, v) => a + v, 0);
-  if (pt > 0) { const ch = rows.map(r => ({n:r.n, d:r.v - (prev[r.id] || 0), p:prev[r.id] || 0})).concat(Object.keys(prev).filter(id => !rows.some(r => r.id === id)).map(id => ({n:catOf(t, id).n, d:-prev[id], p:prev[id]}))).sort((a, b) => b.d - a.d);
-    const up = ch[0], dn = ch[ch.length - 1], tch = Math.round((total / pt - 1) * 100), good = d => t === 'out' ? d < 0 : d > 0, col = d => good(d) ? IN_COL : d ? '#E5484D' : 'var(--muted)';
-    const line = q => '<li><span>' + esc(q.n) + '</span><b style="color:' + col(q.d) + '">' + (q.d > 0 ? '+' : '−') + eur(Math.abs(q.d)) + (q.p > 0 ? ' (' + (q.d > 0 ? '+' : '') + Math.round(q.d / q.p * 100) + '%)' : ' (nuova)') + '</b></li>';
-    h += '<p>Rispetto a ' + prevLabel + ': <b style="color:' + col(tch) + '">' + (tch > 0 ? '+' : '') + tch + '%</b> in totale.</p><ul class="chg">' + (up && up.d > 0 ? line(up) : '') + (dn && dn.d < 0 && dn !== up ? line(dn) : '') + '</ul>'; }
+  const tile = (big, lab, col) => '<div class="stile"><b style="color:' + (col || 'var(--fg)') + '">' + big + '</b><span>' + lab + '</span></div>';
+  const pt = Object.values(prev).reduce((a, v) => a + v, 0), tch = pt > 0 ? Math.round((total / pt - 1) * 100) : null, good = d => t === 'out' ? d < 0 : d > 0, col = d => good(d) ? IN_COL : d ? '#E5484D' : 'var(--muted)';
+  const nd = t === 'out' ? rows.filter(r => r.disc).reduce((a, r) => a + r.v, 0) : 0;
+  let h = '<div class="synth"><div class="stiles">' + (t === 'out'
+      ? tile(pc(topV) + '%', 'nelle prime ' + top.length + (top.length === 1 ? ' voce' : ' voci')) + tile(pc(nd) + '%', 'non essenziali · ' + eur(nd), OUT_COL)
+      : tile(String(pos.length), pos.length === 1 ? 'fonte di entrata' : 'fonti di entrata') + tile(pc(top[0] ? top[0].v : 0) + '%', 'da ' + esc(top[0] ? top[0].n : '–'), IN_COL)) +
+    (tch !== null ? tile((tch > 0 ? '+' : '') + tch + '%', 'rispetto a ' + prevLabel, col(tch)) : '') + '</div>' +
+    stack(top.map(r => ({n:r.n, v:r.v, c:r.c})).concat(rest > 0 ? [{n:'Le altre ' + (pos.length - top.length), v:rest, c:'#5f5f5a'}] : []));
+  if (t === 'out') h += '<div class="stack ess"><i style="width:' + (100 - pc(nd)) + '%;background:#3987e5"></i><i style="width:' + pc(nd) + '%;background:' + OUT_COL + '"></i></div><div class="stackl"><span><i style="background:#3987e5"></i>Essenziali <b>' + eur(total - nd) + '</b></span><span><i style="background:' + OUT_COL + '"></i>Non essenziali <b>' + eur(nd) + '</b></span></div><details class="small muted"><summary>Cosa conta come non essenziale?</summary>' + esc(essText()) + '</details>';
+  if (pt > 0) { const ch = rows.map(r => ({n:r.n, d:r.v - (prev[r.id] || 0), p:prev[r.id] || 0})).concat(Object.keys(prev).filter(id => !rows.some(r => r.id === id)).map(id => ({n:catOf(t, id).n, d:-prev[id], p:prev[id]}))).filter(q => Math.abs(q.d) >= 1).sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 4);
+    if (ch.length) h += '<span class="label" style="margin-top:4px">Cosa è cambiato di più</span><ul class="chg">' + ch.map(q => '<li><span>' + (q.d > 0 ? '↑ ' : '↓ ') + esc(q.n) + '</span><b style="color:' + col(q.d) + '">' + (q.d > 0 ? '+' : '−') + eur(Math.abs(q.d)) + (q.p > 0 ? ' (' + (q.d > 0 ? '+' : '') + Math.round(q.d / q.p * 100) + '%)' : ' (nuova)') + '</b></li>').join('') + '</ul>'; }
   return h + '</div>';
 }
 function slideCard(title, rows, total, empty, synth){
@@ -3895,19 +3909,42 @@ function renderWhatIf(){
 
 /* ---------- PDF e backup ---------- */
 function loadScript(src){ return new Promise((ok, ko) => { if (window.jspdf) return ok(); const t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = ko; document.head.appendChild(t); }); }
-async function exportPDF(mode, level){
+const _curYM = () => curYM(), _today = () => today();
+/* scelta del resoconto PDF: periodo, livello, cifre nascoste */
+function pdfPop(kind){
+  const cm = curYM(), yr = cm.slice(0, 4), first = [...S.tx.map(x => ymOf(x.d))].sort()[0] || cm, ml = ym => ymLabel(ym, {month:'long', year:'numeric'});
+  const P = [['cur', 'Questo mese (' + ymLabel(cm, {month:'long'}) + ')', cm, cm], ['prev', 'Mese scorso (' + ymLabel(addMonths(cm, -1), {month:'long'}) + ')', addMonths(cm, -1), addMonths(cm, -1)],
+    ['l3', 'Ultimi 3 mesi', addMonths(cm, -2), cm], ['l6', 'Ultimi 6 mesi', addMonths(cm, -5), cm], ['l12', 'Ultimi 12 mesi', addMonths(cm, -11), cm],
+    ['y', 'Quest\'anno (' + yr + ')', yr + '-01', cm], ['yp', 'Anno scorso (' + (+yr - 1) + ')', (+yr - 1) + '-01', (+yr - 1) + '-12'], ['all', 'Tutto il periodo (da ' + ml(first) + ')', first, cm], ['pick', 'Un mese a scelta…', null, null]];
+  const months = []; for (let m = cm; m >= first && months.length < 36; m = addMonths(m, -1)) months.push(m);
+  catPop('<b style="font-size:1.1rem">Resoconto PDF</b><p class="small muted" style="margin:0">Analisi e considerazioni sui tuoi dati. I singoli movimenti restano nell\'app.</p>' +
+    '<div class="field"><label for="pp-p">Periodo</label><select id="pp-p">' + P.map(p => '<option value="' + p[0] + '"' + (p[0] === (kind === 'y' ? 'y' : 'cur') ? ' selected' : '') + '>' + p[1] + '</option>').join('') + '</select></div>' +
+    '<div class="field" id="pp-mrow" hidden><label for="pp-m">Mese</label><select id="pp-m">' + months.map(m => '<option value="' + m + '">' + ml(m) + '</option>').join('') + '</select></div>' +
+    '<label class="check small"><input type="checkbox" id="pp-anon"> <span><b>Nascondi le cifre</b> · importi e nomi personali coperti: per chiedere un parere o per mostrare com\'è fatto</span></label>' +
+    '<div class="actopts">' + [['s', 'Sintetico', 'Pagella, capacità di risparmio, dove vanno i soldi, pilastri e obiettivi · 2 pagine'], ['c', 'Completo', 'In più confronti con te stesso, andamento, voci più grandi, ricorrenti, entrate e uno sguardo avanti'], ['a', 'Approfondito', 'Tutto, più abitudini di spesa, tendenze, scenari, quanto lavoro costa e cosa dicono i numeri']].map(o => '<button class="actopt" data-pk="' + o[0] + '"><b>' + o[1] + '</b><span>' + o[2] + '</span></button>').join('') + '</div><button class="textlink" data-x style="align-self:flex-start">Annulla</button>', (o, close) => {
+    const sel = o.querySelector('#pp-p'); sel.onchange = () => { o.querySelector('#pp-mrow').hidden = sel.value !== 'pick'; };
+    o.querySelectorAll('[data-pk]').forEach(x => x.onclick = () => { const p = P.find(q => q[0] === sel.value), pm = o.querySelector('#pp-m').value, from = p[0] === 'pick' ? pm : p[2], to = p[0] === 'pick' ? pm : p[3];
+      close(); exportPDF(from === to ? 'm' : 'y', x.dataset.pk, {from, to, anon:o.querySelector('#pp-anon').checked, label:p[0] === 'pick' ? ymLabel(pm) : p[0] === 'y' ? 'anno ' + yr : p[0] === 'yp' ? 'anno ' + (+yr - 1) : p[0] === 'cur' || p[0] === 'prev' ? ymLabel(from) : p[1].replace(/ \(.*\)$/, '').toLowerCase() + ' (' + ymLabel(from, {month:'short', year:'numeric'}) + ' - ' + ymLabel(to, {month:'short', year:'numeric'}) + ')'}); }); }); }
+/* che cosa conta come spesa non essenziale: lo dice l'utente nelle categorie */
+function essText(){ const nd = S.cats.out.filter(c => c.disc).map(c => c.n); return 'Non essenziali: ' + (nd.length ? nd.join(', ') : 'nessuna categoria') + ', più le sottocategorie Bar e caffè, Delivery e Pranzo fuori. Ogni categoria si può segnare come essenziale o no in Categorie uscite.'; }
+async function exportPDF(mode, level, opt){
+  /* periodo scelto (uno o più mesi, anche passati) e cifre nascoste per condividere la struttura */
+  const REAL = _curYM(), RT = _today(), PR = opt && opt.from ? opt : (mode === 'y' ? {from:REAL.slice(0, 4) + '-01', to:REAL} : {from:REAL, to:REAL}), ANON = !!(opt && opt.anon);
+  const END = PR.to > REAL ? REAL : PR.to, ENDD = END === REAL ? RT : END + '-' + pad(new Date(+END.slice(0, 4), +END.slice(5), 0).getDate());
+  const curYM = () => END, today = () => ENDD, pB = id => END === REAL ? pilBalance(id) : pilBalanceAt(id, END);
+  if (PR.from !== PR.to) mode = 'y';
   if (!downloads) return toast('Il salvataggio dei file non è disponibile qui');
   try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'); } catch(e) { return toast('Non riesco a preparare il PDF in questo momento'); }
   /* icona dell'app per il piede di pagina (quadrata con angoli tondi); se non si carica, il logo tondo */
   let ICO = null; try { const rb = await fetch('icons/icon-192.png'); if (rb.ok) ICO = await new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = ko; rb.blob().then(b => fr.readAsDataURL(b)); }); } catch(e) {}
   const build = HT => { const CH = []; let CHI = -1;
   const doc = new window.jspdf.jsPDF({unit:'mm', format:'a4'}), M = 16, Wd = 210 - 2 * M; let y = 18;
-  const E = n => (n < 0 ? '-' : '') + fmtN(n, 2) + ' EUR';
+  const E = n => ANON ? '••• EUR' : (n < 0 ? '-' : '') + fmtN(n, 2) + ' EUR';
   const line = () => { doc.setDrawColor(220); doc.line(M, y, 210 - M, y); y += 4; };
   const need = h => { if (y + h > 285) { doc.addPage(); y = 18; } };
   const h1 = t => { if (CHI >= 0) CH[CHI].end = {p:doc.getNumberOfPages(), y}; CHI++; const Hc = HT[CHI]; if (Hc != null) { if (y + Hc > 284 && Hc < 255 && y > 40) { doc.addPage(); y = 18; } else need(12); } else need(30); CH[CHI] = {p:doc.getNumberOfPages(), y}; doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(0); doc.text(t, M, y); y += 7; };
   const kv = (k, v, bold) => { need(7); doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(10); doc.setTextColor(40); doc.text(k, M, y); doc.text(v, 210 - M, y, {align:'right'}); y += 6; };
-  const months = mode === 'y' ? Array.from({length:12}, (_, i) => curYM().slice(0, 4) + '-' + pad(i + 1)).filter(m => m <= curYM()) : [curYM()];
+  const months = (() => { const o = []; for (let m = PR.from < END ? PR.from : END; m <= END; m = addMonths(m, 1)) o.push(m); return o; })();
   const per = months.map(ym => stats(ym)); let inc = 0, out = 0; const byCat = {};
   per.forEach(s => { inc += s.inc; out += s.out; Object.entries(s.byCat).forEach(([c, a]) => byCat[c] = (byCat[c] || 0) + a); });
   /* disegni del PDF: colori come nell'app */
@@ -3932,7 +3969,7 @@ async function exportPDF(mode, level){
   const lineChart = (title, pts, note) => { if (pts.length < 2) return; need(52); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); txt('#222222', title, M, y); y += 4;
     const ch = 32, x0 = M + 18, w = Wd - 20, vs = pts.map(q => q.v), mn = Math.min(0, ...vs), mx = Math.max(1, ...vs), X = i => x0 + i / (pts.length - 1) * w, Y = v => y + ch - (v - mn) / (mx - mn) * ch;
     doc.setLineWidth(0.15); doc.setDrawColor(225); doc.setFontSize(6.5); doc.setFont('helvetica', 'normal');
-    [0, 0.5, 1].forEach(f => { const v = mn + (mx - mn) * f, yy = Y(v); doc.line(x0, yy, x0 + w, yy); txt('#999999', Math.abs(v) >= 1000 ? fmtN(v / 1000, 1).replace(/,0$/, '') + 'k' : fmtN(v), x0 - 2, yy + 1, {align:'right'}); });
+    [0, 0.5, 1].forEach(f => { const v = mn + (mx - mn) * f, yy = Y(v); doc.line(x0, yy, x0 + w, yy); if (!ANON) txt('#999999', Math.abs(v) >= 1000 ? fmtN(v / 1000, 1).replace(/,0$/, '') + 'k' : fmtN(v), x0 - 2, yy + 1, {align:'right'}); });
     const segs = pts.slice(1).map((q, i) => [X(i + 1) - X(i), Y(q.v) - Y(pts[i].v)]); doc.setFillColor(255, 236, 170);
     doc.lines(segs.concat([[0, Y(mn) - Y(pts[pts.length - 1].v)], [X(0) - X(pts.length - 1), 0], [0, Y(pts[0].v) - Y(mn)]]), X(0), Y(pts[0].v), [1, 1], 'F', true);
     doc.setDrawColor(201, 133, 0); doc.setLineWidth(0.7); doc.lines(segs, X(0), Y(pts[0].v), [1, 1], 'S', false); doc.setLineWidth(0.2);
@@ -3941,7 +3978,7 @@ async function exportPDF(mode, level){
     const d0 = last.v - pts[0].v; doc.setFontSize(8.5); txt(d0 >= 0 ? '#0ca30c' : '#e5484d', (d0 >= 0 ? '+' : '-') + EU(Math.abs(d0)) + ' nel periodo', x0 + w, y - 1, {align:'right'}); y += ch + 8;
     if (note) { doc.setFontSize(7.5); txt('#888888', note, M, y); y += 5; } doc.setDrawColor(220); };
   doc.setFillColor(0, 0, 0); doc.rect(0, 0, 210, 30, 'F'); doc.setTextColor(255, 201, 10); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text('Buddy4Free Risparmio', M, 14);
-  doc.setTextColor(255); doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('Resoconto ' + (mode === 'y' ? 'anno ' + curYM().slice(0, 4) : ymLabel(curYM())) + ' · ' + ({s:'sintetico', c:'completo', a:'approfondito'}[level] || 'completo') + ' · generato il ' + new Date().toLocaleDateString('it-IT'), M, 22); y = 40;
+  doc.setTextColor(255); doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('Resoconto ' + (PR.label || (mode === 'y' ? (months[0].slice(5) === '01' && months.length >= curYM().slice(5) * 1 ? 'anno ' + curYM().slice(0, 4) : ymLabel(months[0], {month:'short', year:'numeric'}) + ' - ' + ymLabel(END, {month:'short', year:'numeric'})) : ymLabel(curYM()))) + (ANON ? ' · cifre nascoste' : '') + ' · ' + ({s:'sintetico', c:'completo', a:'approfondito'}[level] || 'completo') + ' · generato il ' + new Date().toLocaleDateString('it-IT'), M, 22); y = 40;
   /* tre riquadri: entrate, uscite, risparmio */
   const bw = (Wd - 8) / 3; [['Entrate', inc, '#22A45D'], ['Uscite', out, '#C98500'], ['Risparmio', sv, VAR[bd.c] || '#888888']].forEach(([l, v, c], i) => { const x = M + i * (bw + 4);
     doc.setFillColor(246, 246, 243); doc.roundedRect(x, y, bw, 22, 3, 3, 'F'); fill(c); doc.rect(x, y + 3, 1.6, 16, 'F');
@@ -3969,7 +4006,7 @@ async function exportPDF(mode, level){
         else { doc.setFontSize(6.3); txt(vals[i][1] || '#666666', vals[i][0], M + i * cw + cw / 2, y + h + 7.6, {align:'center'}); } } });
     y += h + (vals && topK == null ? 11 : 8); doc.setFontSize(7.5); let lx = M; series.forEach(s => { fill(s.c); doc.rect(lx, y - 2.4, 3, 3, 'F'); txt('#444444', s.n, lx + 4.5, y); lx += 8 + doc.getTextWidth(s.n) + 6; }); y += 6; };
   const lines2 = (series, n, labelOf, h) => { need(h + 16); const x0 = M + 14, w = Wd - 16, mx = Math.max(1, ...series.flatMap(s => s.v.filter(v => v != null))), X = i => x0 + i / Math.max(1, n - 1) * w, Y = v => y + h - v / mx * h;
-    doc.setLineWidth(0.15); doc.setDrawColor(225); doc.setFontSize(6.5); [0, 0.5, 1].forEach(f => { const yy = Y(mx * f); doc.line(x0, yy, x0 + w, yy); txt('#999999', fmtN(mx * f), x0 - 2, yy + 1, {align:'right'}); });
+    doc.setLineWidth(0.15); doc.setDrawColor(225); doc.setFontSize(6.5); [0, 0.5, 1].forEach(f => { const yy = Y(mx * f); doc.line(x0, yy, x0 + w, yy); if (!ANON) txt('#999999', fmtN(mx * f), x0 - 2, yy + 1, {align:'right'}); });
     series.forEach(s => { const pts = s.v.map((v, i) => v == null ? null : [X(i), Y(v)]).filter(Boolean); if (pts.length < 2) return; doc.setDrawColor(...rgb(s.c)); doc.setLineWidth(s.w || 0.7); doc.lines(pts.slice(1).map((p2, i) => [p2[0] - pts[i][0], p2[1] - pts[i][1]]), pts[0][0], pts[0][1], [1, 1], 'S', false); });
     doc.setLineWidth(0.2); const st = Math.max(1, Math.ceil(n / 8)); for (let i = 0; i < n; i += st) txt('#888888', labelOf(i), X(i), y + h + 4, {align:'center'});
     y += h + 9; doc.setFontSize(7.5); let lx = M; series.forEach(s => { fill(s.c); doc.rect(lx, y - 2.4, 3, 3, 'F'); txt('#444444', s.n, lx + 4.5, y); lx += 8 + doc.getTextWidth(s.n) + 6; }); y += 6; doc.setDrawColor(220); };
@@ -3988,10 +4025,10 @@ async function exportPDF(mode, level){
   const L0 = [].concat(...months.map(ym => monthTx(ym).filter(x => !x.plan)));
   const OUTX = L0.filter(x => x.t === 'out' && x.a > 0), disc = per.reduce((t, s2) => t + s2.disc, 0), essP = out - disc;
   const cap = inc - essP, rows = Object.entries(byCat).filter(([, a]) => a > 0).sort((a, b) => b[1] - a[1]);
-  const ess = avgEssential(), aOut = avgOut(), totPil = PILLARS.reduce((t, q) => t + pilBalance(q.id), 0), debts = S.debts || [];
+  const ess = avgEssential(), aOut = avgOut(), totPil = PILLARS.reduce((t, q) => t + pB(q.id), 0), debts = S.debts || [];
   const rataM = debts.reduce((t, d) => t + (debtInfo(d).left > 0 ? +d.rata || 0 : 0), 0), l6 = lastFull(6), avgInc6 = l6.length ? l6.reduce((t, ym) => t + stats(ym).inc, 0) / l6.length : inc / months.length;
   const avgSave6 = l6.length ? l6.reduce((t, ym) => t + stats(ym).save, 0) / l6.length : sv / months.length;
-  const autonomy = ess > 0 ? (pilBalance('liq') + pilBalance('emerg')) / ess : null, wb = typeof wbIndex === 'function' ? wbIndex() : null;
+  const autonomy = ess > 0 ? (pB('liq') + pB('emerg')) / ess : null, wb = typeof wbIndex === 'function' ? wbIndex() : null;
   const keyPts = [];
   const d0P = L0.map(x => x.d).sort()[0] || today(), dEnd = isY ? (curYM().slice(0, 4) + '-12-31' > today() ? today() : curYM().slice(0, 4) + '-12-31') : today(), nDays = Math.max(1, Math.round((new Date(dEnd + 'T12:00') - new Date(d0P + 'T12:00')) / 864e5) + 1), nWeeks = nDays / 7;
   const m3 = [1, 2, 3].map(i => addMonths(curYM(), -i)), avgCat3 = {}; m3.forEach(ym => stats(ym).L.forEach(x => { if (x.t === 'out') avgCat3[x.c] = (avgCat3[x.c] || 0) + x.a / 3; }));
@@ -4002,10 +4039,10 @@ async function exportPDF(mode, level){
   if (out > 0 && rows.length) { const t3 = rows.slice(0, 3).reduce((t, r) => t + r[1], 0); keyPts.push(['#C98500', 'Le prime 3 voci (' + rows.slice(0, 3).map(r => catOf('out', r[0]).n).join(', ') + ') valgono il ' + P(t3, out) + ' delle uscite.']); }
   { const cm = isY ? months.map(m => addMonths(m, -12)) : [1, 2, 3].map(i => addMonths(curYM(), -i)), pt = cm.reduce((t, ym) => t + stats(ym).out, 0) / (isY ? 1 : 3); if (pt > 0 && out > 0) keyPts.push([out > pt ? '#e5484d' : '#22A45D', 'Rispetto ' + (isY ? 'agli stessi mesi dell\'anno scorso' : 'alla media dei 3 mesi precedenti') + ' le uscite sono ' + (Math.abs(out / pt - 1) < 0.01 ? 'rimaste uguali.' : (out > pt ? 'cresciute del ' : 'calate del ') + Math.abs(Math.round((out / pt - 1) * 100)) + '%.')]); }
   if (autonomy !== null) keyPts.push([autonomy >= S.emergMonths ? '#0ca30c' : autonomy >= 3 ? '#fab219' : '#e5484d', 'Conto e fondo di emergenza coprono ' + fmtN(autonomy, 1) + ' mesi di spese essenziali.']);
-  { const g = mainGoal(); if (g) { const pl = goalPlan(g); keyPts.push(['#3987e5', 'Obiettivo «' + g.name + '»: ' + Math.round(pl.pct) + '%' + (pl.left > 0 ? '; per la scadenza servirebbero ' + EU(pl.need) + ' al mese.' : ', raggiunto.')]); } }
+  { const g = mainGoal(); if (g) { const pl = goalPlan(g); keyPts.push(['#3987e5', 'Obiettivo «' + (ANON ? 'principale' : g.name) + '»: ' + Math.round(pl.pct) + '%' + (pl.left > 0 ? '; per la scadenza servirebbero ' + EU(pl.need) + ' al mese.' : ', raggiunto.')]); } }
   if (keyPts.length) card('I punti chiave', keyPts.slice(0, 5).map(k => '• ' + k[1]));
   /* ===== 1. pagella: gli indicatori principali con il loro colore ===== */
-  h1('La pagella del ' + (isY ? 'tuo anno' : 'mese'));
+  h1('La pagella del ' + (isY ? 'periodo' : 'mese'));
   const pg = [];
   pg.push(['Tasso di risparmio', rate === null ? '–' : Math.round(rate) + '%', VAR[bd.c] || '#888888', rate === null ? 'Nessuna entrata nel periodo.' : bd.l + ': su 100 € entrati ne sono rimasti ' + Math.max(0, Math.round(rate)) + '.']);
   if (autonomy !== null) pg.push(['Mesi di autonomia', fmtN(autonomy, 1) + ' mesi', autonomy >= S.emergMonths ? '#0ca30c' : autonomy >= 3 ? '#fab219' : '#e5484d', 'Conto e fondo di emergenza coprono ' + fmtN(autonomy, 1) + ' mesi di spese essenziali (' + EU(ess) + ' al mese).']);
@@ -4016,7 +4053,7 @@ async function exportPDF(mode, level){
   line();
   /* ===== 2. capacità di risparmio (al posto dei budget: entrate meno spese essenziali) ===== */
   if (inc > 0) { h1('La tua capacità di risparmio');
-    sub('Capacità di risparmio = entrate meno spese essenziali: il massimo che il periodo permetteva di mettere da parte.');
+    sub('Capacità di risparmio = entrate meno spese essenziali: il massimo che il periodo permetteva di mettere da parte. ' + essText());
     pieBlock('', sv >= 0 ? [{n:'Spese essenziali', v:essP, c:'#3987e5'}, {n:'Spese non essenziali', v:disc, c:'#C98500'}, {n:'Risparmio', v:sv, c:'#22A45D'}] : [{n:'Spese essenziali', v:essP, c:'#3987e5'}, {n:'Spese non essenziali', v:disc, c:'#C98500'}], [rate === null ? '-' : Math.round(rate) + '%', 'risparmiato']);
     para(cap > 0 ? 'Entrate ' + EU(inc) + ', spese essenziali ' + EU(essP) + ': capacità di risparmio ' + EU(cap) + '. Ne sono diventati risparmio ' + EU(Math.max(0, sv)) + ' (' + P(Math.max(0, sv), cap) + '); ' + EU(disc) + ' sono andati in spese non essenziali.' : 'Nel periodo le spese essenziali (' + EU(essP) + ') hanno superato le entrate (' + EU(inc) + '): la capacità di risparmio è stata negativa.');
     if (C2) { const span12 = Array.from({length:12}, (_, i) => addMonths(curYM(), -11 + i)).filter(ym => { const s2 = stats(ym); return s2.inc > 0 || s2.out > 0; });
@@ -4042,28 +4079,28 @@ async function exportPDF(mode, level){
     line(); }
   /* ===== 5. andamento: giorno per giorno (mese) o mese per mese (anno) ===== */
   if (C2) { h1(isY ? 'Entrate e uscite mese per mese' : 'Andamento del mese');
-    if (isY) vbars(months.map(ML), [{n:'Entrate', c:'#22A45D', v:per.map(s2 => s2.inc)}, {n:'Uscite', c:'#C98500', v:per.map(s2 => s2.out)}], 34, per.map(s2 => s2.rate === null ? null : [Math.round(s2.rate) + '%', VAR[band(s2.rate).c] || '#666666']));
-    else { const [yy, mm] = curYM().split('-').map(Number), nd = new Date(yy, mm, 0).getDate(), td = new Date().getDate(), pym = addMonths(curYM(), -1), cum = (ym, upto) => { const d = {}; monthTx(ym).forEach(x => { if (x.t === 'out' && !x.plan && x.a > 0) { const k = +x.d.slice(8); d[k] = (d[k] || 0) + x.a; } }); let c = 0; return Array.from({length:nd}, (_, i) => i + 1 > upto ? null : (c += d[i + 1] || 0)); };
+    if (isY) vbars(months.slice(-12).map(ML), [{n:'Entrate', c:'#22A45D', v:per.slice(-12).map(s2 => s2.inc)}, {n:'Uscite', c:'#C98500', v:per.slice(-12).map(s2 => s2.out)}], 34, per.slice(-12).map(s2 => s2.rate === null ? null : [Math.round(s2.rate) + '%', VAR[band(s2.rate).c] || '#666666']));
+    else { const [yy, mm] = curYM().split('-').map(Number), nd = new Date(yy, mm, 0).getDate(), td = +today().slice(8), pym = addMonths(curYM(), -1), cum = (ym, upto) => { const d = {}; monthTx(ym).forEach(x => { if (x.t === 'out' && !x.plan && x.a > 0) { const k = +x.d.slice(8); d[k] = (d[k] || 0) + x.a; } }); let c = 0; return Array.from({length:nd}, (_, i) => i + 1 > upto ? null : (c += d[i + 1] || 0)); };
       const c3 = m3.map(ym => cum(ym, 31)), pc = Array.from({length:nd}, (_, i) => c3.reduce((t, c) => t + (c[i] == null ? c[c.length - 1] || 0 : c[i]), 0) / 3), ly = addMonths(curYM(), -12), lyc = stats(ly).out > 0 ? cum(ly, 31) : null, cc = cum(curYM(), td);
       lines2([{n:'Media dei 3 mesi precedenti', c:'#bbbbbb', v:pc, w:0.6}].concat(lyc ? [{n:ymLabel(ly, {month:'long', year:'numeric'}), c:'#8b5cf6', v:lyc, w:0.5}] : []).concat([{n:'Questo mese', c:'#C98500', v:cc}]), nd, i => String(i + 1), 30);
       const atSame = pc[Math.min(td, nd) - 1]; if (atSame > 0) para('Al giorno ' + td + ' le uscite sono ' + EU(cc[td - 1] || 0) + ', contro ' + EU(atSame) + ' in media allo stesso giorno dei 3 mesi precedenti' + (lyc && lyc[td - 1] ? ' e ' + EU(lyc[td - 1]) + ' a ' + ymLabel(ly, {month:'long', year:'numeric'}) : '') + '.');
       const wk = (ym, upto) => { const w = [0, 0, 0, 0, 0]; monthTx(ym).forEach(x => { const d = +x.d.slice(8); if (x.t === 'out' && !x.plan && x.a > 0 && d <= upto) w[Math.min(4, Math.floor((d - 1) / 7))] += x.a; }); return w; };
       const wC = wk(curYM(), td), wP = [0, 1, 2, 3, 4].map(i => m3.reduce((t, ym) => t + wk(ym, 31)[i], 0) / 3); y += 2; h2('Settimana per settimana', 44);
-      vbars(['1-7', '8-14', '15-21', '22-28', '29-' + nd], [{n:'Media dei 3 mesi precedenti', c:'#cfcfcf', v:wP}, {n:'Questo mese', c:'#C98500', v:wC}], 30, wC.map((v, i) => i * 7 + 1 > td ? null : [fmtN(v) + ' €', '#C98500']), 1);
+      vbars(['1-7', '8-14', '15-21', '22-28', '29-' + nd], [{n:'Media dei 3 mesi precedenti', c:'#cfcfcf', v:wP}, {n:'Questo mese', c:'#C98500', v:wC}], 30, wC.map((v, i) => i * 7 + 1 > td ? null : [ANON ? '•••' : fmtN(v) + ' €', '#C98500']), 1);
       sub('Uscite di ogni settimana del mese, accanto alla media delle stesse settimane nei 3 mesi precedenti.'); }
     line(); }
   /* ===== 6. spese più grandi, ricorrenti e abbonamenti, eventi ===== */
-  if (C2 && OUTX.length) { const ag = {}; OUTX.forEach(x => { const nm = (x.n || x.s || catOf('out', x.c).n).trim(), k = nm.toLowerCase() + '|' + x.c, g = ag[k] = ag[k] || {n:nm, c:x.c, v:0, k:0}; g.v += x.a; g.k++; });
+  if (C2 && OUTX.length) { const ag = {}; OUTX.forEach(x => { const nm = (ANON ? (x.s || catOf('out', x.c).n) : (x.n || x.s || catOf('out', x.c).n)).trim(), k = nm.toLowerCase() + '|' + x.c, g = ag[k] = ag[k] || {n:nm, c:x.c, v:0, k:0}; g.v += x.a; g.k++; });
     h1('Le 10 voci di spesa più grandi'); hbars2(Object.values(ag).sort((a, b) => b.v - a.v).slice(0, 10).map(g => ({n:g.n, v:g.v, c:catColor('out', catOf('out', g.c)), r:EU(g.v) + (g.k > 1 ? ' · ' + g.k + ' volte' : '') + ' · ' + catOf('out', g.c).n.slice(0, 14)})));
     sub('Le spese con lo stesso nome sono sommate: per esempio tutte le volte al supermercato.'); y += 2; }
   const recO = (S.rec || []).filter(r => r.t === 'out' && (!r.to || r.to >= curYM())), recM = r => r.unit === 'w' ? r.a * 52 / 12 / (r.every || 1) : r.a / (r.every || 1);
-  if (C2 && (recO.length || (S.dues || []).length)) { h1('Spese ricorrenti e scadenze'); const rws = recO.map(r => [(r.n || catOf('out', r.c).n).slice(0, 40), EU(recM(r)), EU(recM(r) * 12)]).concat((S.dues || []).map(d => [(d.n || '').slice(0, 40) + ' (scadenza)', EU(dueYear(d) / 12), EU(dueYear(d))]));
+  if (C2 && (recO.length || (S.dues || []).length)) { h1('Spese ricorrenti e scadenze'); const rws = recO.map(r => [(ANON ? catOf('out', r.c).n : r.n || catOf('out', r.c).n).slice(0, 40), EU(recM(r)), EU(recM(r) * 12)]).concat((S.dues || []).map(d => [(ANON ? catOf('out', d.c).n : d.n || '').slice(0, 40) + ' (scadenza)', EU(dueYear(d) / 12), EU(dueYear(d))]));
     const tm = recO.reduce((t, r) => t + recM(r), 0) + (S.dues || []).reduce((t, d) => t + dueYear(d) / 12, 0);
     hbars2(rws.slice(0, 14).map(r => ({n:r[0], v:parseAmt(r[2]), c:'#3987e5', r:r[1] + ' al mese · ' + r[2] + ' all\'anno'})), null, 64); para('In totale ' + EU(tm) + ' al mese, cioè ' + EU(tm * 12) + ' all\'anno' + (aOut > 0 ? ': il ' + P(tm, aOut) + ' delle uscite medie.' : '.'));
     line(); }
   const tagsP = {}; L0.forEach(x => { if (x.tag && x.t === 'out') { const g = tagsP[x.tag] = tagsP[x.tag] || {v:0, n:0}; g.v += x.a; g.n++; } });
-  if (C2 && Object.keys(tagsP).length) { h1('Eventi ed etichette'); table(['Etichetta', 'Movimenti', 'Spesa', 'Sulle uscite'], Object.entries(tagsP).sort((a, b) => b[1].v - a[1].v).map(([k, g]) => [k.slice(0, 40), g.n, EU(g.v), P(g.v, out)]), [90, 24, 36, 32], ['left', 'right', 'right', 'right']); line(); }
-  const FX = L0.filter(x => x.fx); if (C2 && FX.length) { h1('Spese in valuta estera'); table(['Data', 'Voce', 'Importo', 'Cambio', 'In euro'], FX.slice(0, 12).map(x => [x.d.slice(8) + '/' + x.d.slice(5, 7), (x.n || catOf(x.t, x.c).n).slice(0, 28), fxTxt(x.fx), fxNum(x.fx.r, 4), EU(x.a)]), [18, 64, 34, 30, 36], ['left', 'left', 'right', 'right', 'right']); }
+  if (C2 && Object.keys(tagsP).length) { h1('Eventi ed etichette'); table(['Etichetta', 'Movimenti', 'Spesa', 'Sulle uscite'], Object.entries(tagsP).sort((a, b) => b[1].v - a[1].v).map(([k, g], ti) => [ANON ? 'Etichetta ' + (ti + 1) : k.slice(0, 40), g.n, EU(g.v), P(g.v, out)]), [90, 24, 36, 32], ['left', 'right', 'right', 'right']); line(); }
+  const FX = L0.filter(x => x.fx); if (C2 && FX.length) { h1('Spese in valuta estera'); table(['Data', 'Voce', 'Importo', 'Cambio', 'In euro'], FX.slice(0, 12).map(x => [x.d.slice(8) + '/' + x.d.slice(5, 7), (ANON ? catOf(x.t, x.c).n : x.n || catOf(x.t, x.c).n).slice(0, 28), ANON ? '•••' : fxTxt(x.fx), fxNum(x.fx.r, 4), EU(x.a)]), [18, 64, 34, 30, 36], ['left', 'left', 'right', 'right', 'right']); }
   /* ===== 7. entrate ===== */
   const byInc = {}; L0.forEach(x => { if (x.t === 'in') byInc[x.c] = (byInc[x.c] || 0) + x.a; });
   const inRows = Object.entries(byInc).filter(([, a]) => a > 0).sort((a, b) => b[1] - a[1]);
@@ -4093,19 +4130,19 @@ async function exportPDF(mode, level){
     /* voci e negozi più frequenti, dalle note */
     const nt = {}; OUTX.forEach(x => { const k = (x.n || '').trim().toLowerCase(); if (k.length > 2) { const g = nt[k] = nt[k] || {n:x.n.trim(), c:0, v:0}; g.c++; g.v += x.a; } });
     const ntr = Object.values(nt).filter(g => g.c >= 2).sort((a, b) => b.c - a.c || b.v - a.v).slice(0, 6);
-    if (ntr.length) { y += 1; h2('Le voci che tornano più spesso', 20); table(['Voce (dalla nota)', 'Volte', 'Totale'], ntr.map(g => [g.n.slice(0, 40), g.c, EU(g.v)]), [110, 30, 42], ['left', 'right', 'right']); }
+    if (ntr.length && !ANON) { y += 1; h2('Le voci che tornano più spesso', 20); table(['Voce (dalla nota)', 'Volte', 'Totale'], ntr.map(g => [g.n.slice(0, 40), g.c, EU(g.v)]), [110, 30, 42], ['left', 'right', 'right']); }
     line();
     /* quando si spende */
     h1('Quando si spende');
     const wd = [0, 0, 0, 0, 0, 0, 0], wn = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'], wc = [0, 0, 0, 0, 0, 0, 0]; OUTX.filter(x => !x.rec).forEach(x => { wd[(new Date(x.d + 'T12:00').getDay() + 6) % 7] += x.a; }); for (let t0 = new Date(d0P + 'T12:00'); t0 <= new Date(dEnd + 'T12:00'); t0.setDate(t0.getDate() + 1)) wc[(t0.getDay() + 6) % 7]++;
-    const wt = wd.reduce((t, v) => t + v, 0); if (wt > 0) { vbars(wn.map((d, i) => d + ' · ' + P(wd[i], wt)), [{n:'Spese variabili per giorno della settimana (sopra: media di quel giorno)', c:'#C98500', v:wd}], 26, wd.map((v, i) => [EU(wc[i] ? v / wc[i] : 0).replace(',00', ''), '#8a5a00']), 0);
+    const wt = wd.reduce((t, v) => t + v, 0); if (wt > 0) { vbars(wn.map((d, i) => d + ' · ' + P(wd[i], wt)), [{n:'Spese variabili per giorno della settimana (sopra: media di quel giorno)', c:'#C98500', v:wd}], 26, wd.map((v, i) => [ANON ? '•••' : EU(wc[i] ? v / wc[i] : 0).replace(',00', ''), '#8a5a00']), 0);
       const wk = wd[5] + wd[6]; para('Nel fine settimana (sabato e domenica) va il ' + P(wk, wt) + ' delle spese variabili, in 2 giorni su 7.'); }
     /* effetto stipendio */
     const pday = (S.pays || [])[0] && S.pays[0].day ? +S.pays[0].day : null;
     if (pday && !isY) { const vv = OUTX.filter(x => !x.rec), first7 = vv.filter(x => { const d = +x.d.slice(8); return d >= pday && d < pday + 7; }).reduce((t, x) => t + x.a, 0), tv = vv.reduce((t, x) => t + x.a, 0);
       if (tv > 0) para('Effetto stipendio: nei 7 giorni dopo l\'accredito (dal giorno ' + pday + ') è andato il ' + P(first7, tv) + ' delle spese variabili del mese.'); }
     /* giorni senza spese */
-    { const days = [], d0 = L0.map(x => x.d).sort()[0] || today(); months.forEach(ym => { const [yy, mm] = ym.split('-').map(Number), nd = ym === curYM() ? new Date().getDate() : new Date(yy, mm, 0).getDate(); for (let d = 1; d <= nd; d++) { const k = ym + '-' + pad(d); if (k >= d0) days.push(k); } });
+    { const days = [], d0 = L0.map(x => x.d).sort()[0] || today(); months.forEach(ym => { const [yy, mm] = ym.split('-').map(Number), nd = ym === curYM() ? +today().slice(8) : new Date(yy, mm, 0).getDate(); for (let d = 1; d <= nd; d++) { const k = ym + '-' + pad(d); if (k >= d0) days.push(k); } });
       const spent = new Set(OUTX.filter(x => !x.rec).map(x => x.d)); let zero = 0, run = 0, best = 0; days.forEach(d => { if (spent.has(d)) run = 0; else { zero++; run++; best = Math.max(best, run); } });
       para('Giorni senza spese variabili: ' + zero + ' su ' + days.length + '; la serie più lunga è di ' + best + (best === 1 ? ' giorno.' : ' giorni di fila.')); }
     line();
@@ -4121,9 +4158,9 @@ async function exportPDF(mode, level){
     if (sv > 0) para('Valore nel tempo: con un\'inflazione ipotetica del 2% all\'anno, i ' + EU(sv) + ' risparmiati nel periodo tra 10 anni comprerebbero quanto oggi ' + EU(sv / Math.pow(1.02, 10)) + ', se restassero fermi.', '#555555', 8.6);
     /* anno: griglia mesi x categorie e record */
     if (isY && per.length > 1) { y += 2; h2('Mesi e voci: dove si concentra la spesa', 60);
-      const tc = rows.slice(0, 8).map(r => r[0]), cw = (Wd - 40) / months.length, mxv = Math.max(1, ...per.flatMap(s2 => tc.map(c => s2.byCat[c] || 0)));
-      need(tc.length * 6 + 10); doc.setFontSize(6.6); months.forEach((ym, i) => txt('#888888', ML(ym), M + 40 + i * cw + cw / 2, y, {align:'center'})); y += 2;
-      tc.forEach(c => { doc.setFontSize(7.6); txt('#333333', catOf('out', c).n.slice(0, 20), M, y + 3.6); per.forEach((s2, i) => { const v = s2.byCat[c] || 0, f = v / mxv; doc.setFillColor(255, Math.round(248 - 120 * f), Math.round(225 - 210 * f)); doc.rect(M + 40 + i * cw + 0.3, y, cw - 0.6, 5, 'F'); }); y += 5.6; }); y += 3; sub('Più il colore è scuro, più si è speso in quella voce in quel mese.');
+      const ms12 = months.slice(-12), pr12 = per.slice(-12), tc = rows.slice(0, 8).map(r => r[0]), cw = (Wd - 40) / ms12.length, mxv = Math.max(1, ...pr12.flatMap(s2 => tc.map(c => s2.byCat[c] || 0)));
+      need(tc.length * 6 + 10); doc.setFontSize(6.6); ms12.forEach((ym, i) => txt('#888888', ML(ym), M + 40 + i * cw + cw / 2, y, {align:'center'})); y += 2;
+      tc.forEach(c => { doc.setFontSize(7.6); txt('#333333', catOf('out', c).n.slice(0, 20), M, y + 3.6); pr12.forEach((s2, i) => { const v = s2.byCat[c] || 0, f = v / mxv; doc.setFillColor(255, Math.round(248 - 120 * f), Math.round(225 - 210 * f)); doc.rect(M + 40 + i * cw + 0.3, y, cw - 0.6, 5, 'F'); }); y += 5.6; }); y += 3; sub('Più il colore è scuro, più si è speso in quella voce in quel mese.');
       const valid = per.map((s2, i) => ({ym:months[i], s:s2})).filter(q => q.s.inc > 0 || q.s.out > 0);
       if (valid.length > 1) { const bR = valid.filter(q => q.s.rate !== null).sort((a, b) => b.s.rate - a.s.rate)[0], lO = valid.slice().sort((a, b) => a.s.out - b.s.out)[0]; let run = 0, bestRun = 0; valid.forEach(q => { if (q.s.save > 0) { run++; bestRun = Math.max(bestRun, run); } else run = 0; });
         bullets([bR ? ['#22A45D', 'Record di risparmio: ' + MON(bR.ym) + ', ' + Math.round(bR.s.rate) + '% delle entrate.'] : null, ['#3987e5', 'Mese con meno uscite: ' + MON(lO.ym) + ', ' + EU(lO.s.out) + '.'], ['#C98500', 'Mesi positivi di fila (risparmio sopra zero): al massimo ' + bestRun + '.']].filter(Boolean)); } }
@@ -4131,13 +4168,13 @@ async function exportPDF(mode, level){
   /* ===== 9. bilancio, pilastri, patrimonio, obiettivi, debiti ===== */
   h1('Il tuo bilancio finanziario');
   const debt = debts.reduce((t, d) => t + (debtInfo(d).pv || 0), 0);
-  kv('Patrimonio nei 4 pilastri', E(totPil)); { const pAt = ym => PILLARS.reduce((t2, q) => t2 + pilBalanceAt(q.id, ym), 0), base = pAt(addMonths(months[0], -1)), dP = totPil - base; kv(isY ? 'Variazione nell\'anno' : 'Variazione nel mese', (dP >= 0 ? '+' : '-') + E(Math.abs(dP))); } if (debt > 0) kv('Debiti e finanziamenti da restituire', '-' + E(debt)); kv('Patrimonio netto', E(totPil - debt), true);
+  kv('Patrimonio nei 4 pilastri', E(totPil)); { const pAt = ym => PILLARS.reduce((t2, q) => t2 + pilBalanceAt(q.id, ym), 0), base = pAt(addMonths(months[0], -1)), dP = totPil - base; kv(isY ? 'Variazione nel periodo' : 'Variazione nel mese', (dP >= 0 ? '+' : '-') + E(Math.abs(dP))); } if (debt > 0) kv('Debiti e finanziamenti da restituire', '-' + E(debt)); kv('Patrimonio netto', E(totPil - debt), true);
   if (autonomy !== null) kv('Mesi di autonomia (conto + fondo di emergenza)', fmtN(autonomy, 1) + ' mesi');
   if (A3 && aOut > 0) kv('Mesi di spese coperti dal patrimonio', fmtN(totPil / aOut, 1) + ' mesi');
   y += 1; line();
-  need(55); h1('I 4 pilastri'); const pv = PILLARS.map(p => ({p, v:pilBalance(p.id)})), pt = pv.reduce((t, x) => t + Math.max(0, x.v), 0);
+  need(55); h1('I 4 pilastri'); const pv = PILLARS.map(p => ({p, v:pB(p.id)})), pt = pv.reduce((t, x) => t + Math.max(0, x.v), 0);
   if (pt > 0) pieBlock('', pv.map(({p, v}) => ({n:p.n, v:Math.max(0, v), c:p.c})), [EU(pt).replace(/,\d\d €/, ' €'), 'totale']); else pv.forEach(({p, v}) => kv(p.n, E(v)));
-  if (A3) { const T = targets(), ln = [['Liquidità', pilBalance('liq'), T.liq], ['Fondo di emergenza', pilBalance('emerg'), T.emerg]].map(([n, v, t]) => [n, EU(v), t ? EU(t) : '–', t ? {t:v >= t ? 'completo' : P(v, t), c:v >= t ? '#0ca30c' : '#C98500'} : '–']);
+  if (A3) { const T = targets(), ln = [['Liquidità', pB('liq'), T.liq], ['Fondo di emergenza', pB('emerg'), T.emerg]].map(([n, v, t]) => [n, EU(v), t ? EU(t) : '–', t ? {t:v >= t ? 'completo' : P(v, t), c:v >= t ? '#0ca30c' : '#C98500'} : '–']);
     table(['Pilastro', 'Oggi', 'Obiettivo scelto', 'Stato'], ln, [70, 36, 40, 36], ['left', 'right', 'right', 'right']); sub('I pilastri si riempiono in ordine: prima la liquidità, poi il fondo di emergenza, poi obiettivi e investimenti.'); }
   if (C2) { const pilAt = ym => PILLARS.reduce((t2, q) => t2 + pilBalanceAt(q.id, ym), 0), yr = curYM().slice(0, 4);
     const firstYM = [...S.tx.filter(x => !x.imp).map(x => ymOf(x.d)), ...(S.moves || []).map(m => ymOf(m.d)), ...Object.values(S.hist || {}).flat().map(a => a.ym), ymOf(pilFrom())].filter(Boolean).sort()[0] || curYM();
@@ -4149,17 +4186,17 @@ async function exportPDF(mode, level){
     let allM = rng(firstYM, curYM()); if (allM.length > 48) { const st = Math.ceil(allM.length / 48); allM = allM.filter((m2, i) => i % st === 0 || i === allM.length - 1); }
     if (allM.length > 1) lineChart('Patrimonio da sempre', allM.map(ym => ({ym, v:pilAt(ym)})), 'Dal ' + ymLabel(firstYM, {month:'long', year:'numeric'}) + ': i saldi a fine mese di tutti e 4 i pilastri.'); }
   line();
-  if (S.goals.length) { h1('Obiettivi'); S.goals.forEach(g => { const pl = goalPlan(g), pc = Math.max(0, Math.min(100, pl.pct)); need(16);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); txt('#282828', g.name + ' (entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + ')', M, y); txt('#282828', EU(goalSaved(g)) + ' di ' + EU(goalTarget(g)), 210 - M, y, {align:'right'}); y += 2.5;
+  if (S.goals.length) { h1('Obiettivi'); S.goals.forEach((g, gi) => { const pl = goalPlan(g), pc = Math.max(0, Math.min(100, pl.pct)), gName = ANON ? 'Obiettivo ' + (gi + 1) : g.name; need(16);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); txt('#282828', gName + ' (entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + ')', M, y); txt('#282828', EU(goalSaved(g)) + ' di ' + EU(goalTarget(g)), 210 - M, y, {align:'right'}); y += 2.5;
       doc.setFillColor(235, 235, 232); doc.roundedRect(M, y, Wd, 3.5, 1.5, 1.5, 'F'); bar(M, y, Wd * pc / 100, 3.5, VAR[goalStatus(g).c] || goalStatus(g).c || '#199e70'); y += 7.5;
       if (C2 && pl.left > 0) { doc.setFontSize(8.2); const eta = avgSave6 > 0 ? addMonths(curYM(), Math.ceil(pl.left / avgSave6)) : null;
         const gl2 = doc.splitTextToSize('Per la scadenza servirebbero ' + EU(pl.need) + ' al mese' + (eta ? '; con tutto il risparmio medio degli ultimi mesi (' + EU(avgSave6) + ') si arriverebbe a ' + MON(eta) + (eta > g.date ? ', dopo la scadenza.' : ', prima della scadenza.') : '.'), Wd); need(gl2.length * 4 + 2); txt('#666666', gl2, M, y); y += gl2.length * 4 + 2; } }); line(); }
-  if (debts.length) { h1('Finanziamenti'); debts.forEach(d => { const c = debtInfo(d); kv((d.n || 'Finanziamento') + ' (TAEG ' + d.taeg + '%)', 'residuo ' + EU(c.pv) + ' · ' + c.left + ' rate'); if (C2) { doc.setFontSize(8.2); const dl2 = doc.splitTextToSize('Rata ' + EU(d.rata) + ' · interessi e costi ancora da pagare ' + EU(c.int) + ' · ultima rata ' + MON(c.end) + '.', Wd); txt('#666666', dl2, M, y); y += dl2.length * 4 + 2; } }); line(); }
+  if (debts.length) { h1('Finanziamenti'); debts.forEach(d => { const c = debtInfo(d); kv((ANON ? 'Finanziamento' : d.n || 'Finanziamento') + ' (TAEG ' + d.taeg + '%)', 'residuo ' + EU(c.pv) + ' · ' + c.left + ' rate'); if (C2) { doc.setFontSize(8.2); const dl2 = doc.splitTextToSize('Rata ' + EU(d.rata) + ' · interessi e costi ancora da pagare ' + EU(c.int) + ' · ultima rata ' + MON(c.end) + '.', Wd); txt('#666666', dl2, M, y); y += dl2.length * 4 + 2; } }); line(); }
   /* ===== 10. sguardo avanti e proiezioni (sempre dichiarate come previsioni) ===== */
-  if (C2) { h1('Uno sguardo avanti'); sub('Previsioni basate sui movimenti programmati e sul ritmo degli ultimi mesi: non sono dati reali.');
+  if (C2 && END === REAL) { h1('Uno sguardo avanti'); sub('Previsioni basate sui movimenti programmati e sul ritmo degli ultimi mesi: non sono dati reali.');
     const nx = addMonths(curYM(), 1), nxOut = monthTx(nx).filter(x => x.t === 'out').reduce((t, x) => t + x.a, 0), nxDues = (S.dues || []).filter(d => ymOf(d.date) === nx);
     const bl = []; if (nxOut > 0) bl.push(['#C98500', ymLabel(nx, {month:'long'}) + ': ' + EU(nxOut) + ' di uscite già programmate (ricorrenti e scadenze).']);
-    nxDues.forEach(d => bl.push(['#e5484d', 'Scadenza: ' + d.n + ', ' + EU(d.a) + ' il ' + dshort(d.date) + '.']));
+    nxDues.forEach(d => bl.push(['#e5484d', 'Scadenza: ' + (ANON ? catOf('out', d.c).n : d.n) + ', ' + EU(d.a) + ' il ' + dshort(d.date) + '.']));
     try { const px = (S.pays || []).reduce((t, p) => t + payExp(p, nx).reduce((t2, e) => t2 + e.a, 0), 0); if (px > 0) bl.push(['#22A45D', 'Stipendio e pensione previsti a ' + ymLabel(nx, {month:'long'}) + ': ' + EU(px) + '.']); } catch(e) {}
     if (avgSave6 !== 0) { const left = 12 - +curYM().slice(5); bl.push([avgSave6 > 0 ? '#22A45D' : '#e5484d', 'Al ritmo degli ultimi mesi (' + EU(avgSave6) + ' di risparmio medio al mese), a fine anno il patrimonio sarebbe di circa ' + EU(totPil + avgSave6 * left) + '.']); }
     if (bl.length) bullets(bl);
@@ -4209,7 +4246,7 @@ async function exportPDF(mode, level){
   for (let pass = 0; pass < 4; pass++) { const N = {}; R0.CH.forEach((c, i) => { if (c && c.end) N[i] = Math.round((c.end.p - c.p) * 267 + c.end.y - c.y); }); if (JSON.stringify(N) === JSON.stringify(HT)) break; HT = N; R0 = build(HT); }
   const doc = R0.doc, LV = {s:1, c:2, a:3}[level] || 2, isY = mode === 'y';
   { const np = doc.getNumberOfPages(); for (let i = 1; i <= np; i++) { doc.setPage(i); /* logo Buddy4Free in basso a destra, tondo */ try { doc.saveGraphicsState(); if (ICO) { doc.roundedRect(181, 280, 13, 13, 3, 3, null); doc.clip(); doc.discardPath(); doc.addImage(ICO, 'PNG', 181, 280, 13, 13); } else { doc.circle(189.5, 287.5, 4.5, null); doc.clip(); doc.discardPath(); doc.addImage(LOGO, 'JPEG', 185, 283, 9, 9); } doc.restoreGraphicsState(); } catch(e) {} doc.setFontSize(7.5); doc.setTextColor(150); doc.text('Buddy4Free Risparmio · ' + ({1:'Sintetico', 2:'Completo', 3:'Approfondito'})[LV] + ' · pagina ' + i + ' di ' + np, 105, 292, {align:'center'}); } }
-  try { await downloads.save({filename:'buddy4free-resoconto-' + (isY ? curYM().slice(0, 4) : curYM()) + '-' + ({1:'sintetico', 2:'completo', 3:'approfondito'})[LV] + '.pdf', data:doc.output('blob')}); toast('PDF salvato'); } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare il PDF'); }
+  try { await downloads.save({filename:'buddy4free-resoconto-' + (PR.from < END ? PR.from + '_' + END : END) + (ANON ? '-anonimo' : '') + '-' + ({1:'sintetico', 2:'completo', 3:'approfondito'})[LV] + '.pdf', data:doc.output('blob')}); toast('PDF salvato'); } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare il PDF'); }
 }
 /* ---------- cifratura: backup protetti da password (AES-GCM a 256 bit, chiave da PBKDF2-SHA256) ---------- */
 const b64e = u8 => { let s2 = ''; for (let i = 0; i < u8.length; i += 0x8000) s2 += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s2); };
@@ -5151,9 +5188,7 @@ function renderSettings(){
   const sd = view.querySelector('#s-report'); if (sd) sd.onclick = () => { try { diagPop(); } catch(e) { toast('Segnala un problema non si apre: ' + (e && e.message)); try { localStorage.setItem('b4f-lasterr', JSON.stringify({m:'diag: ' + (e && e.message), s:String(e && e.stack).slice(0, 800), t:new Date().toISOString()})); } catch(x) {} } };
   bindRem(renderSettings);
   const c = view.querySelector('#s-csv'); if (c) c.onclick = exportCSV;
-  view.querySelectorAll('[data-pdf]').forEach(b => b.onclick = () => catPop('<b style="font-size:1.1rem">Resoconto PDF ' + (b.dataset.pdf === 'y' ? 'dell\'anno' : 'del mese') + '</b><p class="small muted" style="margin:0">Analisi e considerazioni sui tuoi dati. I singoli movimenti restano nell\'app.</p><div class="actopts">' +
-      [['s', 'Sintetico', 'Pagella, capacità di risparmio, dove vanno i soldi, pilastri e obiettivi · 2 pagine'], ['c', 'Completo', 'In più confronti con te stesso, andamento, spese più grandi, ricorrenti, entrate e uno sguardo avanti'], ['a', 'Approfondito', 'Tutto, più abitudini di spesa, tendenze, scenari, quanto lavoro costa e cosa dicono i numeri']].map(o => '<button class="actopt" data-pk="' + o[0] + '"><b>' + o[1] + '</b><span>' + o[2] + '</span></button>').join('') + '</div><button class="textlink" data-x style="align-self:flex-start">Annulla</button>', (o, close) => {
-    o.querySelectorAll('[data-pk]').forEach(x => x.onclick = () => { close(); exportPDF(b.dataset.pdf, x.dataset.pk); }); }));
+  view.querySelectorAll('[data-pdf]').forEach(b => b.onclick = () => pdfPop(b.dataset.pdf));
   const bk = view.querySelector('#s-bk'); if (bk) bk.onclick = exportBackup; lockCard();
   (view.querySelector('#s-rs') || {}).onchange = e => { const f = e.target.files[0]; if (f) importBackup(f); };
   (view.querySelector('#s-snd') || {}).onchange = e => { S.sound = e.target.checked; save(); };

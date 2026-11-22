@@ -18,8 +18,12 @@
     <background>
         <layer-list>
             <item android:drawable="@android:color/black" />
-            <!-- fondo nero e immagine a tutta superficie: niente bordino bianco intorno all'icona -->
-            <item android:drawable="@mipmap/ic_maskable" />
+            <!-- fondo nero (niente bordino bianco) e immagine dentro la parte visibile dell'icona (72dp su 108): il logo resta intero e centrato in ogni forma -->
+            <item android:drawable="@mipmap/ic_maskable"
+                android:top="18dp"
+                android:right="18dp"
+                android:left="18dp"
+                android:bottom="18dp" />
         </layer-list>
     </background>
     <foreground android:drawable="@android:color/transparent" />

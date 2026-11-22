@@ -470,6 +470,12 @@ public class MainActivity extends Activity {
             return v == 1 ? "pending" : v == 2 ? "ok" : v == 3 ? "cancel" : "none";
         }
 
+        /** Il telefono è stato riavviato dall'ultima volta che l'app è stata chiusa? (il blocco scatta comunque) */
+        @JavascriptInterface
+        public boolean riavviato() {
+            return riavviatoDopo();
+        }
+
         /** La pagina comunica se il blocco con l'impronta è attivo e dopo quanti secondi chiederla. */
         @JavascriptInterface
         public void lockState(boolean bio, int dopo) {
@@ -728,16 +734,26 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onStop() {
-        getSharedPreferences(BLOCCO, MODE_PRIVATE).edit().putLong("pausa", System.currentTimeMillis()).apply();
+        getSharedPreferences(BLOCCO, MODE_PRIVATE).edit().putLong("pausa", System.currentTimeMillis()).putInt("avvio", avvii()).apply();
         super.onStop();
     }
 
     /** Se il blocco con l'impronta è attivo e il tempo scelto è passato, l'impronta si chiede subito, senza aspettare la pagina. */
+    /** Quante volte il telefono è stato acceso: se cambia dall'ultima chiusura dell'app, il telefono è stato riavviato. */
+    private int avvii() {
+        try { return android.provider.Settings.Global.getInt(getContentResolver(), android.provider.Settings.Global.BOOT_COUNT); } catch (Exception e) { return -1; }
+    }
+
+    private boolean riavviatoDopo() {
+        int prima = getSharedPreferences(BLOCCO, MODE_PRIVATE).getInt("avvio", -1), ora = avvii();
+        return prima >= 0 && ora >= 0 && ora != prima;
+    }
+
     private void bioSubito() {
         android.content.SharedPreferences sp = getSharedPreferences(BLOCCO, MODE_PRIVATE);
         if (!sp.getBoolean("bio", false) || preBio == 1 || Build.VERSION.SDK_INT < 29) return;
         long dopo = sp.getLong("dopo", 60) * 1000L, p = sp.getLong("pausa", 0);
-        if (p > 0 && System.currentTimeMillis() - p < dopo) return;
+        if (p > 0 && System.currentTimeMillis() - p < dopo && !riavviatoDopo()) return; // dopo un riavvio del telefono si chiede sempre
         preBio = 1;
         root.post(() -> mostraBio(r -> {
             preBio = "ok".equals(r) ? 2 : "cancel".equals(r) ? 3 : 0; // se la finestra non si è potuta aprire, ci riprova la pagina

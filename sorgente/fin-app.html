@@ -4386,7 +4386,7 @@ function nativeLockSync(){ try { if (window.B4FNative && window.B4FNative.lockSt
 /* "richiedi il PIN dopo…": ricordo l'ultimo momento in cui l'app era aperta e sbloccata, anche se Android la chiude del tutto */
 const LOCK_KEY = 'b4f-lock-seen';
 function lockSeen(){ if (!document.getElementById('lock')) try { localStorage.setItem(LOCK_KEY, String(Date.now())); } catch (e) {} }
-function lockDue(){ if (!S.lock || !S.lock.on) return false; const after = (S.lock.after ?? 60) * 1000; if (!after) return true; let seen = 0; try { seen = +localStorage.getItem(LOCK_KEY) || 0; } catch (e) {} return !seen || Date.now() - seen > after || Date.now() < seen; }
+function lockDue(){ if (!S.lock || !S.lock.on) return false; const after = (S.lock.after ?? 60) * 1000; if (!after) return true; try { if (window.B4FNative && window.B4FNative.riavviato && window.B4FNative.riavviato()) return true; } catch (e) {} /* dopo un riavvio del telefono il blocco scatta sempre */ let seen = 0; try { seen = +localStorage.getItem(LOCK_KEY) || 0; } catch (e) {} return !seen || Date.now() - seen > after || Date.now() < seen; }
 document.addEventListener('visibilitychange', () => { if (!S.lock || !S.lock.on) return; if (document.hidden) lockSeen(); else if (lockDue()) showLock(); });
 window.addEventListener('pagehide', lockSeen);
 setInterval(() => { if (!document.hidden) lockSeen(); }, 20000);

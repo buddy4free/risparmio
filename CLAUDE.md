@@ -11,6 +11,10 @@ Prima di qualsiasi modifica sostanziale (dati salvati, calcoli, struttura delle 
 4. Le modifiche al pacchetto Android (icona, browser, nome) richiedono una nuova versione sul Play Store: raggrupparle (vedi `store/ANDROID.md`).
 5. Prima di pubblicare: test di sicurezza (`sh sorgente/test-sicurezza/esegui.sh`) e prova del flusso toccato.
 
+## Regola di Lorenzo (22/11/2026)
+- Non compilare MAI versioni Android se Lorenzo non lo chiede esplicitamente ("compila"). Alle domande si risponde e basta, senza avviare lavori non richiesti.
+- Prossima versione Android (da compilare solo su richiesta): impronta sempre chiesta dopo un riavvio del telefono (`riavviato()`, BOOT_COUNT), già su `prossima`.
+
 ## Pubblicazioni raggruppate (deciso il 27/10/2026)
 - Le modifiche si fanno sul ramo `prossima`, non su `main`: `main` è il sito che arriva subito ai tester.
 - L'artifact si aggiorna subito come anteprima per Lorenzo.

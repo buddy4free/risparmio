@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611221043">
+<meta name="b4f-build" content="202611221054">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Qz4fdqxywfjk3fVspk+PQ0CET4dljI2Kn/xOn/gmBDs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ZK/OrhVJKEKWaJ5BB933fyckTf31/2gg7Tez80PJKGM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -4417,7 +4417,7 @@ function nativeLockSync(){ try { if (window.B4FNative && window.B4FNative.lockSt
 /* "richiedi il PIN dopo…": ricordo l'ultimo momento in cui l'app era aperta e sbloccata, anche se Android la chiude del tutto */
 const LOCK_KEY = 'b4f-lock-seen';
 function lockSeen(){ if (!document.getElementById('lock')) try { localStorage.setItem(LOCK_KEY, String(Date.now())); } catch (e) {} }
-function lockDue(){ if (!S.lock || !S.lock.on) return false; const after = (S.lock.after ?? 60) * 1000; if (!after) return true; let seen = 0; try { seen = +localStorage.getItem(LOCK_KEY) || 0; } catch (e) {} return !seen || Date.now() - seen > after || Date.now() < seen; }
+function lockDue(){ if (!S.lock || !S.lock.on) return false; const after = (S.lock.after ?? 60) * 1000; if (!after) return true; try { if (window.B4FNative && window.B4FNative.riavviato && window.B4FNative.riavviato()) return true; } catch (e) {} /* dopo un riavvio del telefono il blocco scatta sempre */ let seen = 0; try { seen = +localStorage.getItem(LOCK_KEY) || 0; } catch (e) {} return !seen || Date.now() - seen > after || Date.now() < seen; }
 document.addEventListener('visibilitychange', () => { if (!S.lock || !S.lock.on) return; if (document.hidden) lockSeen(); else if (lockDue()) showLock(); });
 window.addEventListener('pagehide', lockSeen);
 setInterval(() => { if (!document.hidden) lockSeen(); }, 20000);

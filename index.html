@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611221245">
+<meta name="b4f-build" content="202611221304">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-0WmY3q54m8EROsBKbPTcvKShXv57iuo1e9fgsLr3wvM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-xaPLVSaw+95xP0hS+DjM4jkNT34oOaJ42KytokaNS6g='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -655,6 +655,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 .addgoal{align-items:center;justify-content:center;color:var(--muted);min-height:200px;background:none;border-style:dashed}
 .donut{display:flex;flex-direction:column;align-items:center;gap:12px}
 .donut svg{width:100%;max-width:380px;height:auto}
+.dact{display:flex;justify-content:space-between;width:100%;max-width:380px;margin-top:-6px;gap:8px}.dact[hidden]{display:flex;visibility:hidden}.dact .btn{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;padding:8px 12px;width:auto;min-height:0}.dact .i{width:18px;height:18px}
 .dlegend{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:.82rem}
 .dlegend span{display:inline-flex;align-items:center;gap:6px}
 .dlegend i{width:10px;height:10px;border-radius:3px}
@@ -2197,7 +2198,7 @@ function renderAn(){
 function renderTx(){
   const fresh = TXREF !== PREV; TXREF = PREV;
   if (R.cat) { TXBACK = PREV && PREV.screen !== 'tx' ? {screen:PREV.screen} : null; if (PREV && PREV.screen === 'stats' && ST.mode === 'm' && ST.ym) viewYM = ST.ym;
-    TXC = {t:R.ct || 'out', c:R.cat, s:R.sub}; TXP = 'm'; R = {screen:'tx'}; }
+    TXC = {t:R.ct || 'out', c:R.cat, s:R.sub}; TXP = 'm'; if (PREV && PREV.screen === 'stats') { if (ST.mode === 'y') { TXP = 'y'; TXY = ST.y; } else if (ST.mode === 'p') { TXP = 'p'; TXFR = ST.from; TXTO = ST.to; } } R = {screen:'tx'}; }
   else if (fresh && PREV && !['tx', 'add', 'cats', 'an'].includes(PREV.screen)) { TXC = null; TXBACK = null; TXSEL = null; }
   if (TXC && !S.cats[TXC.t].some(c => c.id === TXC.c)) TXC = null;
   if (!TXC) TXBACK = null;
@@ -2816,14 +2817,18 @@ function hbarsHTML(rows, total, mx){
   return '<div class="hbars">' + rows.map(r => '<' + (r.go ? 'button ' + nav$(r.go) : 'div') + ' class="hbar" title="' + esc(r.n) + ': ' + eur2(r.v) + '">' + (r.tile || '<span class="ic" style="background:' + r.c + '"></span>') +
     '<span class="t"><span>' + esc(r.n) + '</span><span class="track"><i style="width:' + (Math.abs(r.v) / max * 100) + '%;background:' + r.c + '"></i></span></span><span class="v">' + eur(r.v) + (total ? '<small>' + Math.round(r.v / total * 100) + '%</small>' : (r.sub ? '<small>' + r.sub + '</small>' : '')) + '</span></' + (r.go ? 'button' : 'div') + '>').join('') + '</div>';
 }
-function donutHTML(rows, total){
+function donutHTML(rows, total, t){
   /* al massimo 5 voci con il nome accanto (freccia), le piccole (sotto il 4%) e il resto in "Altro" */
   const pos = rows.filter(r => r.v > 0 && r.n !== 'Altro'), top = pos.filter((r, i) => i < (pos.length > 6 ? 5 : 6) && r.v / total >= .04), rest = total - top.reduce((t, r) => t + r.v, 0);
-  const segs = top.map(r => ({n:r.n, v:r.v, c:r.c})).concat(rest > total * .001 ? [{n:'Altro', v:rest, c:'#8a8a84'}] : []);
+  const segs = top.map(r => ({n:r.n, v:r.v, c:r.c, id:r.id})).concat(rest > total * .001 ? [{n:'Altro', v:rest, c:'#8a8a84'}] : []);
   const R0 = 62, C = 2 * Math.PI * R0; let off = 0;
-  const arcs = segs.map(sg => { const len = sg.v / total * C, gap = segs.length > 1 ? Math.min(3, len * .3) : 0; sg.m = (off + len / 2) / C * 360; const el = '<circle data-dn="' + esc(sg.n) + '" data-dv="' + sg.v + '" data-dm="' + sg.m + '" data-dc="' + sg.c + '" r="' + R0 + '" cx="170" cy="115" fill="none" stroke="' + sg.c + '" stroke-width="24" stroke-dasharray="' + Math.max(0, len - gap) + ' ' + C + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 170 115)"><title>' + esc(sg.n) + ': ' + eur2(sg.v) + '</title></circle>'; off += len; return el; }).join('');
-  return '<div class="donut" data-tot="' + total + '"><svg viewBox="0 0 340 230" role="img" aria-label="Grafico circolare: trascina per girarlo, tocca uno spicchio per i dettagli"><g class="drot">' + arcs + '</g><g class="dlab">' + dnLabels(segs, total, 0) + '</g><text class="dct1" x="170" y="111" text-anchor="middle" font-size="11" fill="var(--muted)">Totale</text><text class="dct2" x="170" y="130" text-anchor="middle" font-size="16" font-weight="800" fill="var(--fg)">' + eur(total) + '</text></svg></div>';
+  const arcs = segs.map(sg => { const len = sg.v / total * C, gap = segs.length > 1 ? Math.min(3, len * .3) : 0; sg.m = (off + len / 2) / C * 360; const el = '<circle data-dn="' + esc(sg.n) + '" data-dv="' + sg.v + '"' + (t && sg.id ? ' data-dk="' + esc(sg.id) + '"' : '') + ' data-dm="' + sg.m + '" data-dc="' + sg.c + '" r="' + R0 + '" cx="170" cy="115" fill="none" stroke="' + sg.c + '" stroke-width="24" stroke-dasharray="' + Math.max(0, len - gap) + ' ' + C + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 170 115)"><title>' + esc(sg.n) + ': ' + eur2(sg.v) + '</title></circle>'; off += len; return el; }).join('');
+  return '<div class="donut" data-tot="' + total + '"><svg viewBox="0 0 340 230" role="img" aria-label="Grafico circolare: trascina per girarlo, tocca uno spicchio per i dettagli"><g class="drot">' + arcs + '</g><g class="dlab">' + dnLabels(segs, total, 0) + '</g><text class="dct1" x="170" y="111" text-anchor="middle" font-size="11" fill="var(--muted)">Totale</text><text class="dct2" x="170" y="130" text-anchor="middle" font-size="16" font-weight="800" fill="var(--fg)">' + eur(total) + '</text><text class="dct3" x="170" y="140" text-anchor="middle" font-size="12" font-weight="800"></text></svg>' +
+    (t ? '<div class="dact" hidden><button class="btn ghost dlist" data-dt="' + t + '">' + ic('list') + 'Movimenti</button><button class="btn ghost dsee" data-dt="' + t + '"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3.1A9 9 0 1 0 20.9 13H11z"/><path d="M14 2.5A8 8 0 0 1 21.5 10H14z"/></svg>Dettaglio</button></div>' : '') + '</div>';
 }
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.dact button'); if (!b) return; const t = b.dataset.dt, k = b.parentNode.dataset.k; if (!k) return;
+  if (b.classList.contains('dsee')) { AN = {t, c:k, s:null}; nav({screen:'an'}); return; }
+  nav({screen:'tx', cat:k, ct:t}); });
 /* nomi intorno al cerchio con una freccia verso lo spicchio; seguono il cerchio quando lo giri */
 function dnLabels(segs, total, rot){
   const cx = 170, cy = 115, rad = d => (d + rot - 90) * Math.PI / 180, L = [];
@@ -2840,10 +2845,11 @@ function dnLabels(segs, total, rot){
   document.addEventListener('pointerdown', e => { const svg = e.target.closest && e.target.closest('.donut svg'); if (!svg || !e.target.closest('circle[data-dn]')) return; const g = svg.querySelector('.drot'); D = {svg, g, a0:ang(svg, e), r0:+(g.dataset.r || 0), moved:0, t:e.target}; svg.parentNode.classList.add('drag'); try { svg.setPointerCapture(e.pointerId); } catch(x) {} });
   document.addEventListener('pointermove', e => { if (!D) return; let d = ang(D.svg, e) - D.a0; if (d > 180) d -= 360; if (d < -180) d += 360; D.moved = Math.max(D.moved, Math.abs(d)); const r = D.r0 + d; D.g.dataset.r = r; D.g.setAttribute('transform', 'rotate(' + r + ' 170 115)'); const lab = D.svg.querySelector('.dlab'), tot = +D.svg.parentNode.dataset.tot || 0; if (lab && tot) lab.innerHTML = dnLabels([...D.g.querySelectorAll('circle[data-dn]')].map(c => ({n:c.dataset.dn, v:+c.dataset.dv, m:+c.dataset.dm, c:c.dataset.dc})), tot, r); });
   const end = () => { if (!D) return; const d = D; D = null; d.svg.parentNode.classList.remove('drag'); if (d.moved > 4) return;
-    const c = d.t.closest && d.t.closest('circle[data-dn]'), box = d.svg.parentNode, t1 = d.svg.querySelector('.dct1'), t2 = d.svg.querySelector('.dct2'), tot = +box.dataset.tot || 0;
+    const c = d.t.closest && d.t.closest('circle[data-dn]'), box = d.svg.parentNode, t1 = d.svg.querySelector('.dct1'), t2 = d.svg.querySelector('.dct2'), t3 = d.svg.querySelector('.dct3'), act = box.querySelector('.dact'), tot = +box.dataset.tot || 0;
     d.svg.querySelectorAll('circle.on').forEach(x => x.classList.remove('on'));
-    if (c && !c.dataset.sel) { d.svg.querySelectorAll('circle[data-sel]').forEach(x => delete x.dataset.sel); c.dataset.sel = 1; c.classList.add('on'); t1.textContent = c.dataset.dn.slice(0, 18); t2.textContent = eur(+c.dataset.dv) + ' · ' + (tot ? Math.round(+c.dataset.dv / tot * 100) : 0) + '%'; t2.setAttribute('font-size', '14'); }
-    else { d.svg.querySelectorAll('circle[data-sel]').forEach(x => delete x.dataset.sel); t1.textContent = 'Totale'; t2.textContent = eur(tot); t2.setAttribute('font-size', '18'); } };
+    if (c && !c.dataset.sel) { d.svg.querySelectorAll('circle[data-sel]').forEach(x => delete x.dataset.sel); c.dataset.sel = 1; c.classList.add('on'); const n = c.dataset.dn; t1.textContent = n.length > 14 ? n.slice(0, 13) + '…' : n; t1.setAttribute('y', '102'); t2.textContent = eur(+c.dataset.dv); t2.setAttribute('y', '120'); t2.setAttribute('font-size', '15'); t3.textContent = (tot ? Math.round(+c.dataset.dv / tot * 100) : 0) + '%'; t3.setAttribute('y', '136'); t3.setAttribute('fill', c.getAttribute('stroke'));
+      if (act) { act.hidden = !c.dataset.dk; act.dataset.k = c.dataset.dk || ''; const cr = box.closest('.carousel'), sl = box.closest('.slide'); if (cr && sl) cr.style.height = sl.scrollHeight + 'px'; } }
+    else { d.svg.querySelectorAll('circle[data-sel]').forEach(x => delete x.dataset.sel); t1.textContent = 'Totale'; t1.setAttribute('y', '111'); t2.textContent = eur(tot); t2.setAttribute('y', '130'); t2.setAttribute('font-size', '16'); t3.textContent = ''; if (act) act.hidden = true; } };
   document.addEventListener('pointerup', end); document.addEventListener('pointercancel', end); })();
 function synthHTML(t, rows, total, prev, prevLabel, ndX){
   if (!(total > 0)) return '<p class="small muted">Niente da analizzare nel periodo.</p>';
@@ -2863,9 +2869,9 @@ function synthHTML(t, rows, total, prev, prevLabel, ndX){
     if (ch.length) h += '<span class="label" style="margin-top:4px">Cosa è cambiato di più</span><ul class="chg">' + ch.map(q => '<li><span>' + (q.d > 0 ? '↑ ' : '↓ ') + esc(q.n) + '</span><b style="color:' + col(q.d) + '">' + (q.d > 0 ? '+' : '−') + eur(Math.abs(q.d)) + (q.p > 0 ? ' (' + (q.d > 0 ? '+' : '') + Math.round(q.d / q.p * 100) + '%)' : ' (nuova)') + '</b></li>').join('') + '</ul>'; }
   return h + '</div>';
 }
-function slideCard(title, rows, total, empty, synth){
+function slideCard(title, rows, total, empty, synth, t){
   if (!rows.length) return '<div class="card"><span class="label">' + title + '</span><p class="small muted">' + empty + '</p></div>';
-  return '<div class="card"><div class="spread"><span class="label">' + title + '</span><span class="small muted">' + (synth ? 'barre ↔ cerchio ↔ sintesi' : 'barre ↔ cerchio') + '</span></div><div class="carousel">' + '<div class="slide">' + (rows.length > 6 ? '<div class="catscroll catscroll6">' + hbarsHTML(rows, total) + '</div><span class="small muted" style="text-align:center">' + rows.length + ' voci · scorri ↓</span>' : hbarsHTML(rows, total)) + '</div><div class="slide">' + donutHTML(rows, total) + '</div>' + (synth ? '<div class="slide">' + synth + '</div>' : '') + '</div><div class="dots"><i class="on"></i><i></i>' + (synth ? '<i></i>' : '') + '</div></div>';
+  return '<div class="card"><div class="spread"><span class="label">' + title + '</span><span class="small muted">' + (synth ? 'barre ↔ cerchio ↔ sintesi' : 'barre ↔ cerchio') + '</span></div><div class="carousel">' + '<div class="slide">' + (rows.length > 6 ? '<div class="catscroll catscroll6">' + hbarsHTML(rows, total) + '</div><span class="small muted" style="text-align:center">' + rows.length + ' voci · scorri ↓</span>' : hbarsHTML(rows, total)) + '</div><div class="slide">' + donutHTML(rows, total, t) + '</div>' + (synth ? '<div class="slide">' + synth + '</div>' : '') + '</div><div class="dots"><i class="on"></i><i></i>' + (synth ? '<i></i>' : '') + '</div></div>';
 }
 /* periodo delle statistiche, condiviso da Panoramica e Analisi */
 function stPeriod(){
@@ -2965,8 +2971,8 @@ function renderStats(){
         fine = lastYM >= curYM() ? 'oggi' : 'il ' + endD(lastYM), da = 'il ' + endD(firstPrev);
       return '<p class="small muted" style="margin-bottom:0">In totale il tuo patrimonio ' + (Math.abs(d) < 0.5 ? '<span style="white-space:nowrap">è rimasto uguale ' : (d > 0 ? 'è cresciuto di ' : 'è sceso di ') + '<span style="white-space:nowrap"><b style="color:' + (d > 0 ? 'var(--good)' : 'var(--critical)') + '">' + (d > 0 ? '+' : '−') + eur(Math.abs(d)) + '</b> ') + '<button class="infobtn" id="pat-i" aria-label="Come si calcola" aria-expanded="false">i</button></span></p>' +
         '<p class="infonote" id="pat-d" hidden>Saldi ' + (fine === 'oggi' ? 'a oggi' : 'al ' + endD(lastYM)) + '. Il numero piccolo sotto ogni cifra è quanto è cambiato tra ' + da + ' e ' + fine + '.' + (hasStart ? ' Il primo saldo inserito per un pilastro, nello storico o all\'inizio, è il suo punto di partenza: la crescita si conta da lì.' : '') + '</p></div>'; })(totP - totP0) +
-    slideCard('Quanto hai speso · ' + eur(out), outRows, out, 'Nessuna uscita nel periodo.', synthHTML('out', outRows, out, prevOut, prevLabel, per.reduce((t2, q) => t2 + (q.s.disc || 0), 0))) +
-    slideCard('Da dove arrivano le entrate · ' + eur(inc), inRows, inc, 'Nessuna entrata nel periodo.', synthHTML('in', inRows, inc, prevIn, prevLabel)) +
+    slideCard('Quanto hai speso · ' + eur(out), outRows, out, 'Nessuna uscita nel periodo.', synthHTML('out', outRows, out, prevOut, prevLabel, per.reduce((t2, q) => t2 + (q.s.disc || 0), 0)), 'out') +
+    slideCard('Da dove arrivano le entrate · ' + eur(inc), inRows, inc, 'Nessuna entrata nel periodo.', synthHTML('in', inRows, inc, prevIn, prevLabel), 'in') +
     trendHTML + cmp +
     (!S.reviews[addMonths(curYM(), -1)] ? '<button class="readcard" ' + nav$({screen:'review'}) + '><span class="t"><b>' + ic('calendar') + ' Revisione mensile di ' + ymLabel(addMonths(curYM(), -1), {month:'long'}) + '</b><span>15 minuti per tenere la rotta</span></span>' + ic('right') + '</button>' : '') +
   '</div>';

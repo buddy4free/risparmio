@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611221325">
+<meta name="b4f-build" content="202611221329">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-M6wpwl5SjJ5EApBT3SJ4+3UpE+/sh/+TDKU1FtYtDH4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-2SWyFwoRQqxQcYFaT3BWPul81DBWUB2U4O/yD99Bns0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -2821,7 +2821,7 @@ function hbarsHTML(rows, total, mx){
 function donutHTML(rows, total, t){
   /* al massimo 5 voci con il nome accanto (freccia), le piccole (sotto il 4%) e il resto in "Altro" */
   const pos = rows.filter(r => r.v > 0 && r.n !== 'Altro'), top = pos.filter((r, i) => i < (pos.length > 6 ? 5 : 6) && r.v / total >= .04), rest = total - top.reduce((t, r) => t + r.v, 0);
-  const segs = top.map(r => ({n:r.n, v:r.v, c:r.c, id:r.id})).concat(rest > total * .001 ? [{n:'Altro', v:rest, c:'#8a8a84'}] : []);
+  const segs = top.map(r => ({n:r.n, v:r.v, c:r.c, id:r.id})).concat(rest > total * .001 ? [{n:'Altro', v:rest, c:'#8a8a84', id:(o => o.length ? 'a:' + o.join(',') : null)(rows.filter(r => r.id && r.v > 0 && !top.includes(r)).map(r => r.id))}] : []);
   const R0 = 62, C = 2 * Math.PI * R0; let off = 0;
   const arcs = segs.map(sg => { const len = sg.v / total * C, gap = segs.length > 1 ? Math.min(3, len * .3) : 0; sg.m = (off + len / 2) / C * 360; const el = '<circle data-dn="' + esc(sg.n) + '" data-dv="' + sg.v + '"' + (t && sg.id ? ' data-dk="' + esc(sg.id) + '"' : '') + ' data-dm="' + sg.m + '" data-dc="' + sg.c + '" r="' + R0 + '" cx="170" cy="115" fill="none" stroke="' + sg.c + '" stroke-width="24" stroke-dasharray="' + Math.max(0, len - gap) + ' ' + C + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 170 115)"><title>' + esc(sg.n) + ': ' + eur2(sg.v) + '</title></circle>'; off += len; return el; }).join('');
   return '<div class="donut" data-tot="' + total + '"><svg viewBox="0 0 340 230" role="img" aria-label="Grafico circolare: trascina per girarlo, tocca uno spicchio per i dettagli"><g class="drot">' + arcs + '</g><g class="dlab">' + dnLabels(segs, total, 0) + '</g><text class="dct1" x="170" y="111" text-anchor="middle" font-size="11" fill="var(--muted)">Totale</text><text class="dct2" x="170" y="130" text-anchor="middle" font-size="16" font-weight="800" fill="var(--fg)">' + eur(total) + '</text><text class="dct3" x="170" y="140" text-anchor="middle" font-size="12" font-weight="800"></text></svg>' +
@@ -2835,14 +2835,15 @@ document.addEventListener('click', e => { const b = e.target.closest && e.target
 const dnp$ = (t, k, a, z) => 'data-dnp="' + t + '|' + esc(k) + '|' + a + '|' + (z || a) + '"';
 /* finestra sopra le statistiche: "Dettaglio" = un altro cerchio con le parti della voce, "Movimenti" = solo i movimenti di quella voce, con andamento */
 function dnPop(t, k, mode, part, per){
-  const P = per || stPeriod(), cat = catOf(t, k), col = catColor(t, cat), all = [].concat(...P.months.map(ym => monthTx(ym))).filter(x => !x.plan && x.t === t && x.c === k);
-  const subs = new Set(all.map(x => x.s || '')), bySub = subs.size > 1 || (subs.size === 1 && !subs.has('')), keyOf = x => bySub ? (x.s || 'Senza sottocategoria') : ((x.n || '').trim() || 'Senza nota');
+  /* k = una categoria, oppure "a:id1,id2,…" = la fetta "Altro" che raccoglie più categorie */
+  const grp = k.startsWith('a:'), ids = grp ? k.slice(2).split(',') : [k], P = per || stPeriod(), cat = grp ? {id:'_', n:'Altro', i:'dots', col:'#8a8a84'} : catOf(t, k), col = grp ? '#8a8a84' : catColor(t, cat), all = [].concat(...P.months.map(ym => monthTx(ym))).filter(x => !x.plan && x.t === t && ids.includes(x.c));
+  const subs = new Set(all.map(x => x.s || '')), bySub = !grp && (subs.size > 1 || (subs.size === 1 && !subs.has(''))), keyOf = x => grp ? catOf(t, x.c).n : bySub ? (x.s || 'Senza sottocategoria') : ((x.n || '').trim() || 'Senza nota'), tileOf = x => grp ? catTile(t, catOf(t, x.c)) : catTile(t, cat), idOf = {}; if (grp) all.forEach(x => { idOf[catOf(t, x.c).n] = x.c; });
   const L = part != null ? all.filter(x => keyOf(x) === part) : all, tot = L.reduce((a, x) => a + x.a, 0), close = () => { const o = document.getElementById('dnpop'); if (o) o.remove(); };
   let body;
   if (mode === 'see') {
     const g = {}; all.forEach(x => { const q = keyOf(x); g[q] = (g[q] || 0) + x.a; });
-    const rows = Object.entries(g).sort((a, b) => b[1] - a[1]).map(([n, v], i) => ({n, v, c:i ? CAT_COLS[(CAT_COLS.indexOf(col) + i * 5 + CAT_COLS.length) % CAT_COLS.length] : col}));
-    body = '<span class="small muted">' + (bySub ? 'Per sottocategoria' : 'Per nota dei movimenti') + ' · tocca una riga per i suoi movimenti</span>' + (tot > 0 ? donutHTML(rows, tot) : '') +
+    const rows = Object.entries(g).sort((a, b) => b[1] - a[1]).map(([n, v], i) => ({n, v, c:grp ? catColor(t, catOf(t, idOf[n])) : i ? CAT_COLS[(CAT_COLS.indexOf(col) + i * 5 + CAT_COLS.length) % CAT_COLS.length] : col}));
+    body = '<span class="small muted">' + (grp ? 'Le categorie raccolte in Altro' : bySub ? 'Per sottocategoria' : 'Per nota dei movimenti') + ' · tocca una riga per ' + (grp ? 'aprirla' : 'i suoi movimenti') + '</span>' + (tot > 0 ? donutHTML(rows, tot) : '') +
       '<div class="dnrows">' + rows.map(r => '<button data-part="' + esc(r.n) + '"><i style="background:' + r.c + '"></i><span>' + esc(r.n) + '</span><small>' + Math.round(r.v / tot * 100) + '%</small><b>' + eur2(r.v) + '</b></button>').join('') + '</div>';
   } else {
     const sorted = L.slice().sort((a, b) => a.d.localeCompare(b.d)), d0 = P.months[0] + '-01', last = P.months[P.months.length - 1], dEnd = last === curYM() ? today() : last + '-' + pad(new Date(+last.slice(0, 4), +last.slice(5), 0).getDate());
@@ -2851,7 +2852,7 @@ function dnPop(t, k, mode, part, per){
     const line = pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' '), dd = d => d.slice(8, 10) + '/' + d.slice(5, 7) + (P.months.length > 12 ? '/' + d.slice(2, 4) : '');
     body = (tot > 0 ? '<svg class="dncum" viewBox="0 0 340 134" role="img" aria-label="Andamento nel periodo"><polygon points="30,112 ' + line + ' 330,112" fill="' + col + '" opacity=".18"/><polyline points="' + line + '" fill="none" stroke="' + col + '" stroke-width="2.2" stroke-linejoin="round"/><line x1="30" y1="112" x2="330" y2="112" stroke="var(--line)"/><text x="30" y="11" font-size="11" fill="var(--muted)">' + eur(tot) + '</text><text x="30" y="128" font-size="11" fill="var(--muted)">' + dd(d0) + '</text><text x="330" y="128" text-anchor="end" font-size="11" fill="var(--muted)">' + dd(dEnd) + '</text></svg>' : '') +
       '<div class="spread"><span class="small muted">' + movN(L.length) + '</span><span>Totale <b style="color:' + (t === 'in' ? IN_COL : 'var(--fg)') + '">' + eur2(tot) + '</b></span></div>' +
-      '<div class="list">' + sorted.reverse().slice(0, 300).map(x => '<button class="item" data-ed="' + esc(x.id) + '">' + catTile(t, cat) + '<span class="t"><b>' + esc(x.n || x.s || cat.n) + '</b><span class="sub">' + dd(x.d) + (x.s && x.n ? ' · ' + esc(x.s) : '') + '</span></span><span class="amt" style="color:' + (t === 'in' ? IN_COL : 'var(--fg)') + '">' + (t === 'in' ? '+' : '−') + eur2(x.a) + '</span></button>').join('') + '</div>';
+      '<div class="list">' + sorted.reverse().slice(0, 300).map(x => '<button class="item" data-ed="' + esc(x.id) + '">' + tileOf(x) + '<span class="t"><b>' + esc(x.n || x.s || catOf(t, x.c).n) + '</b><span class="sub">' + dd(x.d) + (grp ? ' · ' + esc(catOf(t, x.c).n) : '') + (x.s && x.n ? ' · ' + esc(x.s) : '') + '</span></span><span class="amt" style="color:' + (t === 'in' ? IN_COL : 'var(--fg)') + '">' + (t === 'in' ? '+' : '−') + eur2(x.a) + '</span></button>').join('') + '</div>';
   }
   close(); const o = document.createElement('div'); o.className = 'psheet'; o.id = 'dnpop';
   o.innerHTML = '<div class="pin dnpin"><div class="spread"><span class="row" style="gap:10px">' + catTile(t, cat) + '<b style="font-size:1.1rem">' + esc(part != null ? part : cat.n) + '</b></span><button class="textlink" data-x>Chiudi</button></div><span class="small muted" style="margin-top:-8px">' + esc(P.label) + (part != null ? ' · ' + esc(cat.n) : '') + '</span>' +
@@ -2859,7 +2860,7 @@ function dnPop(t, k, mode, part, per){
   document.body.appendChild(o); if (!part) histPush(); dnTouch(o);
   o.onclick = e => { if (e.target === o || e.target.closest('[data-x]')) return close();
     const m = e.target.closest('[data-m]'); if (m) return dnPop(t, k, m.dataset.m, null, P);
-    const pr = e.target.closest('[data-part]'); if (pr) return dnPop(t, k, 'list', pr.dataset.part, P);
+    const pr = e.target.closest('[data-part]'); if (pr) return grp ? dnPop(t, idOf[pr.dataset.part], 'list', null, P) : dnPop(t, k, 'list', pr.dataset.part, P);
     const ed = e.target.closest('[data-ed]'); if (ed) { close(); nav({screen:'add', edit:ed.dataset.ed}); } };
 }
 /* nomi intorno al cerchio con una freccia verso lo spicchio; seguono il cerchio quando lo giri */

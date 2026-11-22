@@ -714,6 +714,7 @@ public class MainActivity extends Activity {
         super.onResume();
         web.onResume();
         Promemoria.programma(getApplicationContext());
+        if (daVerificare) { daVerificare = false; root.postDelayed(this::bioSubito, 120); }
         controllaAggiornamenti(false);
         if (pronta) web.evaluateJavascript("window.__b4fResume&&window.__b4fResume()", null);
     }
@@ -721,8 +722,9 @@ public class MainActivity extends Activity {
     @Override
     protected void onStart() {
         super.onStart();
-        bioSubito();
+        daVerificare = true; // l'impronta si chiede quando l'app è davvero in primo piano (onResume), non prima
     }
+    private boolean daVerificare;
 
     @Override
     protected void onStop() {
@@ -738,7 +740,7 @@ public class MainActivity extends Activity {
         if (p > 0 && System.currentTimeMillis() - p < dopo) return;
         preBio = 1;
         root.post(() -> mostraBio(r -> {
-            preBio = "ok".equals(r) ? 2 : 3;
+            preBio = "ok".equals(r) ? 2 : "cancel".equals(r) ? 3 : 0; // se la finestra non si è potuta aprire, ci riprova la pagina
             for (String id : attesaBio) bioFatto(id, r);
             attesaBio.clear();
             if (pronta) web.evaluateJavascript("window.__b4fBioPre&&window.__b4fBioPre(" + JSONObject.quote(r) + ")", null);
@@ -759,7 +761,10 @@ public class MainActivity extends Activity {
             if (Build.VERSION.SDK_INT >= 30) b.setAllowedAuthenticators(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK);
             b.build().authenticate(new android.os.CancellationSignal(), getMainExecutor(), new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
                 @Override public void onAuthenticationSucceeded(android.hardware.biometrics.BiometricPrompt.AuthenticationResult r) { una.esito("ok"); }
-                @Override public void onAuthenticationError(int code, CharSequence msg) { una.esito("cancel"); }
+                @Override public void onAuthenticationError(int code, CharSequence msg) {
+                    // annullata dall'utente (indietro o "Usa il PIN"): cancel; altri motivi (finestra non disponibile, troppi tentativi…): err
+                    una.esito(code == 10 || code == 13 ? "cancel" : "err"); // 10 annullata, 13 "Usa il PIN"
+                }
             });
         } catch (Exception e) {
             cb.esito("err");

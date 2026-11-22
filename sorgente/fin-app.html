@@ -4377,7 +4377,7 @@ function showLock(){
     /* app Android 2.3+: l'impronta può essere già stata chiesta dalla parte nativa all'apertura, mentre la pagina si caricava */
     const pre = S.lock.bio === 'native' && window.B4FNative && window.B4FNative.bioPre ? window.B4FNative.bioPre() : 'none';
     if (pre === 'ok') open();
-    else if (pre === 'pending') window.__b4fBioPre = r => { window.__b4fBioPre = null; if (r === 'ok') { try { window.B4FNative.bioPre(); } catch(e) {} open(); } };
+    else if (pre === 'pending') window.__b4fBioPre = r => { window.__b4fBioPre = null; if (r === 'ok') { try { window.B4FNative.bioPre(); } catch(e) {} open(); } else if (r !== 'cancel') setTimeout(bio, 200); };
     else if (pre !== 'cancel') setTimeout(bio, bioNative() ? 0 : 350);
   }
 }

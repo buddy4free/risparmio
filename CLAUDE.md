@@ -73,6 +73,11 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - App Android 2.3 (v14, preparata il 22/11/2026, da compilare con "compila"): impronta chiesta subito dalla parte nativa all'apertura (`bioSubito`, `bioPre`, `lockState` con tempo "dopo"; la pagina la consuma in `showLock`), schermata con l'icona tenuta finché la pagina è pronta (Android 12+, max 3 s). In "Segnala un problema" il tempo di avvio della pagina.
 - In Home per tutti: schede "Scopri l'app" (`DISC`) per le funzioni non ancora usate; si tolgono con la X (`S.discX`). Escluse dallo scorrimento tra schermate.
 
+## Spese essenziali ed extra (22/11/2026, scelta di Lorenzo)
+- Automatico (predefinito, `S.essMode` 'auto' | 'cat'): `essNat` = natura (categorie segnate non essenziali e Bar/Delivery/Pranzo fuori → extra; gruppi casa e finanza e ricorrenti necessarie → essenziali; il resto "di tutti i giorni" → spesa di base). `essBase` = 30° percentile della spesa mensile della voce nei 12 mesi prima (servono 3 mesi, altrimenti tutto essenziale); oltre la base è extra. `essSplit(ym)` dà essenziali/extra per voce; `stats().disc` è l'extra.
+- Revisione mensile attiva e facoltativa (`essAskHTML`): spese "fuori dal tuo solito" (`essOutliers`, > 1,8× lo scontrino tipico) → Necessaria/Un extra (ricordato anche per la stessa nota in `S.ess.note`); base della voce → Meno/Giusta/Di più (`S.ess.base`).
+- Niente classificazione da fare a ogni spesa: Lorenzo la ritiene non sostenibile.
+
 ## Resoconto PDF (19/11/2026)
 - Tre livelli: Sintetico (2 pagine), Completo, Approfondito; niente più elenco dei movimenti, solo analisi e considerazioni. `exportPDF(mode, level, opt)` con level 's'|'c'|'a' e opt {from, to, label, anon}; scelta in `pdfPop` (periodo, mese a scelta, cifre nascoste). Dentro `exportPDF` curYM/today indicano la fine del periodo (`_curYM` è la data vera). Impaginazione a più passate: un capitolo va a pagina nuova solo se non entra.
 

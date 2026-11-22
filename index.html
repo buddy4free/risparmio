@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611221312">
+<meta name="b4f-build" content="202611221318">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-rQCuz7XeEyr8xCQRsc9m1TRXpW5Dil6D+WJmuE29Q+8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-M6wpwl5SjJ5EApBT3SJ4+3UpE+/sh/+TDKU1FtYtDH4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -656,7 +656,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 .donut{display:flex;flex-direction:column;align-items:center;gap:12px}
 .donut svg{width:100%;max-width:380px;height:auto}
 .dact{display:flex;justify-content:space-between;width:100%;max-width:380px;margin-top:-6px;gap:8px}.dact[hidden]{display:flex;visibility:hidden}.dact .btn{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;padding:8px 12px;width:auto;min-height:0}.dact .i{width:18px;height:18px}
-.dnpin{max-height:88dvh;overflow-y:auto}.dnpin>*{flex-shrink:0}.dncum{width:100%;height:auto}.dnrows{display:flex;flex-direction:column;gap:2px}.dnrows button{display:grid;grid-template-columns:14px 1fr auto auto;gap:10px;align-items:center;padding:10px 4px;background:none;border:0;border-bottom:1px solid var(--line);color:var(--fg);text-align:left;font:inherit}.dnrows i{width:14px;height:14px;border-radius:4px}.dnrows small{color:var(--muted);min-width:36px;text-align:right}.dnrows b{min-width:78px;text-align:right}
+#dnpop{touch-action:none}.dnpin{max-height:88dvh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}.dnpin>*{flex-shrink:0}.dncum{width:100%;height:auto}.dnrows{display:flex;flex-direction:column;gap:2px}.dnrows button{display:grid;grid-template-columns:14px 1fr auto auto;gap:10px;align-items:center;padding:10px 4px;background:none;border:0;border-bottom:1px solid var(--line);color:var(--fg);text-align:left;font:inherit}.dnrows i{width:14px;height:14px;border-radius:4px}.dnrows small{color:var(--muted);min-width:36px;text-align:right}.dnrows b{min-width:78px;text-align:right}
 .dlegend{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:.82rem}
 .dlegend span{display:inline-flex;align-items:center;gap:6px}
 .dlegend i{width:10px;height:10px;border-radius:3px}
@@ -2082,7 +2082,7 @@ function catBars(s, limit){
   if (!ent.length) return '<p class="muted small">Nessuna uscita registrata in questo mese.</p>';
   const max = ent[0][1], shown = ent.slice(0, limit || 6), rest = ent.slice(limit || 6).reduce((t, e) => t + e[1], 0);
   const rows = shown.map(([c, a]) => [catOf('out', c), a]); if (rest) rows.push([{id:'_', n:'Le altre', i:'dots'}, rest]);
-  return '<div class="hbars">' + rows.map(([c, a]) => '<button class="hbar" title="' + esc(c.n) + ': ' + eur2(a) + ' (' + Math.round(a / s.out * 100) + '%)"' + (c.id !== '_' ? ' ' + nav$({screen:'tx', cat:c.id}) : '') + '>' + (c.id === '_' ? '<span class="ic">' + ic('dots') + '</span>' : catTile('out', c)) + '<span class="t"><span>' + esc(c.n) + '</span><span class="track"><i style="width:' + (a / max * 100) + '%"></i></span></span><span class="v">' + eur(a) + '<small>' + Math.round(a / s.out * 100) + '%</small></span></button>').join('') + '</div>';
+  return '<div class="hbars">' + rows.map(([c, a]) => '<button class="hbar" title="' + esc(c.n) + ': ' + eur2(a) + ' (' + Math.round(a / s.out * 100) + '%)"' + (c.id !== '_' ? ' ' + (viewYM <= curYM() ? dnp$('out', c.id, viewYM) : nav$({screen:'tx', cat:c.id})) : '') + '>' + (c.id === '_' ? '<span class="ic">' + ic('dots') + '</span>' : catTile('out', c)) + '<span class="t"><span>' + esc(c.n) + '</span><span class="track"><i style="width:' + (a / max * 100) + '%"></i></span></span><span class="v">' + eur(a) + '<small>' + Math.round(a / s.out * 100) + '%</small></span></button>').join('') + '</div>';
 }
 function trend(){
   const months = Array.from({length:6}, (_, i) => addMonths(viewYM, i - 5));
@@ -2129,7 +2129,7 @@ function renderHome(){
   bindMonth(); bindDemo(); bindOldRec(); bindBackupNotice(); bindDisc();
   if (viewYM === curYM()) setTimeout(() => { if (R.screen === 'home' && !payAsk()) payOffer(); }, 900);
   const rl = document.getElementById('rv-later'); if (rl) rl.onclick = () => { S.reviewLater = addMonths(curYM(), -1); save(); renderHome(); };
-  view.querySelectorAll('.catscroll .hbar, [data-allout]').forEach(b => { b.removeAttribute('data-nav'); b.onclick = () => { txFilter = 'out'; nav({screen:'tx'}); }; });
+  view.querySelectorAll('.catscroll .hbar:not([data-dnp]), [data-allout]').forEach(b => { b.removeAttribute('data-nav'); b.onclick = () => { txFilter = 'out'; nav({screen:'tx'}); }; });
   guidePopup(); supportPopup();
   const spg = document.getElementById('sp-go'); if (spg) spg.onclick = () => { sp.forEach(x => transfer('liq', x.k, x.v)); save(); toast('Fatto: soldi spostati nei pilastri'); renderHome(); };
 }
@@ -2798,7 +2798,7 @@ function renderCharts(){
     '<div class="card"><span class="label">Tasso di risparmio, ultimi 6 mesi</span>' + trend() + '<div class="legend small muted"><span><i class="sw" style="background:var(--critical)"></i>fino a 10%</span><span><i class="sw" style="background:var(--serious)"></i>11–25%</span><span><i class="sw" style="background:var(--warn)"></i>26–39%</span><span><i class="sw" style="background:var(--good)"></i>40% e oltre</span></div></div>' +
     '<div class="card"><span class="label">Questo mese e media dei 3 mesi prima</span><div class="legend small"><span><i class="sw" style="background:' + OUT_COL + '"></i>' + ymLabel(viewYM, {month:'long'}) + '</span><span><i class="tgt-key" style="border-color:var(--fg)"></i>Media 3 mesi</span></div>' +
       (cats.length ? '<div class="hbars">' + cats.map(c => { const a = cur.byCat[c.id] || 0, m = prevAvg[c.id], diff = m ? Math.round((a / m - 1) * 100) : null;
-        return '<button class="hbar" ' + nav$({screen:'tx', cat:c.id}) + ' title="' + esc(c.n) + ': ' + eur2(a) + ', media ' + eur2(m) + '">' + catTile('out', c) + '<span class="t"><span>' + esc(c.n) + '</span><span class="track" style="position:relative"><i style="width:' + (a / maxC * 100) + '%;background:' + OUT_COL + '"></i>' + (m ? '<b class="avgm" style="left:' + (m / maxC * 100) + '%"></b>' : '') + '</span></span><span class="v">' + eur(a) + '<small style="color:' + (diff === null ? 'var(--muted)' : diff > 10 ? OUT_COL : diff < -10 ? IN_COL : 'var(--muted)') + '">' + (diff === null ? 'nuova' : (diff > 0 ? '+' : '') + diff + '%') + '</small></span></button>'; }).join('') + '</div>' : '<p class="small muted">Servono almeno un mese di movimenti.</p>') + '</div>' +
+        return '<button class="hbar" ' + (viewYM <= curYM() ? dnp$('out', c.id, viewYM) : nav$({screen:'tx', cat:c.id})) + ' title="' + esc(c.n) + ': ' + eur2(a) + ', media ' + eur2(m) + '">' + catTile('out', c) + '<span class="t"><span>' + esc(c.n) + '</span><span class="track" style="position:relative"><i style="width:' + (a / maxC * 100) + '%;background:' + OUT_COL + '"></i>' + (m ? '<b class="avgm" style="left:' + (m / maxC * 100) + '%"></b>' : '') + '</span></span><span class="v">' + eur(a) + '<small style="color:' + (diff === null ? 'var(--muted)' : diff > 10 ? OUT_COL : diff < -10 ? IN_COL : 'var(--muted)') + '">' + (diff === null ? 'nuova' : (diff > 0 ? '+' : '') + diff + '%') + '</small></span></button>'; }).join('') + '</div>' : '<p class="small muted">Servono almeno un mese di movimenti.</p>') + '</div>' +
     (new Date().getDate() <= 10 || !S.reviews[addMonths(curYM(), -1)] ? '<button class="readcard" ' + nav$({screen:'review'}) + '><span class="t"><b>Revisione mensile di ' + ymLabel(addMonths(curYM(), -1), {month:'long'}) + '</b><span>' + (S.reviews[addMonths(curYM(), -1)] ? 'Fatta' : '15 minuti per tenere la rotta') + '</span></span>' + ic('right') + '</button>' : '') +
   '</div>';
   bindMonth(); bindDemo(); bindToggle();
@@ -2815,8 +2815,8 @@ function pilBalanceAt(id, ym){
 }
 function hbarsHTML(rows, total, mx){
   const max = mx || Math.max(1, ...rows.map(r => Math.abs(r.v)));
-  return '<div class="hbars">' + rows.map(r => '<' + (r.go ? 'button ' + nav$(r.go) : 'div') + ' class="hbar" title="' + esc(r.n) + ': ' + eur2(r.v) + '">' + (r.tile || '<span class="ic" style="background:' + r.c + '"></span>') +
-    '<span class="t"><span>' + esc(r.n) + '</span><span class="track"><i style="width:' + (Math.abs(r.v) / max * 100) + '%;background:' + r.c + '"></i></span></span><span class="v">' + eur(r.v) + (total ? '<small>' + Math.round(r.v / total * 100) + '%</small>' : (r.sub ? '<small>' + r.sub + '</small>' : '')) + '</span></' + (r.go ? 'button' : 'div') + '>').join('') + '</div>';
+  return '<div class="hbars">' + rows.map(r => '<' + (r.dnp ? 'button ' + r.dnp : r.go ? 'button ' + nav$(r.go) : 'div') + ' class="hbar" title="' + esc(r.n) + ': ' + eur2(r.v) + '">' + (r.tile || '<span class="ic" style="background:' + r.c + '"></span>') +
+    '<span class="t"><span>' + esc(r.n) + '</span><span class="track"><i style="width:' + (Math.abs(r.v) / max * 100) + '%;background:' + r.c + '"></i></span></span><span class="v">' + eur(r.v) + (total ? '<small>' + Math.round(r.v / total * 100) + '%</small>' : (r.sub ? '<small>' + r.sub + '</small>' : '')) + '</span></' + (r.go || r.dnp ? 'button' : 'div') + '>').join('') + '</div>';
 }
 function donutHTML(rows, total, t){
   /* al massimo 5 voci con il nome accanto (freccia), le piccole (sotto il 4%) e il resto in "Altro" */
@@ -2829,9 +2829,13 @@ function donutHTML(rows, total, t){
 }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.dact button'); if (!b) return; const t = b.dataset.dt, k = b.parentNode.dataset.k; if (!k) return;
   dnPop(t, k, b.classList.contains('dsee') ? 'see' : 'list'); });
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-dnp]'); if (!b) return; e.preventDefault(); e.stopPropagation();
+  const [t, k, a, z] = b.dataset.dnp.split('|'), months = []; for (let m = a; m <= z; m = addMonths(m, 1)) months.push(m);
+  dnPop(t, k, 'list', null, {months, label:a === z ? ymLabel(a) : ymLabel(a, {month:'short', year:'numeric'}) + ' – ' + ymLabel(z, {month:'short', year:'numeric'})}); }, true);
+const dnp$ = (t, k, a, z) => 'data-dnp="' + t + '|' + esc(k) + '|' + a + '|' + (z || a) + '"';
 /* finestra sopra le statistiche: "Dettaglio" = un altro cerchio con le parti della voce, "Movimenti" = solo i movimenti di quella voce, con andamento */
-function dnPop(t, k, mode, part){
-  const P = stPeriod(), cat = catOf(t, k), col = catColor(t, cat), all = [].concat(...P.months.map(ym => monthTx(ym))).filter(x => !x.plan && x.t === t && x.c === k);
+function dnPop(t, k, mode, part, per){
+  const P = per || stPeriod(), cat = catOf(t, k), col = catColor(t, cat), all = [].concat(...P.months.map(ym => monthTx(ym))).filter(x => !x.plan && x.t === t && x.c === k);
   const subs = new Set(all.map(x => x.s || '')), bySub = subs.size > 1 || (subs.size === 1 && !subs.has('')), keyOf = x => bySub ? (x.s || 'Senza sottocategoria') : ((x.n || '').trim() || 'Senza nota');
   const L = part != null ? all.filter(x => keyOf(x) === part) : all, tot = L.reduce((a, x) => a + x.a, 0), close = () => { const o = document.getElementById('dnpop'); if (o) o.remove(); };
   let body;
@@ -2852,10 +2856,10 @@ function dnPop(t, k, mode, part){
   close(); const o = document.createElement('div'); o.className = 'psheet'; o.id = 'dnpop';
   o.innerHTML = '<div class="pin dnpin"><div class="spread"><span class="row" style="gap:10px">' + catTile(t, cat) + '<b style="font-size:1.1rem">' + esc(part != null ? part : cat.n) + '</b></span><button class="textlink" data-x>Chiudi</button></div><span class="small muted" style="margin-top:-8px">' + esc(P.label) + (part != null ? ' · ' + esc(cat.n) : '') + '</span>' +
     '<div class="seg2"><button data-m="list" aria-pressed="' + (mode === 'list') + '">Movimenti</button><button data-m="see" aria-pressed="' + (mode === 'see') + '">Dettaglio</button></div>' + body + '</div>';
-  document.body.appendChild(o); if (!part) histPush();
+  document.body.appendChild(o); if (!part) histPush(); dnTouch(o);
   o.onclick = e => { if (e.target === o || e.target.closest('[data-x]')) return close();
-    const m = e.target.closest('[data-m]'); if (m) return dnPop(t, k, m.dataset.m);
-    const pr = e.target.closest('[data-part]'); if (pr) return dnPop(t, k, 'list', pr.dataset.part);
+    const m = e.target.closest('[data-m]'); if (m) return dnPop(t, k, m.dataset.m, null, P);
+    const pr = e.target.closest('[data-part]'); if (pr) return dnPop(t, k, 'list', pr.dataset.part, P);
     const ed = e.target.closest('[data-ed]'); if (ed) { close(); nav({screen:'add', edit:ed.dataset.ed}); } };
 }
 /* nomi intorno al cerchio con una freccia verso lo spicchio; seguono il cerchio quando lo giri */
@@ -2979,14 +2983,14 @@ function renderStats(){
     const mx = Math.max(1, ...cats.map(c => Math.max(byCat[c.id] || 0, avg[c.id])));
     cmp = '<div class="card"><span class="label">Questo mese e media dei 3 mesi prima</span><div class="legend small"><span><i class="sw" style="background:' + OUT_COL + '"></i>' + ymLabel(ST.ym, {month:'long'}) + '</span><span><i class="avgkey"></i>Media 3 mesi</span></div>' +
       (cats.length ? '<div class="hbars">' + cats.map(c => { const a = byCat[c.id] || 0, m = avg[c.id], diff = m ? Math.round((a / m - 1) * 100) : null;
-        return '<button class="hbar" ' + nav$({screen:'tx', cat:c.id}) + ' title="' + esc(c.n) + ': ' + eur2(a) + ', media ' + eur2(m) + '">' + catTile('out', c) + '<span class="t"><span>' + esc(c.n) + '</span><span class="track" style="position:relative"><i style="width:' + (a / mx * 100) + '%;background:' + OUT_COL + '"></i>' + (m ? '<b class="avgm" style="left:' + (m / mx * 100) + '%"></b>' : '') + '</span></span><span class="v">' + eur(a) + '<small style="color:' + (diff === null ? 'var(--muted)' : diff > 10 ? OUT_COL : diff < -10 ? IN_COL : 'var(--muted)') + '">' + (diff === null ? 'nuova' : (diff > 0 ? '+' : '') + diff + '%') + '</small></span></button>'; }).join('') + '</div>' : '<p class="small muted">Servono almeno un mese di movimenti.</p>') + '</div>';
+        return '<button class="hbar" ' + dnp$('out', c.id, ST.ym) + ' title="' + esc(c.n) + ': ' + eur2(a) + ', media ' + eur2(m) + '">' + catTile('out', c) + '<span class="t"><span>' + esc(c.n) + '</span><span class="track" style="position:relative"><i style="width:' + (a / mx * 100) + '%;background:' + OUT_COL + '"></i>' + (m ? '<b class="avgm" style="left:' + (m / mx * 100) + '%"></b>' : '') + '</span></span><span class="v">' + eur(a) + '<small style="color:' + (diff === null ? 'var(--muted)' : diff > 10 ? OUT_COL : diff < -10 ? IN_COL : 'var(--muted)') + '">' + (diff === null ? 'nuova' : (diff > 0 ? '+' : '') + diff + '%') + '</small></span></button>'; }).join('') + '</div>' : '<p class="small muted">Servono almeno un mese di movimenti.</p>') + '</div>';
   }
   /* stesso periodo, appena prima: per dire cosa è cambiato */
   const prevOut = {}, prevIn = {}, prevM = months.map(m => addMonths(m, -months.length));
   prevM.forEach(ym => stats(ym).L.forEach(x => { if (x.plan) return; const o = x.t === 'in' ? prevIn : prevOut; o[x.c] = (o[x.c] || 0) + x.a; }));
   const prevLabel = ST.mode === 'm' ? ymLabel(prevM[0], {month:'long'}) : ST.mode === 'y' ? 'gli stessi mesi del ' + (ST.y - 1) : 'i ' + months.length + ' mesi prima';
-  const outRows = Object.entries(byCat).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('out', c); return {id:c, disc:!!k.disc, n:k.n, v:a, c:catColor('out', k), tile:catTile('out', k), go:ST.mode === 'm' ? {screen:'tx', cat:c} : null}; });
-  const inRows = Object.entries(byIn).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('in', c); return {id:c, n:k.n, v:a, c:catColor('in', k), tile:catTile('in', k), go:ST.mode === 'm' ? {screen:'tx', cat:c, ct:'in'} : null}; });
+  const outRows = Object.entries(byCat).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('out', c); return {id:c, disc:!!k.disc, n:k.n, v:a, c:catColor('out', k), tile:catTile('out', k), dnp:months.length ? dnp$('out', c, months[0], months[months.length - 1]) : null}; });
+  const inRows = Object.entries(byIn).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('in', c); return {id:c, n:k.n, v:a, c:catColor('in', k), tile:catTile('in', k), dnp:months.length ? dnp$('in', c, months[0], months[months.length - 1]) : null}; });
   const fcR = payOn() && ST.mode === 'm' && months[0] === curYM() ? (f => f.payP ? f : null)(fcStats(curYM())) : null;
   view.innerHTML = '<div class="sec" style="gap:20px">' + demoBar() + '<div class="intro"><h2>Statistiche</h2></div>' + (n => '<div class="row"><button class="readcard" ' + nav$({screen:'tags'}) + '><span class="t"><b>' + ic('list') + ' Etichette</b><span>' + (n ? n + (n === 1 ? ' etichetta' : ' etichette') + ': viaggi, eventi, progetti' : 'Spese di categorie diverse sotto un nome, come «Vacanza Grecia»') + '</span></span>' + ic('right') + '</button></div>')(tagsAll().length) +
     statViews('stats') + stPeriodHTML() +
@@ -3071,7 +3075,8 @@ function goalsCarousel(){
   return '<div class="card"><div class="spread"><span class="label">' + (gs.length > 1 ? 'I tuoi obiettivi · ' + gs.length : 'Il tuo obiettivo') + '</span><button class="textlink small" ' + nav$({screen:'goal', id:'new'}) + '>+ Nuovo</button></div>' +
     (gs.length > 1 ? '<div class="carousel">' + gs.map(g => '<div class="slide">' + goalMini(g) + '</div>').join('') + '</div><div class="dots">' + gs.map((_, i) => '<i class="' + (i ? '' : 'on') + '"></i>').join('') + '</div>' : goalMini(gs[0])) + '</div>';
 }
-function bindCarousels(){ view.querySelectorAll('.donut svg').forEach(svg => { let ring = false; svg.addEventListener('touchstart', e => { ring = !!(e.target.closest && e.target.closest('circle[data-dn]')); }, {passive:true}); svg.addEventListener('touchmove', e => { if (ring && e.cancelable) e.preventDefault(); }, {passive:false}); }); view.querySelectorAll('.carousel:not(.books)').forEach(c => { const dots = c.parentElement.querySelectorAll('.dots i'); const fit = i => { const sl = c.children[i]; if (sl) c.style.height = sl.scrollHeight + 'px'; }; fit(0); c.onscroll = () => { const i = Math.round(c.scrollLeft / c.clientWidth); dots.forEach((d, k) => d.classList.toggle('on', k === i)); fit(i); }; dots.forEach((d, k) => { d.onclick = () => { const sl = c.children[k]; if (sl) c.scrollTo({left:sl.offsetLeft - c.children[0].offsetLeft, behavior:'smooth'}); }; }); }); }
+function dnTouch(root){ root.querySelectorAll('.donut svg').forEach(svg => { if (svg.dataset.tb) return; svg.dataset.tb = 1; let ring = false; svg.addEventListener('touchstart', e => { ring = !!(e.target.closest && e.target.closest('circle[data-dn]')); }, {passive:true}); svg.addEventListener('touchmove', e => { if (ring && e.cancelable) e.preventDefault(); }, {passive:false}); }); }
+function bindCarousels(){ dnTouch(view); view.querySelectorAll('.carousel:not(.books)').forEach(c => { const dots = c.parentElement.querySelectorAll('.dots i'); const fit = i => { const sl = c.children[i]; if (sl) c.style.height = sl.scrollHeight + 'px'; }; fit(0); c.onscroll = () => { const i = Math.round(c.scrollLeft / c.clientWidth); dots.forEach((d, k) => d.classList.toggle('on', k === i)); fit(i); }; dots.forEach((d, k) => { d.onclick = () => { const sl = c.children[k]; if (sl) c.scrollTo({left:sl.offsetLeft - c.children[0].offsetLeft, behavior:'smooth'}); }; }); }); }
 /* con il mouse (computer): trascinare le schede di lato come con il dito */
 (() => { let M = null;
   document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button !== 0) return; const c = e.target.closest && e.target.closest('.carousel, .disc, .hscroll'); if (!c || e.target.closest('.donut circle[data-dn], input, textarea, select')) return; M = {c, x:e.clientX, s:c.scrollLeft, moved:0}; });

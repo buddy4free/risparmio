@@ -181,7 +181,7 @@ i.lg{display:inline-block;width:12px;height:10px;border-radius:3px;background:va
 .disc .dcard p{margin:0}.disc .dcard .btn{align-self:flex-start;margin-top:auto}
 .discdots{display:flex;justify-content:center;gap:6px}.discdots i{width:7px;height:7px;border-radius:99px;background:var(--line)}.discdots i.on{background:var(--yellow);width:18px}
 .stiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px;margin-bottom:10px}.stile{background:var(--soft2);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:2px}.stile b{font-family:var(--display);font-size:1.45rem;line-height:1.1}.stile span{font-size:.75rem;color:var(--muted);line-height:1.25}.stack.ess{margin-top:10px}#mc .stile b{font-size:1.08rem;white-space:nowrap}#mc .stiles{grid-template-columns:repeat(3,1fr)}
-.donut svg{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}.donut .drot{transition:transform .25s ease}.donut.drag .drot{transition:none}.donut circle.on{stroke-width:32}
+.donut svg{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}.donut circle.on{stroke-width:30}
 .amount{position:relative;cursor:pointer}.amount input{cursor:pointer;caret-color:transparent}.amtx{position:absolute;right:0;bottom:-22px;font-style:normal;font-size:.85rem;font-weight:700;color:var(--ytext)}
 .kpad{position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 12px calc(12px + env(safe-area-inset-bottom,0px));background:#0b0b0b;border-top:1px solid var(--line);max-width:560px;margin:0 auto}
 .kpad button{height:58px;border:0;border-radius:16px;background:var(--soft);color:var(--fg);font-family:var(--display);font-size:1.55rem;font-weight:800;display:grid;place-items:center;-webkit-user-select:none;user-select:none;touch-action:manipulation}
@@ -639,7 +639,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 .catscroll{max-height:212px;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;padding-right:4px}
 .addgoal{align-items:center;justify-content:center;color:var(--muted);min-height:200px;background:none;border-style:dashed}
 .donut{display:flex;flex-direction:column;align-items:center;gap:12px}
-.donut svg{width:200px;height:200px}
+.donut svg{width:100%;max-width:380px;height:auto}
 .dlegend{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:.82rem}
 .dlegend span{display:inline-flex;align-items:center;gap:6px}
 .dlegend i{width:10px;height:10px;border-radius:3px}
@@ -2786,15 +2786,28 @@ function hbarsHTML(rows, total, mx){
     '<span class="t"><span>' + esc(r.n) + '</span><span class="track"><i style="width:' + (Math.abs(r.v) / max * 100) + '%;background:' + r.c + '"></i></span></span><span class="v">' + eur(r.v) + (total ? '<small>' + Math.round(r.v / total * 100) + '%</small>' : (r.sub ? '<small>' + r.sub + '</small>' : '')) + '</span></' + (r.go ? 'button' : 'div') + '>').join('') + '</div>';
 }
 function donutHTML(rows, total){
-  const top = rows.slice(0, 7), rest = rows.slice(7).reduce((t, r) => t + r.v, 0), segs = top.map(r => ({n:r.n, v:r.v, c:r.c})).concat(rest > 0 ? [{n:'Le altre', v:rest, c:'#5f5f5a'}] : []);
-  const R0 = 70, C = 2 * Math.PI * R0; let off = 0;
-  const arcs = segs.map(sg => { const len = sg.v / total * C, gap = segs.length > 1 ? Math.min(3, len * .3) : 0; const el = '<circle data-dn="' + esc(sg.n) + '" data-dv="' + sg.v + '" r="' + R0 + '" cx="90" cy="90" fill="none" stroke="' + sg.c + '" stroke-width="26" stroke-dasharray="' + Math.max(0, len - gap) + ' ' + C + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 90 90)"><title>' + esc(sg.n) + ': ' + eur2(sg.v) + '</title></circle>'; off += len; return el; }).join('');
-  return '<div class="donut" data-tot="' + total + '"><svg viewBox="0 0 180 180" role="img" aria-label="Grafico circolare: trascina per girarlo, tocca uno spicchio per i dettagli"><g class="drot">' + arcs + '</g><text class="dct1" x="90" y="86" text-anchor="middle" font-size="12" fill="var(--muted)">Totale</text><text class="dct2" x="90" y="106" text-anchor="middle" font-size="18" font-weight="800" fill="var(--fg)">' + eur(total) + '</text></svg><div class="dlegend">' + segs.map(sg => '<span><i style="background:' + sg.c + '"></i>' + esc(sg.n) + ' <b>' + Math.round(sg.v / total * 100) + '%</b></span>').join('') + '</div></div>';
+  /* al massimo 5 voci con il nome accanto (freccia), le piccole (sotto il 4%) e il resto in "Altro" */
+  const pos = rows.filter(r => r.v > 0 && r.n !== 'Altro'), top = pos.filter((r, i) => i < (pos.length > 6 ? 5 : 6) && r.v / total >= .04), rest = total - top.reduce((t, r) => t + r.v, 0);
+  const segs = top.map(r => ({n:r.n, v:r.v, c:r.c})).concat(rest > total * .001 ? [{n:'Altro', v:rest, c:'#8a8a84'}] : []);
+  const R0 = 62, C = 2 * Math.PI * R0; let off = 0;
+  const arcs = segs.map(sg => { const len = sg.v / total * C, gap = segs.length > 1 ? Math.min(3, len * .3) : 0; sg.m = (off + len / 2) / C * 360; const el = '<circle data-dn="' + esc(sg.n) + '" data-dv="' + sg.v + '" data-dm="' + sg.m + '" data-dc="' + sg.c + '" r="' + R0 + '" cx="170" cy="115" fill="none" stroke="' + sg.c + '" stroke-width="24" stroke-dasharray="' + Math.max(0, len - gap) + ' ' + C + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 170 115)"><title>' + esc(sg.n) + ': ' + eur2(sg.v) + '</title></circle>'; off += len; return el; }).join('');
+  return '<div class="donut" data-tot="' + total + '"><svg viewBox="0 0 340 230" role="img" aria-label="Grafico circolare: trascina per girarlo, tocca uno spicchio per i dettagli"><g class="drot">' + arcs + '</g><g class="dlab">' + dnLabels(segs, total, 0) + '</g><text class="dct1" x="170" y="111" text-anchor="middle" font-size="11" fill="var(--muted)">Totale</text><text class="dct2" x="170" y="130" text-anchor="middle" font-size="16" font-weight="800" fill="var(--fg)">' + eur(total) + '</text></svg></div>';
+}
+/* nomi intorno al cerchio con una freccia verso lo spicchio; seguono il cerchio quando lo giri */
+function dnLabels(segs, total, rot){
+  const cx = 170, cy = 115, rad = d => (d + rot - 90) * Math.PI / 180, L = [];
+  segs.forEach(sg => { const a = rad(sg.m), co = Math.cos(a), si = Math.sin(a); L.push({sg, side:co >= 0 ? 1 : -1, x0:cx + 75 * co, y0:cy + 75 * si, y:cy + 92 * si, ex:cx + 88 * co}); });
+  [1, -1].forEach(side => { const g = L.filter(l => l.side === side).sort((p, q) => p.y - q.y), H = 29;
+    for (let i = 0; i < g.length; i++) { g[i].y = Math.max(g[i].y, i ? g[i - 1].y + H : 14); }
+    for (let i = g.length - 1; i >= 0; i--) { g[i].y = Math.min(g[i].y, i < g.length - 1 ? g[i + 1].y - H : 230 - 18); } });
+  return L.map(l => { const tx = l.side > 0 ? 334 : 6, ax = l.side > 0 ? 'end' : 'start', ex = l.side > 0 ? Math.max(l.ex, cx + 40) : Math.min(l.ex, cx - 40), n = l.sg.n.length > 18 ? l.sg.n.slice(0, 17) + '…' : l.sg.n;
+    return '<polyline points="' + [l.x0, l.y0, ex, l.y, tx + (l.side > 0 ? -2 : 2) - l.side * 0, l.y].map(v => v.toFixed(1)).join(' ') + '" fill="none" stroke="var(--muted)" stroke-width="1"/><circle cx="' + l.x0.toFixed(1) + '" cy="' + l.y0.toFixed(1) + '" r="2" fill="var(--muted)"/>' +
+      '<text x="' + tx + '" y="' + (l.y - 4).toFixed(1) + '" text-anchor="' + ax + '" font-size="12" fill="var(--fg)">' + esc(n) + '</text><text x="' + tx + '" y="' + (l.y + 11).toFixed(1) + '" text-anchor="' + ax + '" font-size="12" font-weight="800" fill="' + l.sg.c + '">' + Math.round(l.sg.v / total * 100) + '%</text>'; }).join('');
 }
 /* al posto del cerchio, quando le voci sono tante: una lettura in poche righe */
 (() => { let D = null; const ang = (svg, e) => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - r.top - r.height / 2, e.clientX - r.left - r.width / 2) * 180 / Math.PI; };
   document.addEventListener('pointerdown', e => { const svg = e.target.closest && e.target.closest('.donut svg'); if (!svg) return; const g = svg.querySelector('.drot'); D = {svg, g, a0:ang(svg, e), r0:+(g.dataset.r || 0), moved:0, t:e.target}; svg.parentNode.classList.add('drag'); try { svg.setPointerCapture(e.pointerId); } catch(x) {} });
-  document.addEventListener('pointermove', e => { if (!D) return; let d = ang(D.svg, e) - D.a0; if (d > 180) d -= 360; if (d < -180) d += 360; D.moved = Math.max(D.moved, Math.abs(d)); const r = D.r0 + d; D.g.dataset.r = r; D.g.setAttribute('transform', 'rotate(' + r + ' 90 90)'); });
+  document.addEventListener('pointermove', e => { if (!D) return; let d = ang(D.svg, e) - D.a0; if (d > 180) d -= 360; if (d < -180) d += 360; D.moved = Math.max(D.moved, Math.abs(d)); const r = D.r0 + d; D.g.dataset.r = r; D.g.setAttribute('transform', 'rotate(' + r + ' 170 115)'); const lab = D.svg.querySelector('.dlab'), tot = +D.svg.parentNode.dataset.tot || 0; if (lab && tot) lab.innerHTML = dnLabels([...D.g.querySelectorAll('circle[data-dn]')].map(c => ({n:c.dataset.dn, v:+c.dataset.dv, m:+c.dataset.dm, c:c.dataset.dc})), tot, r); });
   const end = () => { if (!D) return; const d = D; D = null; d.svg.parentNode.classList.remove('drag'); if (d.moved > 4) return;
     const c = d.t.closest && d.t.closest('circle[data-dn]'), box = d.svg.parentNode, t1 = d.svg.querySelector('.dct1'), t2 = d.svg.querySelector('.dct2'), tot = +box.dataset.tot || 0;
     d.svg.querySelectorAll('circle.on').forEach(x => x.classList.remove('on'));

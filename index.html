@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611221218">
+<meta name="b4f-build" content="202611221224">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-/dHOn+c22yWJsSSt9UD6BgD8CkSAaN8D1Ao8mxACvDo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-XsPyNK41auenE4v3R6VPyFwlIWCp1QQLrjkD5T3g9Fk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -642,7 +642,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 #gcar .slide{flex-basis:92%}
 #gcar .slide > .goal2{flex:1}
 .dots{display:flex;gap:6px;justify-content:center}
-.dots i{width:7px;height:7px;border-radius:50%;background:var(--soft2)}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--soft2);cursor:pointer}
 .dots i.on{background:var(--yellow);width:18px;border-radius:4px}
 .gmini{display:flex;flex-direction:column;gap:8px}
 .gname{display:flex;align-items:center;gap:10px;font-size:1.1rem;min-width:0}
@@ -2837,7 +2837,7 @@ function dnLabels(segs, total, rot){
 }
 /* al posto del cerchio, quando le voci sono tante: una lettura in poche righe */
 (() => { let D = null; const ang = (svg, e) => { const r = svg.getBoundingClientRect(); return Math.atan2(e.clientY - r.top - r.height / 2, e.clientX - r.left - r.width / 2) * 180 / Math.PI; };
-  document.addEventListener('pointerdown', e => { const svg = e.target.closest && e.target.closest('.donut svg'); if (!svg) return; const g = svg.querySelector('.drot'); D = {svg, g, a0:ang(svg, e), r0:+(g.dataset.r || 0), moved:0, t:e.target}; svg.parentNode.classList.add('drag'); try { svg.setPointerCapture(e.pointerId); } catch(x) {} });
+  document.addEventListener('pointerdown', e => { const svg = e.target.closest && e.target.closest('.donut svg'); if (!svg || (e.pointerType === 'mouse' && !e.target.closest('circle[data-dn]'))) return; const g = svg.querySelector('.drot'); D = {svg, g, a0:ang(svg, e), r0:+(g.dataset.r || 0), moved:0, t:e.target}; svg.parentNode.classList.add('drag'); try { svg.setPointerCapture(e.pointerId); } catch(x) {} });
   document.addEventListener('pointermove', e => { if (!D) return; let d = ang(D.svg, e) - D.a0; if (d > 180) d -= 360; if (d < -180) d += 360; D.moved = Math.max(D.moved, Math.abs(d)); const r = D.r0 + d; D.g.dataset.r = r; D.g.setAttribute('transform', 'rotate(' + r + ' 170 115)'); const lab = D.svg.querySelector('.dlab'), tot = +D.svg.parentNode.dataset.tot || 0; if (lab && tot) lab.innerHTML = dnLabels([...D.g.querySelectorAll('circle[data-dn]')].map(c => ({n:c.dataset.dn, v:+c.dataset.dv, m:+c.dataset.dm, c:c.dataset.dc})), tot, r); });
   const end = () => { if (!D) return; const d = D; D = null; d.svg.parentNode.classList.remove('drag'); if (d.moved > 4) return;
     const c = d.t.closest && d.t.closest('circle[data-dn]'), box = d.svg.parentNode, t1 = d.svg.querySelector('.dct1'), t2 = d.svg.querySelector('.dct2'), tot = +box.dataset.tot || 0;
@@ -3036,7 +3036,14 @@ function goalsCarousel(){
   return '<div class="card"><div class="spread"><span class="label">' + (gs.length > 1 ? 'I tuoi obiettivi · ' + gs.length : 'Il tuo obiettivo') + '</span><button class="textlink small" ' + nav$({screen:'goal', id:'new'}) + '>+ Nuovo</button></div>' +
     (gs.length > 1 ? '<div class="carousel">' + gs.map(g => '<div class="slide">' + goalMini(g) + '</div>').join('') + '</div><div class="dots">' + gs.map((_, i) => '<i class="' + (i ? '' : 'on') + '"></i>').join('') + '</div>' : goalMini(gs[0])) + '</div>';
 }
-function bindCarousels(){ view.querySelectorAll('.carousel:not(.books)').forEach(c => { const dots = c.parentElement.querySelectorAll('.dots i'); const fit = i => { const sl = c.children[i]; if (sl) c.style.height = sl.scrollHeight + 'px'; }; fit(0); c.onscroll = () => { const i = Math.round(c.scrollLeft / c.clientWidth); dots.forEach((d, k) => d.classList.toggle('on', k === i)); fit(i); }; }); }
+function bindCarousels(){ view.querySelectorAll('.carousel:not(.books)').forEach(c => { const dots = c.parentElement.querySelectorAll('.dots i'); const fit = i => { const sl = c.children[i]; if (sl) c.style.height = sl.scrollHeight + 'px'; }; fit(0); c.onscroll = () => { const i = Math.round(c.scrollLeft / c.clientWidth); dots.forEach((d, k) => d.classList.toggle('on', k === i)); fit(i); }; dots.forEach((d, k) => { d.onclick = () => { const sl = c.children[k]; if (sl) c.scrollTo({left:sl.offsetLeft - c.children[0].offsetLeft, behavior:'smooth'}); }; }); }); }
+/* con il mouse (computer): trascinare le schede di lato come con il dito */
+(() => { let M = null;
+  document.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button !== 0) return; const c = e.target.closest && e.target.closest('.carousel, .disc, .hscroll'); if (!c || e.target.closest('.donut circle[data-dn], input, textarea, select')) return; M = {c, x:e.clientX, s:c.scrollLeft, moved:0}; });
+  document.addEventListener('dragstart', e => { if (e.target.closest && e.target.closest('.carousel, .disc, .hscroll')) e.preventDefault(); });
+  document.addEventListener('pointermove', e => { if (!M) return; const dx = e.clientX - M.x; if (!M.moved && Math.abs(dx) < 6) return; if (!M.moved) { M.c.style.scrollSnapType = 'none'; M.c.style.cursor = 'grabbing'; document.body.style.userSelect = 'none'; } M.moved = 1; M.c.scrollLeft = M.s - dx; });
+  document.addEventListener('pointerup', e => { if (!M) return; const m = M; M = null; if (!m.moved) return; document.body.style.userSelect = ''; m.c.style.cursor = ''; const ch = [...m.c.children], o0 = ch[0] ? ch[0].offsetLeft : 0, pos = ch.map(x => x.offsetLeft - o0), near = v => pos.reduce((b, p, k) => Math.abs(p - v) < Math.abs(pos[b] - v) ? k : b, 0), d = m.c.scrollLeft - m.s; let i = near(m.c.scrollLeft); const i0 = near(m.s); if (Math.abs(d) > 40 && i === i0) i = Math.max(0, Math.min(ch.length - 1, i0 + Math.sign(d)));
+    if (m.c.classList.contains('hscroll')) i = -1; if (i >= 0) m.c.scrollTo({left:pos[i], behavior:'smooth'}); setTimeout(() => { m.c.style.scrollSnapType = ''; }, 400); const stop = ev => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, {capture:true, once:true}); setTimeout(() => document.removeEventListener('click', stop, {capture:true}), 50); }); })();
 function goalCardHTML(g, big){
   const p = goalPlan(g), gs = goalStatus(g), st = [0, gs.c, gs.l];
   return '<div class="goal2" style="--gc:' + st[1] + '"><div class="spread"><span class="label">' + (big ? KINDS.find(k => k[0] === g.kind)[1] : 'Il tuo obiettivo') + ' · entro ' + ymLabel(g.date, {month:'short', year:'numeric'}) + '</span><span class="gic">' + ic(KINDS.find(k => k[0] === g.kind)[2]) + '</span></div>' +

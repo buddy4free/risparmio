@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611221002">
+<meta name="b4f-build" content="202611221006">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-DYwEpaEjAmH3v141qsG/7M7wXzqBqlY3kZubYdggrrQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-TSUV4VOK4uVl71P+DWAi72wDLfzaAV3vQXowaAy4nsY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1341,25 +1341,28 @@ function monthTxCalc(ym){
 const ESS_SUB = ['Bar e caffè', 'Delivery', 'Pranzo fuori'];
 const essMode = () => S.essMode || 'auto';
 /* natura della spesa: svago per natura (categoria segnata non essenziale o Bar/Delivery/Pranzo fuori) = extra; casa e finanza (affitto, bollette, tasse, assicurazioni) = essenziali; le altre voci (alimentari, trasporti, salute, famiglia…) si leggono con la spesa di base */
-const essNat = x => { const c = catOf('out', x.c); return c.disc || ESS_SUB.includes(x.s) ? 'x' : ['casa', 'finanza'].includes(c.g) ? 'e' : 'b'; };
+const essNat = x => ['casa', 'finanza'].includes(catOf('out', x.c).g) ? 'e' : 'b';
+const essOld = x => catOf('out', x.c).disc || ESS_SUB.includes(x.s); /* vecchia regola per categoria: si usa finché lo storico non basta */
 const essKey = x => { const n = (x.n || '').trim().toLowerCase(); return n.length > 2 ? n + '|' + x.c : null; };
 function essLabel(x){ const E = S.ess || {}; if (E.tx && E.tx[x.id]) return E.tx[x.id]; const k = essKey(x); return k && E.note && E.note[k] || null; }
 let _essK = '', _essB = {}, _essS = {};
 function essCache(){ const k = S.savedAt + ':' + S.tx.length + ':' + S.rec.length + ':' + today(); if (k !== _essK) { _essK = k; _essB = {}; _essS = {}; } }
 function essBase(c, ym){ essCache(); const E = S.ess || {}; if (E.base && E.base[c] != null) return E.base[c]; const key = c + '|' + ym; if (key in _essB) return _essB[key];
-  const vals = []; for (let i = 1; i <= 12; i++) { const L = monthTx(addMonths(ym, -i)).filter(x => !x.plan); if (!L.length) continue; vals.push(L.filter(x => x.t === 'out' && x.c === c && !x.rec && !essLabel(x) && essNat(x) === 'b').reduce((t, x) => t + x.a, 0)); }
+  const vals = []; for (let i = 1; i <= 12; i++) { const L = monthTx(addMonths(ym, -i)).filter(x => !x.plan); if (!L.length) continue; vals.push(L.filter(x => x.t === 'out' && x.c === c && !(x.rec && !essOld(x)) && essLabel(x) == null && essNat(x) === 'b').reduce((t, x) => t + x.a, 0)); }
   vals.sort((a, b) => a - b); return (_essB[key] = vals.length >= 3 ? vals[Math.floor((vals.length - 1) * 0.3)] : null); }
 function essSplit(ym, L){ essCache(); const key = ym + '|' + (L ? L.length : 'x'); if (_essS[key]) return _essS[key];
   L = L || monthTx(ym).filter(x => !x.plan); const cats = {};
-  L.forEach(x => { if (x.t !== 'out') return; const g = cats[x.c] = cats[x.c] || {f:0, e:0, x:0, u:0}, lb = essLabel(x);
-    if (lb === 'x') g.x += x.a; else if (lb === 'e' || x.rec && essNat(x) !== 'x') g.e += x.a; else { const nt = essNat(x); if (nt === 'x') g.x += x.a; else if (nt === 'e') g.e += x.a; else g.u += x.a; } });
+  L.forEach(x => { if (x.t !== 'out') return; const g = cats[x.c] = cats[x.c] || {e:0, x:0, u:0, ud:0}, lb = essLabel(x);
+    if (typeof lb === 'number') { const p = Math.min(x.a, Math.max(0, lb)); g.x += p; g.e += x.a - p; } else if (lb === 'x') g.x += x.a; else if (lb === 'e' || x.rec && !essOld(x) || essNat(x) === 'e') g.e += x.a; else { g.u += x.a; if (essOld(x)) g.ud += x.a; } });
   let ext = 0; const byCat = {};
-  Object.entries(cats).forEach(([c, g]) => { const base = g.u > 0 ? essBase(c, ym) : null, uE = base === null ? g.u : Math.min(g.u, Math.max(0, base)), ex = g.x + Math.max(0, g.u - uE);
+  Object.entries(cats).forEach(([c, g]) => { const base = g.u > 0 ? essBase(c, ym) : null, uE = base === null ? g.u - g.ud : Math.min(g.u, Math.max(0, base)), ex = g.x + Math.max(0, g.u - uE);
     byCat[c] = {base, ess:g.e + uE, ext:ex, auto:base !== null}; ext += ex; });
   return (_essS[key] = {ext, byCat}); }
 /* spese "fuori dal tuo solito": molto sopra lo scontrino tipico della voce nei 6 mesi prima */
-function essOutliers(ms){ const res = []; ms.forEach(ym => { const tick = {}; for (let i = 1; i <= 6; i++) monthTx(addMonths(ym, -i)).forEach(x => { if (x.t === 'out' && !x.plan && !x.rec && x.a > 0) (tick[x.c] = tick[x.c] || []).push(x.a); });
-  monthTx(ym).forEach(x => { if (x.t !== 'out' || x.plan || x.rec || !(x.a > 10)) return; const T = (tick[x.c] || []).slice().sort((a, b) => a - b); if (T.length < 5) return; const med = T[Math.floor(T.length / 2)]; if (x.a > med * 1.8) res.push({x, med, over:x.a - med}); }); });
+function essOutliers(ms){ const res = []; ms.forEach(ym => { const H = []; for (let i = 1; i <= 6; i++) monthTx(addMonths(ym, -i)).forEach(x => { if (x.t === 'out' && !x.plan && !x.rec && x.a > 0) H.push(x); });
+  const med = A => { const T = A.map(x => x.a).sort((a, b) => a - b); return T[Math.floor(T.length / 2)]; };
+  monthTx(ym).forEach(x => { if (x.t !== 'out' || x.plan || x.rec || !(x.a > 10) || essNat(x) === 'e') return; const k = essKey(x), byN = k ? H.filter(y => essKey(y) === k) : [], byS = x.s ? H.filter(y => y.c === x.c && y.s === x.s) : [], byC = H.filter(y => y.c === x.c);
+    const ref = byN.length >= 3 ? byN : byS.length >= 5 ? byS : byC.length >= 5 ? byC : null; if (!ref) return; const m = med(ref); if (x.a > m * 1.5 && x.a - m >= 5 && (ref === byN || x.a <= m * 5)) res.push({x, med:m, over:x.a - m, by:ref === byN ? 'n' : ref === byS ? 's' : 'c'}); }); });
   return res.sort((a, b) => b.over - a.over); }
 function stats(ym, all){
   const L = all || ym < curYM() ? monthTx(ym) : monthTx(ym).filter(x => !x.plan);
@@ -3984,7 +3987,7 @@ function pdfPop(kind){
     o.querySelectorAll('[data-pk]').forEach(x => x.onclick = () => { const p = P.find(q => q[0] === sel.value), pm = o.querySelector('#pp-m').value, from = p[0] === 'pick' ? pm : p[2], to = p[0] === 'pick' ? pm : p[3];
       close(); exportPDF(from === to ? 'm' : 'y', x.dataset.pk, {from, to, anon:o.querySelector('#pp-anon').checked, label:p[0] === 'pick' ? ymLabel(pm) : p[0] === 'y' ? 'anno ' + yr : p[0] === 'yp' ? 'anno ' + (+yr - 1) : p[0] === 'cur' || p[0] === 'prev' ? ymLabel(from) : p[1].replace(/ \(.*\)$/, '').toLowerCase() + ' (' + ymLabel(from, {month:'short', year:'numeric'}) + ' - ' + ymLabel(to, {month:'short', year:'numeric'}) + ')'}); }); }); }
 /* che cosa conta come spesa non essenziale: lo dice l'utente nelle categorie */
-function essText(){ if (essMode() === 'auto') return 'Calcolo automatico, senza segnare niente: nelle voci di tutti i giorni (alimentari, trasporti, salute, famiglia…) la spesa fino alla tua spesa di base, cioè quanto spendi in un mese normale dei tuoi ultimi 12, è essenziale; quello che va oltre è extra. Casa, bollette, tasse, assicurazioni e le spese ricorrenti necessarie sono essenziali; svago, ristoranti, shopping e le altre categorie segnate come non essenziali sono extra. Nei primi mesi, finché lo storico non basta, le voci di tutti i giorni contano come essenziali. Le risposte della revisione mensile aiutano l\'app a capire meglio.'; const nd = S.cats.out.filter(c => c.disc).map(c => c.n); return 'Non essenziali: ' + (nd.length ? nd.join(', ') : 'nessuna categoria') + ', più le sottocategorie Bar e caffè, Delivery e Pranzo fuori. Ogni categoria si può segnare come essenziale o no in Categorie uscite.'; }
+function essText(){ if (essMode() === 'auto') return 'Calcolo automatico, senza segnare niente: in ogni voce è essenziale la tua spesa abituale, cioè quanto spendi in un mese normale dei tuoi ultimi 12 (la spesa di base); quello che va oltre le tue abitudini è extra. Casa, bollette, tasse e assicurazioni sono sempre essenziali. Nei primi mesi, finché lo storico non basta, contano le categorie segnate come non essenziali. Nella revisione mensile puoi dire se la parte in più di una spesa insolita era un extra: l\'app impara.'; const nd = S.cats.out.filter(c => c.disc).map(c => c.n); return 'Non essenziali: ' + (nd.length ? nd.join(', ') : 'nessuna categoria') + ', più le sottocategorie Bar e caffè, Delivery e Pranzo fuori. Ogni categoria si può segnare come essenziale o no in Categorie uscite.'; }
 async function exportPDF(mode, level, opt){
   /* periodo scelto (uno o più mesi, anche passati) e cifre nascoste per condividere la struttura */
   const REAL = _curYM(), RT = _today(), PR = opt && opt.from ? opt : (mode === 'y' ? {from:REAL.slice(0, 4) + '-01', to:REAL} : {from:REAL, to:REAL}), ANON = !!(opt && opt.anon);
@@ -5273,13 +5276,13 @@ function renderSettings(){
 
 /* revisione mensile "attiva": poche domande facoltative per insegnare all'app cosa è extra per te */
 function essAskHTML(ym){ if (essMode() !== 'auto') return ''; const E = S.ess = S.ess || {}, asked = (E.asked = E.asked || {})[ym] = E.asked[ym] || [];
-  const ol = essOutliers([ym]).filter(o => !essLabel(o.x) && essNat(o.x) === 'b').slice(0, 3), sp = essSplit(ym).byCat, bc = Object.entries(sp).filter(([c, v]) => v.base > 20 && !(E.base && E.base[c] != null) && !asked.includes('b:' + c)).sort((a, b) => b[1].base - a[1].base).slice(0, 2);
+  const ol = essOutliers([ym]).filter(o => essLabel(o.x) == null).slice(0, 3), sp = essSplit(ym).byCat, bc = Object.entries(sp).filter(([c, v]) => v.base > 20 && !(E.base && E.base[c] != null) && !asked.includes('b:' + c)).sort((a, b) => b[1].base - a[1].base).slice(0, 2);
   if (!ol.length && !bc.length) return '';
   return '<div class="card" id="essask" style="gap:12px"><span class="label">Aiuta l\'app a capirti · facoltativo</span><p class="small muted" style="margin:0">Le tue risposte rendono più preciso il calcolo di spese essenziali ed extra. Puoi saltarle.</p>' +
-    ol.map(o => '<div class="sec" style="gap:6px"><span><b>' + esc(o.x.n || catOf('out', o.x.c).n) + '</b> · ' + eur2(o.x.a) + ' <span class="small muted">' + dshort(o.x.d) + '</span></span><span class="small muted">Più del tuo solito in ' + esc(catOf('out', o.x.c).n) + ' (di solito ' + eur(o.med) + '). Per te era…</span><div class="row"><button class="btn sm ghost" data-ea="tx:' + o.x.id + ':e">Necessaria</button><button class="btn sm ghost" data-ea="tx:' + o.x.id + ':x">Un extra</button></div></div>').join('') +
+    ol.map(o => '<div class="sec" style="gap:6px"><span><b>' + esc(o.x.n || catOf('out', o.x.c).n) + '</b> · ' + eur2(o.x.a) + ' <span class="small muted">' + dshort(o.x.d) + '</span></span><span class="small muted">Di solito ' + (o.by === 'n' ? 'per questa voce' : 'in ' + esc(o.x.s || catOf('out', o.x.c).n)) + ' spendi circa ' + eur(o.med) + '. I <b>' + eur2(o.over) + ' in più</b> erano…</span><div class="row"><button class="btn sm ghost" data-ea="tx:' + o.x.id + ':p' + Math.round(o.over * 100) + '">Un extra</button><button class="btn sm ghost" data-ea="tx:' + o.x.id + ':e">Normale per me</button></div></div>').join('') +
     bc.map(([c, v]) => '<div class="sec" style="gap:6px"><span><b>' + esc(catOf('out', c).n) + '</b>: la tua spesa di base risulta <b>' + eur(v.base) + '</b> al mese.</span><span class="small muted">È più o meno quello che ti serve davvero in un mese normale?</span><div class="row" style="flex-wrap:wrap"><button class="btn sm ghost" data-ea="b:' + c + ':0.85">Meno</button><button class="btn sm ghost" data-ea="b:' + c + ':1">Sì, giusta</button><button class="btn sm ghost" data-ea="b:' + c + ':1.15">Di più</button></div></div>').join('') + '</div>'; }
 function bindEssAsk(ym, again){ view.querySelectorAll('[data-ea]').forEach(b => b.onclick = () => { const [k, id, v] = b.dataset.ea.split(':'), E = S.ess = S.ess || {}; (E.asked = E.asked || {})[ym] = E.asked[ym] || [];
-  if (k === 'tx') { const x = S.tx.find(y => y.id === id); (E.tx = E.tx || {})[id] = v; const kk = x && essKey(x); if (kk) (E.note = E.note || {})[kk] = v; toast(v === 'x' ? 'Segnata come extra: la prossima volta lo ricordo' : 'Segnata come necessaria: la prossima volta lo ricordo'); }
+  if (k === 'tx') { (E.tx = E.tx || {})[id] = v[0] === 'p' ? +v.slice(1) / 100 : v; toast(v[0] === 'p' ? 'Segnata la parte in più come extra: il resto resta normale' : 'Va bene: per te è una spesa normale'); }
   else { const base = essSplit(ym).byCat[id] ? essSplit(ym).byCat[id].base : null; if (base != null) { const nb = Math.round(base * +v / 5) * 5; if (+v !== 1) (E.base = E.base || {})[id] = nb; E.asked[ym].push('b:' + id); toast(+v === 1 ? 'Grazie: la base resta ' + eur(base) : 'Base aggiornata: ' + eur(nb)); } }
   save(); const y = window.scrollY; again(); window.scrollTo({top:y}); }); }
 function renderReview(){

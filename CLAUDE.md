@@ -74,8 +74,8 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - In Home per tutti: schede "Scopri l'app" (`DISC`) per le funzioni non ancora usate; si tolgono con la X (`S.discX`). Escluse dallo scorrimento tra schermate.
 
 ## Spese essenziali ed extra (22/11/2026, scelta di Lorenzo)
-- Automatico (predefinito, `S.essMode` 'auto' | 'cat'): `essNat` = natura (categorie segnate non essenziali e Bar/Delivery/Pranzo fuori → extra; gruppi casa e finanza e ricorrenti necessarie → essenziali; il resto "di tutti i giorni" → spesa di base). `essBase` = 30° percentile della spesa mensile della voce nei 12 mesi prima (servono 3 mesi, altrimenti tutto essenziale); oltre la base è extra. `essSplit(ym)` dà essenziali/extra per voce; `stats().disc` è l'extra.
-- Revisione mensile attiva e facoltativa (`essAskHTML`): spese "fuori dal tuo solito" (`essOutliers`, > 1,8× lo scontrino tipico) → Necessaria/Un extra (ricordato anche per la stessa nota in `S.ess.note`); base della voce → Meno/Giusta/Di più (`S.ess.base`).
+- Automatico (predefinito, `S.essMode` 'auto' | 'cat'): extra = quello che va oltre le proprie abitudini. Gruppi casa e finanza (e ricorrenti non di svago) sempre essenziali; tutte le altre voci, svago compreso, con la spesa di base; senza storico (meno di 3 mesi) vale la vecchia regola per categoria (`essOld`). `essBase` = 30° percentile della spesa mensile della voce nei 12 mesi prima (servono 3 mesi, altrimenti tutto essenziale); oltre la base è extra. `essSplit(ym)` dà essenziali/extra per voce; `stats().disc` è l'extra.
+- Revisione mensile attiva e facoltativa (`essAskHTML`): spese "fuori dal tuo solito" (`essOutliers`: confronto con la stessa nota, poi sottocategoria, poi categoria; > 1,5× e almeno 5 € in più) → si chiede solo della **parte in più** (es. dolce e amaro nella cena settimanale): "Un extra" salva l'importo in più in `S.ess.tx[id]` (numero), "Normale per me" = 'e'; base della voce → Meno/Giusta/Di più (`S.ess.base`). Deciso con Lorenzo il 22/11/2026: mai classificare la spesa intera.
 - Niente classificazione da fare a ogni spesa: Lorenzo la ritiene non sostenibile.
 
 ## Resoconto PDF (19/11/2026)

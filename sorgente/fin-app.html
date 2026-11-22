@@ -2821,7 +2821,7 @@ function synthHTML(t, rows, total, prev, prevLabel, ndX){
 }
 function slideCard(title, rows, total, empty, synth){
   if (!rows.length) return '<div class="card"><span class="label">' + title + '</span><p class="small muted">' + empty + '</p></div>';
-  return '<div class="card"><div class="spread"><span class="label">' + title + '</span><span class="small muted">' + (synth ? 'barre ↔ sintesi' : 'barre ↔ cerchio') + '</span></div><div class="carousel">' + '<div class="slide">' + (rows.length > 6 ? '<div class="catscroll catscroll6">' + hbarsHTML(rows, total) + '</div><span class="small muted" style="text-align:center">' + rows.length + ' voci · scorri ↓</span>' : hbarsHTML(rows, total)) + '</div><div class="slide">' + (synth || donutHTML(rows, total)) + '</div></div><div class="dots"><i class="on"></i><i></i></div></div>';
+  return '<div class="card"><div class="spread"><span class="label">' + title + '</span><span class="small muted">' + (synth ? 'barre ↔ cerchio ↔ sintesi' : 'barre ↔ cerchio') + '</span></div><div class="carousel">' + '<div class="slide">' + (rows.length > 6 ? '<div class="catscroll catscroll6">' + hbarsHTML(rows, total) + '</div><span class="small muted" style="text-align:center">' + rows.length + ' voci · scorri ↓</span>' : hbarsHTML(rows, total)) + '</div><div class="slide">' + donutHTML(rows, total) + '</div>' + (synth ? '<div class="slide">' + synth + '</div>' : '') + '</div><div class="dots"><i class="on"></i><i></i>' + (synth ? '<i></i>' : '') + '</div></div>';
 }
 /* periodo delle statistiche, condiviso da Panoramica e Analisi */
 function stPeriod(){

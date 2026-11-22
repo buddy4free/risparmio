@@ -18,11 +18,11 @@ on:
       version_code:
         description: 'Solo per finale: numero di versione, più alto dell''ultimo caricato sul Play Store'
         required: false
-        default: '17'
+        default: '18'
       version_name:
         description: 'Solo per finale: nome della versione mostrato agli utenti'
         required: false
-        default: '2.3.3'
+        default: '2.3.4'
 
 permissions:
   contents: read

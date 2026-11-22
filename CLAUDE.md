@@ -20,6 +20,7 @@ Prima di qualsiasi modifica sostanziale (dati salvati, calcoli, struttura delle 
 - L'artifact si aggiorna subito come anteprima per Lorenzo.
 - La pubblicazione è automatica: il workflow `.github/workflows/pubblica.yml` alle 06:30 e alle 13:30 (ora italiana d'inverno) unisce `prossima` in `main`, ricostruisce, lancia i test di sicurezza e pubblica solo se passano. Si può lanciare anche a mano quando Lorenzo dice "pubblica".
 - Le novità che i tester noteranno si scrivono in `store/NOVITA.md` (una riga "- " per novità): alla pubblicazione diventano una issue con il messaggio pronto per i tester.
+- Dal 22/11/2026, per ogni novità visibile si aggiunge anche un fumetto in `NEWS` (in `sorgente/fin-app.html`: chiave unica, data, titolo, testo, schermata `go` ed elemento `el` per "Mostrami"). All'apertura in Home i tester vedono i fumetti non ancora visti (max 3 per apertura, `S.newsSeen`, salvato nei dati); chi installa da zero li ha già tutti "visti". Elenco in Impostazioni → Aiuto → Novità dell'app.
 - Eccezione: correzioni urgenti (errori che bloccano l'app o rischi sui dati) si pubblicano subito, dicendolo a Lorenzo.
 
 ## Da fare il 28/10/2026 (sicurezza della pubblicazione)

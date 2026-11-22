@@ -69,6 +69,7 @@ Ordine deciso con Lorenzo: 1) verifica in due passaggi sui suoi account (15 minu
 - Chi inizia da zero: avvio in 2 passi (saldo del conto, spesa mensile stimata; `renderSetupLight`), tema chiaro, fumetti guida uno alla volta (`TIPS`, attivi con `b4f-guida`=1, visti in `b4f-tips`; "Rivedi i suggerimenti a fumetto" in Impostazioni). Il vecchio avvio in 4 passi resta nel codice ma non si usa.
 - Dopo l'avvio: "Ultimi due tocchi" (`lastTouches`: promemoria serale e blocco con PIN/impronta). Impostazioni raggruppate in 7 voci con sottopagine (`R.sec`: profilo, aspetto, sicurezza, dati, aiuto, info, avanzate; notifiche apre `notif`); menu laterale ridotto.
 - App Android 2.2 (v13): impronta nativa (`bioStatus`/`bioAuth`, BiometricPrompt di sistema, permesso USE_BIOMETRIC); la pagina la usa se c'è (`S.lock.bio = 'native'`).
+- App Android 2.3 (v14, preparata il 22/11/2026, da compilare con "compila"): impronta chiesta subito dalla parte nativa all'apertura (`bioSubito`, `bioPre`, `lockState` con tempo "dopo"; la pagina la consuma in `showLock`), schermata con l'icona tenuta finché la pagina è pronta (Android 12+, max 3 s). In "Segnala un problema" il tempo di avvio della pagina.
 - In Home per tutti: schede "Scopri l'app" (`DISC`) per le funzioni non ancora usate; si tolgono con la X (`S.discX`). Escluse dallo scorrimento tra schermate.
 
 ## Resoconto PDF (19/11/2026)

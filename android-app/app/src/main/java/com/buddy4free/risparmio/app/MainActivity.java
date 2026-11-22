@@ -58,6 +58,10 @@ public class MainActivity extends Activity {
     private String vaiA;          // schermata da aprire toccando una notifica
     private String daImportare;   // dati arrivati con Condividi (trasloco)
     private boolean pronta;       // la pagina ha finito di caricarsi
+    /* impronta chiesta subito dalla parte nativa, mentre la pagina si carica: 0 nessuna, 1 in corso, 2 riuscita, 3 annullata */
+    private int preBio = 0;
+    private final java.util.ArrayList<String> attesaBio = new java.util.ArrayList<>();
+    private static final String BLOCCO = "blocco";
     private FrameLayout root;
 
     @Override
@@ -69,6 +73,16 @@ public class MainActivity extends Activity {
         web.setBackgroundColor(getColor(R.color.sfondo));
         root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
+        // Android 12+: la schermata con l'icona resta finché la pagina non è pronta (niente schermo vuoto), al massimo 3 secondi
+        if (Build.VERSION.SDK_INT >= 31) {
+            final long t0 = android.os.SystemClock.uptimeMillis();
+            root.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+                @Override public boolean onPreDraw() {
+                    if (pronta || android.os.SystemClock.uptimeMillis() - t0 > 3000) { root.getViewTreeObserver().removeOnPreDrawListener(this); return true; }
+                    return false;
+                }
+            });
+        }
 
         // la pagina sta tra la barra di stato e quella di navigazione (e sopra la tastiera quando è aperta)
         root.setOnApplyWindowInsetsListener((v, ins) -> {
@@ -442,22 +456,24 @@ public class MainActivity extends Activity {
         /** Chiede l'impronta (o il volto) con la finestra di sistema; la risposta torna alla pagina: ok, cancel, err. */
         @JavascriptInterface
         public void bioAuth(String id) {
-            if (Build.VERSION.SDK_INT < 29) { bioFatto(id, "err"); return; }
             runOnUiThread(() -> {
-                try {
-                    android.hardware.biometrics.BiometricPrompt.Builder b = new android.hardware.biometrics.BiometricPrompt.Builder(MainActivity.this)
-                            .setTitle(getString(R.string.app_name))
-                            .setSubtitle("Sblocca con l'impronta")
-                            .setNegativeButton("Usa il PIN", getMainExecutor(), (d, w) -> bioFatto(id, "cancel"));
-                    if (Build.VERSION.SDK_INT >= 30) b.setAllowedAuthenticators(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK);
-                    b.build().authenticate(new android.os.CancellationSignal(), getMainExecutor(), new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
-                        @Override public void onAuthenticationSucceeded(android.hardware.biometrics.BiometricPrompt.AuthenticationResult r) { bioFatto(id, "ok"); }
-                        @Override public void onAuthenticationError(int code, CharSequence msg) { bioFatto(id, "cancel"); }
-                    });
-                } catch (Exception e) {
-                    bioFatto(id, "err");
-                }
+                if (preBio == 1) { attesaBio.add(id); return; } // c'è già la richiesta aperta all'avvio: si aspetta quella
+                mostraBio(r -> bioFatto(id, r));
             });
+        }
+
+        /** Esito dell'impronta chiesta all'avvio: ok (e si consuma), pending, cancel, none. */
+        @JavascriptInterface
+        public String bioPre() {
+            int v = preBio;
+            if (v == 2 || v == 3) preBio = 0;
+            return v == 1 ? "pending" : v == 2 ? "ok" : v == 3 ? "cancel" : "none";
+        }
+
+        /** La pagina comunica se il blocco con l'impronta è attivo e dopo quanti secondi chiederla. */
+        @JavascriptInterface
+        public void lockState(boolean bio, int dopo) {
+            getSharedPreferences(BLOCCO, MODE_PRIVATE).edit().putBoolean("bio", bio).putLong("dopo", Math.max(0, dopo)).apply();
         }
 
         @JavascriptInterface
@@ -700,6 +716,54 @@ public class MainActivity extends Activity {
         Promemoria.programma(getApplicationContext());
         controllaAggiornamenti(false);
         if (pronta) web.evaluateJavascript("window.__b4fResume&&window.__b4fResume()", null);
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        bioSubito();
+    }
+
+    @Override
+    protected void onStop() {
+        getSharedPreferences(BLOCCO, MODE_PRIVATE).edit().putLong("pausa", System.currentTimeMillis()).apply();
+        super.onStop();
+    }
+
+    /** Se il blocco con l'impronta è attivo e il tempo scelto è passato, l'impronta si chiede subito, senza aspettare la pagina. */
+    private void bioSubito() {
+        android.content.SharedPreferences sp = getSharedPreferences(BLOCCO, MODE_PRIVATE);
+        if (!sp.getBoolean("bio", false) || preBio == 1 || Build.VERSION.SDK_INT < 29) return;
+        long dopo = sp.getLong("dopo", 60) * 1000L, p = sp.getLong("pausa", 0);
+        if (p > 0 && System.currentTimeMillis() - p < dopo) return;
+        preBio = 1;
+        root.post(() -> mostraBio(r -> {
+            preBio = "ok".equals(r) ? 2 : 3;
+            for (String id : attesaBio) bioFatto(id, r);
+            attesaBio.clear();
+            if (pronta) web.evaluateJavascript("window.__b4fBioPre&&window.__b4fBioPre(" + JSONObject.quote(r) + ")", null);
+        }));
+    }
+
+    private interface EsitoBio { void esito(String r); }
+
+    private void mostraBio(EsitoBio cb) {
+        if (Build.VERSION.SDK_INT < 29) { cb.esito("err"); return; }
+        try {
+            final boolean[] fatto = {false};
+            final EsitoBio una = r -> { if (!fatto[0]) { fatto[0] = true; cb.esito(r); } };
+            android.hardware.biometrics.BiometricPrompt.Builder b = new android.hardware.biometrics.BiometricPrompt.Builder(this)
+                    .setTitle(getString(R.string.app_name))
+                    .setSubtitle("Sblocca con l'impronta")
+                    .setNegativeButton("Usa il PIN", getMainExecutor(), (d, w) -> una.esito("cancel"));
+            if (Build.VERSION.SDK_INT >= 30) b.setAllowedAuthenticators(android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_WEAK);
+            b.build().authenticate(new android.os.CancellationSignal(), getMainExecutor(), new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                @Override public void onAuthenticationSucceeded(android.hardware.biometrics.BiometricPrompt.AuthenticationResult r) { una.esito("ok"); }
+                @Override public void onAuthenticationError(int code, CharSequence msg) { una.esito("cancel"); }
+            });
+        } catch (Exception e) {
+            cb.esito("err");
+        }
     }
 
     @Override

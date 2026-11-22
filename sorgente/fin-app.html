@@ -4299,8 +4299,16 @@ function showLock(){
     o.querySelector('#lk-back').onclick = () => { o.remove(); showLock(); };
     o.querySelector('#lk-wipe').onclick = () => { if (!o.querySelector('#lk-sure').checked) return toast('Spunta la casella per confermare'); try { localStorage.removeItem(LS_KEY); } catch(e) {} try { clearTimeout(copiaT); copiaT = 0; if (window.B4FNative && window.B4FNative.copiaCancella) window.B4FNative.copiaCancella(); } catch(e) {} S = freshState(); save(); location.reload(); }; };
   document.addEventListener('keydown', function kd(e){ if (!document.getElementById('lock')) return document.removeEventListener('keydown', kd); if (/^\d$/.test(e.key)) o.querySelector('[data-k="' + e.key + '"]').click(); else if (e.key === 'Backspace') o.querySelector('[data-k="del"]').click(); });
-  if (S.lock.bio) setTimeout(bio, 350);
+  if (S.lock.bio) {
+    /* app Android 2.3+: l'impronta può essere già stata chiesta dalla parte nativa all'apertura, mentre la pagina si caricava */
+    const pre = S.lock.bio === 'native' && window.B4FNative && window.B4FNative.bioPre ? window.B4FNative.bioPre() : 'none';
+    if (pre === 'ok') open();
+    else if (pre === 'pending') window.__b4fBioPre = r => { window.__b4fBioPre = null; if (r === 'ok') { try { window.B4FNative.bioPre(); } catch(e) {} open(); } };
+    else if (pre !== 'cancel') setTimeout(bio, bioNative() ? 0 : 350);
+  }
 }
+/* la parte nativa sa se chiedere l'impronta all'apertura, e dopo quanto tempo */
+function nativeLockSync(){ try { if (window.B4FNative && window.B4FNative.lockState) window.B4FNative.lockState(!!(S.lock && S.lock.on && S.lock.bio === 'native'), (S.lock && S.lock.after != null) ? +S.lock.after : 60); } catch(e) {} }
 /* "richiedi il PIN dopo…": ricordo l'ultimo momento in cui l'app era aperta e sbloccata, anche se Android la chiude del tutto */
 const LOCK_KEY = 'b4f-lock-seen';
 function lockSeen(){ if (!document.getElementById('lock')) try { localStorage.setItem(LOCK_KEY, String(Date.now())); } catch (e) {} }
@@ -4320,7 +4328,7 @@ function askPin(title, ok){
     o.querySelector('#pq-ok').onclick = async () => { if (await pinHash(o.querySelector('#pq').value, S.lock.salt) !== S.lock.hash) return toast('PIN sbagliato'); close(); ok(); }; });
 }
 async function lockCard(){
-  const box = document.getElementById('s-lock'); if (!box) return; const L = S.lock || {}, bioOk = await bioAvailable();
+  nativeLockSync(); const box = document.getElementById('s-lock'); if (!box) return; const L = S.lock || {}, bioOk = await bioAvailable();
   box.innerHTML = !L.on ? '<p class="small muted" style="margin:0">Chiedi un PIN' + (bioOk ? ' o l\'impronta' : '') + ' ogni volta che l\'app si apre. Utile se il telefono lo usano anche altri.</p><button class="btn sm" id="lk-on" style="align-self:flex-start">' + ic('shield') + 'Attiva il blocco</button>'
     : '<p class="small" style="margin:0"><b style="color:var(--good)">Blocco attivo</b> · PIN di ' + L.len + ' cifre' + (L.bio ? ' e impronta' : '') + '</p>' +
       (bioOk ? '<label class="check small"><input type="checkbox" id="lk-bio"' + (L.bio ? ' checked' : '') + '> Sblocca anche con l\'impronta o il volto</label>' : '<p class="small muted" style="margin:0">L\'impronta non è disponibile su questo telefono o in questo browser: resta il PIN.</p>') +
@@ -5106,7 +5114,7 @@ function diagText(){ const g = k => { try { return localStorage.getItem(k); } ca
   const L = (label, f) => { try { return label + ': ' + f(); } catch(e) { return label + ': (non disponibile: ' + (e && e.message) + ')'; } }, arr = v => Array.isArray(v) ? v.length : 0;
   const slow = J('b4f-slow', []), err = J('b4f-lasterr', null);
   return ['Buddy4Free Risparmio · segnalazione',
-    L('Versione', () => { const m = document.querySelector('meta[name="b4f-build"]'); return (m ? m.content : 'anteprima') + (window.B4FNative ? ' · app Android ' + window.B4FNative.version() : ''); }), ...(window.B4FNative && window.B4FNative.stepsDiag ? [L('Connessione Salute', () => window.B4FNative.stepsDiag())] : []), L('Data', () => new Date().toLocaleString('it-IT')), L('Schermata', () => R.screen),
+    L('Versione', () => { const m = document.querySelector('meta[name="b4f-build"]'); return (m ? m.content : 'anteprima') + (window.B4FNative ? ' · app Android ' + window.B4FNative.version() : ''); }), ...(window.B4FNative && window.B4FNative.stepsDiag ? [L('Connessione Salute', () => window.B4FNative.stepsDiag())] : []), L('Avvio della pagina', () => (window.__b4fAvvio || '?') + ' ms dall\'apertura del motore'), L('Data', () => new Date().toLocaleString('it-IT')), L('Schermata', () => R.screen),
     L('Tema', () => themePref() + ' (' + document.documentElement.dataset.theme + ')'), L('Schermo', () => innerWidth + '×' + innerHeight), L('Telefono', () => navigator.userAgent),
     L('Dati', () => arr(S.tx) + ' movimenti, ' + arr(S.rec) + ' ricorrenti, ' + arr(S.moves) + ' movimenti dei pilastri, ' + arr(S.goals) + ' obiettivi, ' + arr(S.debts) + ' finanziamenti, ' + arr(S.dues) + ' scadenze, storico ' + Object.values(S.hist || {}).reduce((t, h) => t + arr(h), 0) + ' mesi'),
     L('Memoria usata', () => Math.round(((g('b4f-finanza-v1') || '').length) / 1024) + ' KB'), L('Copia offline', () => navigator.serviceWorker && navigator.serviceWorker.controller ? 'sì' : 'no'),
@@ -5297,6 +5305,7 @@ function renderBreath(){
 }
 
 render();
+window.__b4fAvvio = Math.round(performance.now()); nativeLockSync();
 try { if (window.B4FNative && window.B4FNative.copiaLeggi && !S.setup) { const c = window.B4FNative.copiaLeggi(); if (c && c.length > 20) setTimeout(() => { if (!termsOK()) acceptTerms(); importBackup(new File([c], 'copia.json', {type:'application/json'})); }, 600); } } catch(e) {}
 if (lockDue()) showLock(); else lockSeen();
 setTimeout(samsungPop, 300);

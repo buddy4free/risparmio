@@ -641,6 +641,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 .donut{display:flex;flex-direction:column;align-items:center;gap:12px}
 .donut svg{width:100%;max-width:380px;height:auto}
 .dact{display:flex;justify-content:space-between;width:100%;max-width:380px;margin-top:-6px;gap:8px}.dact[hidden]{display:flex;visibility:hidden}.dact .btn{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;padding:8px 12px;width:auto;min-height:0}.dact .i{width:18px;height:18px}
+.dnpin{max-height:88dvh;overflow-y:auto}.dnpin>*{flex-shrink:0}.dncum{width:100%;height:auto}.dnrows{display:flex;flex-direction:column;gap:2px}.dnrows button{display:grid;grid-template-columns:14px 1fr auto auto;gap:10px;align-items:center;padding:10px 4px;background:none;border:0;border-bottom:1px solid var(--line);color:var(--fg);text-align:left;font:inherit}.dnrows i{width:14px;height:14px;border-radius:4px}.dnrows small{color:var(--muted);min-width:36px;text-align:right}.dnrows b{min-width:78px;text-align:right}
 .dlegend{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:.82rem}
 .dlegend span{display:inline-flex;align-items:center;gap:6px}
 .dlegend i{width:10px;height:10px;border-radius:3px}
@@ -2796,8 +2797,36 @@ function donutHTML(rows, total, t){
     (t ? '<div class="dact" hidden><button class="btn ghost dlist" data-dt="' + t + '">' + ic('list') + 'Movimenti</button><button class="btn ghost dsee" data-dt="' + t + '"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3.1A9 9 0 1 0 20.9 13H11z"/><path d="M14 2.5A8 8 0 0 1 21.5 10H14z"/></svg>Dettaglio</button></div>' : '') + '</div>';
 }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.dact button'); if (!b) return; const t = b.dataset.dt, k = b.parentNode.dataset.k; if (!k) return;
-  if (b.classList.contains('dsee')) { AN = {t, c:k, s:null}; nav({screen:'an'}); return; }
-  nav({screen:'tx', cat:k, ct:t}); });
+  dnPop(t, k, b.classList.contains('dsee') ? 'see' : 'list'); });
+/* finestra sopra le statistiche: "Dettaglio" = un altro cerchio con le parti della voce, "Movimenti" = solo i movimenti di quella voce, con andamento */
+function dnPop(t, k, mode, part){
+  const P = stPeriod(), cat = catOf(t, k), col = catColor(t, cat), all = [].concat(...P.months.map(ym => monthTx(ym))).filter(x => !x.plan && x.t === t && x.c === k);
+  const subs = new Set(all.map(x => x.s || '')), bySub = subs.size > 1 || (subs.size === 1 && !subs.has('')), keyOf = x => bySub ? (x.s || 'Senza sottocategoria') : ((x.n || '').trim() || 'Senza nota');
+  const L = part != null ? all.filter(x => keyOf(x) === part) : all, tot = L.reduce((a, x) => a + x.a, 0), close = () => { const o = document.getElementById('dnpop'); if (o) o.remove(); };
+  let body;
+  if (mode === 'see') {
+    const g = {}; all.forEach(x => { const q = keyOf(x); g[q] = (g[q] || 0) + x.a; });
+    const rows = Object.entries(g).sort((a, b) => b[1] - a[1]).map(([n, v], i) => ({n, v, c:i ? CAT_COLS[(CAT_COLS.indexOf(col) + i * 5 + CAT_COLS.length) % CAT_COLS.length] : col}));
+    body = '<span class="small muted">' + (bySub ? 'Per sottocategoria' : 'Per nota dei movimenti') + ' · tocca una riga per i suoi movimenti</span>' + (tot > 0 ? donutHTML(rows, tot) : '') +
+      '<div class="dnrows">' + rows.map(r => '<button data-part="' + esc(r.n) + '"><i style="background:' + r.c + '"></i><span>' + esc(r.n) + '</span><small>' + Math.round(r.v / tot * 100) + '%</small><b>' + eur2(r.v) + '</b></button>').join('') + '</div>';
+  } else {
+    const sorted = L.slice().sort((a, b) => a.d.localeCompare(b.d)), d0 = P.months[0] + '-01', last = P.months[P.months.length - 1], dEnd = last === curYM() ? today() : last + '-' + pad(new Date(+last.slice(0, 4), +last.slice(5), 0).getDate());
+    const T0 = new Date(d0 + 'T12:00'), span = Math.max(1, (new Date(dEnd + 'T12:00') - T0) / 864e5), X = d => 30 + (new Date(d + 'T12:00') - T0) / 864e5 / span * 300, Y = v => 112 - v / Math.max(1, tot) * 96;
+    let cum = 0, pts = [[30, 112]]; sorted.forEach(x => { const xx = X(x.d); pts.push([xx, Y(cum)]); cum += x.a; pts.push([xx, Y(cum)]); }); pts.push([330, Y(cum)]);
+    const line = pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' '), dd = d => d.slice(8, 10) + '/' + d.slice(5, 7) + (P.months.length > 12 ? '/' + d.slice(2, 4) : '');
+    body = (tot > 0 ? '<svg class="dncum" viewBox="0 0 340 134" role="img" aria-label="Andamento nel periodo"><polygon points="30,112 ' + line + ' 330,112" fill="' + col + '" opacity=".18"/><polyline points="' + line + '" fill="none" stroke="' + col + '" stroke-width="2.2" stroke-linejoin="round"/><line x1="30" y1="112" x2="330" y2="112" stroke="var(--line)"/><text x="30" y="11" font-size="11" fill="var(--muted)">' + eur(tot) + '</text><text x="30" y="128" font-size="11" fill="var(--muted)">' + dd(d0) + '</text><text x="330" y="128" text-anchor="end" font-size="11" fill="var(--muted)">' + dd(dEnd) + '</text></svg>' : '') +
+      '<div class="spread"><span class="small muted">' + movN(L.length) + '</span><span>Totale <b style="color:' + (t === 'in' ? IN_COL : 'var(--fg)') + '">' + eur2(tot) + '</b></span></div>' +
+      '<div class="list">' + sorted.reverse().slice(0, 300).map(x => '<button class="item" data-ed="' + esc(x.id) + '">' + catTile(t, cat) + '<span class="t"><b>' + esc(x.n || x.s || cat.n) + '</b><span class="sub">' + dd(x.d) + (x.s && x.n ? ' · ' + esc(x.s) : '') + '</span></span><span class="amt" style="color:' + (t === 'in' ? IN_COL : 'var(--fg)') + '">' + (t === 'in' ? '+' : '−') + eur2(x.a) + '</span></button>').join('') + '</div>';
+  }
+  close(); const o = document.createElement('div'); o.className = 'psheet'; o.id = 'dnpop';
+  o.innerHTML = '<div class="pin dnpin"><div class="spread"><span class="row" style="gap:10px">' + catTile(t, cat) + '<b style="font-size:1.1rem">' + esc(part != null ? part : cat.n) + '</b></span><button class="textlink" data-x>Chiudi</button></div><span class="small muted" style="margin-top:-8px">' + esc(P.label) + (part != null ? ' · ' + esc(cat.n) : '') + '</span>' +
+    '<div class="seg2"><button data-m="list" aria-pressed="' + (mode === 'list') + '">Movimenti</button><button data-m="see" aria-pressed="' + (mode === 'see') + '">Dettaglio</button></div>' + body + '</div>';
+  document.body.appendChild(o); if (!part) histPush();
+  o.onclick = e => { if (e.target === o || e.target.closest('[data-x]')) return close();
+    const m = e.target.closest('[data-m]'); if (m) return dnPop(t, k, m.dataset.m);
+    const pr = e.target.closest('[data-part]'); if (pr) return dnPop(t, k, 'list', pr.dataset.part);
+    const ed = e.target.closest('[data-ed]'); if (ed) { close(); nav({screen:'add', edit:ed.dataset.ed}); } };
+}
 /* nomi intorno al cerchio con una freccia verso lo spicchio; seguono il cerchio quando lo giri */
 function dnLabels(segs, total, rot){
   const cx = 170, cy = 115, rad = d => (d + rot - 90) * Math.PI / 180, L = [];

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611221059">
+<meta name="b4f-build" content="202611221110">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-t0Lj9+OX3+bd1kyNexlKo6xGIEeDJpzybRR7/PzJYTI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-i/qFMR1gyEyPCUhcdsN2YC+nvIXy7vZI2+yd/Ap0DqA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -3981,13 +3981,119 @@ function pdfPop(kind){
   catPop('<b style="font-size:1.1rem">Resoconto PDF</b><p class="small muted" style="margin:0">Analisi e considerazioni sui tuoi dati. I singoli movimenti restano nell\'app.</p>' +
     '<div class="field"><label for="pp-p">Periodo</label><select id="pp-p">' + P.map(p => '<option value="' + p[0] + '"' + (p[0] === (kind === 'y' ? 'y' : 'cur') ? ' selected' : '') + '>' + p[1] + '</option>').join('') + '</select></div>' +
     '<div class="field" id="pp-mrow" hidden><label for="pp-m">Mese</label><select id="pp-m">' + months.map(m => '<option value="' + m + '">' + ml(m) + '</option>').join('') + '</select></div>' +
+    '<label class="check small"><input type="checkbox" id="pp-cmp"> <span><b>Confronta con un altro periodo</b> · mese con mese, anno con anno, periodo con periodo</span></label>' +
+    '<div id="pp-brow" hidden class="sec" style="gap:8px"><div class="field"><label for="pp-p2">Confronta con</label><select id="pp-p2">' + P.map(p => '<option value="' + p[0] + '"' + (p[0] === (kind === 'y' ? 'yp' : 'prev') ? ' selected' : '') + '>' + p[1] + '</option>').join('') + '</select></div>' +
+    '<div class="field" id="pp-mrow2" hidden><label for="pp-m2">Mese</label><select id="pp-m2">' + months.map(m => '<option value="' + m + '">' + ml(m) + '</option>').join('') + '</select></div></div>' +
     '<label class="check small"><input type="checkbox" id="pp-anon"> <span><b>Nascondi le cifre</b> · importi e nomi personali coperti: per chiedere un parere o per mostrare com\'è fatto</span></label>' +
     '<div class="actopts">' + [['s', 'Sintetico', 'Pagella, capacità di risparmio, dove vanno i soldi, pilastri e obiettivi · 2 pagine'], ['c', 'Completo', 'In più confronti con te stesso, andamento, voci più grandi, ricorrenti, entrate e uno sguardo avanti'], ['a', 'Approfondito', 'Tutto, più abitudini di spesa, tendenze, scenari, quanto lavoro costa e cosa dicono i numeri']].map(o => '<button class="actopt" data-pk="' + o[0] + '"><b>' + o[1] + '</b><span>' + o[2] + '</span></button>').join('') + '</div><button class="textlink" data-x style="align-self:flex-start">Annulla</button>', (o, close) => {
     const sel = o.querySelector('#pp-p'); sel.onchange = () => { o.querySelector('#pp-mrow').hidden = sel.value !== 'pick'; };
-    o.querySelectorAll('[data-pk]').forEach(x => x.onclick = () => { const p = P.find(q => q[0] === sel.value), pm = o.querySelector('#pp-m').value, from = p[0] === 'pick' ? pm : p[2], to = p[0] === 'pick' ? pm : p[3];
+    const s2 = o.querySelector('#pp-p2'), cm2 = o.querySelector('#pp-cmp'); cm2.onchange = () => { o.querySelector('#pp-brow').hidden = !cm2.checked; }; s2.onchange = () => { o.querySelector('#pp-mrow2').hidden = s2.value !== 'pick'; };
+    const rngOf = (v, pm) => { const p = P.find(q => q[0] === v); return p[0] === 'pick' ? {from:pm, to:pm, label:ymLabel(pm)} : {from:p[2], to:p[3], label:p[0] === 'y' ? 'anno ' + yr : p[0] === 'yp' ? 'anno ' + (+yr - 1) : p[0] === 'cur' || p[0] === 'prev' ? ymLabel(p[2]) : null}; };
+    o.querySelectorAll('[data-pk]').forEach(x => x.onclick = () => { if (cm2.checked) { const B = rngOf(sel.value, o.querySelector('#pp-m').value), A = rngOf(s2.value, o.querySelector('#pp-m2').value); close(); return exportCompare(A, B, {level:x.dataset.pk, anon:o.querySelector('#pp-anon').checked}); }
+      const p = P.find(q => q[0] === sel.value), pm = o.querySelector('#pp-m').value, from = p[0] === 'pick' ? pm : p[2], to = p[0] === 'pick' ? pm : p[3];
       close(); exportPDF(from === to ? 'm' : 'y', x.dataset.pk, {from, to, anon:o.querySelector('#pp-anon').checked, label:p[0] === 'pick' ? ymLabel(pm) : p[0] === 'y' ? 'anno ' + yr : p[0] === 'yp' ? 'anno ' + (+yr - 1) : p[0] === 'cur' || p[0] === 'prev' ? ymLabel(from) : p[1].replace(/ \(.*\)$/, '').toLowerCase() + ' (' + ymLabel(from, {month:'short', year:'numeric'}) + ' - ' + ymLabel(to, {month:'short', year:'numeric'}) + ')'}); }); }); }
 /* che cosa conta come spesa non essenziale: lo dice l'utente nelle categorie */
 function essText(){ if (essMode() === 'auto') return 'Calcolo automatico, senza segnare niente: in ogni voce è essenziale la tua spesa abituale, cioè quanto spendi in un mese normale dei tuoi ultimi 12 (la spesa di base); quello che va oltre le tue abitudini è extra. Casa, bollette, tasse e assicurazioni sono sempre essenziali. Nei primi mesi, finché lo storico non basta, contano le categorie segnate come non essenziali. Nella revisione mensile puoi dire se la parte in più di una spesa insolita era un extra: l\'app impara.'; const nd = S.cats.out.filter(c => c.disc).map(c => c.n); return 'Non essenziali: ' + (nd.length ? nd.join(', ') : 'nessuna categoria') + ', più le sottocategorie Bar e caffè, Delivery e Pranzo fuori. Ogni categoria si può segnare come essenziale o no in Categorie uscite.'; }
+const pdfLib = () => loadScript('vendor/jspdf.umd.min.js');
+/* ---------- resoconto PDF di confronto: periodo A e periodo B affiancati, tre livelli; le differenze stanno sui grafici ---------- */
+async function exportCompare(A, B, opt){
+  opt = opt || {}; if (!downloads) return toast('Il salvataggio dei file non è disponibile qui');
+  try { await pdfLib(); } catch(e) { return toast('Non riesco a preparare il PDF in questo momento'); }
+  const LV = {s:1, c:2, a:3}[opt.level] || 2, C2 = LV >= 2, A3 = LV >= 3, ANON = !!opt.anon, doc = new window.jspdf.jsPDF({unit:'mm', format:'a4'}), M = 16, Wd = 210 - 2 * M; let y = 18;
+  const rng = (a, b) => { const o = []; for (let m = a; m <= b; m = addMonths(m, 1)) o.push(m); return o; };
+  const per = P => { const ms = rng(P.from, P.to), ss = ms.map(ym => stats(ym)), r = {ms, ss, inc:0, out:0, disc:0, byCat:{}, byIn:{}, cnt:{}, wd:[0, 0, 0, 0, 0, 0, 0], ext:{}, tags:{}};
+    ss.forEach((s2, k) => { r.inc += s2.inc; r.out += s2.out; r.disc += s2.disc; Object.entries(s2.byCat).forEach(([c, a]) => r.byCat[c] = (r.byCat[c] || 0) + a);
+      s2.L.forEach(x => { if (x.t === 'in') r.byIn[x.c] = (r.byIn[x.c] || 0) + x.a; else if (x.a > 0) { r.cnt[x.c] = (r.cnt[x.c] || 0) + 1; if (!x.rec) r.wd[(new Date(x.d + 'T12:00').getDay() + 6) % 7] += x.a; if (x.tag) r.tags[x.tag] = (r.tags[x.tag] || 0) + x.a; } });
+      if (essMode() === 'auto') Object.entries(essSplit(ms[k]).byCat).forEach(([c, v]) => r.ext[c] = (r.ext[c] || 0) + v.ext); });
+    const endM = P.to > curYM() ? curYM() : P.to; r.sv = r.inc - r.out; r.rate = r.inc > 0 ? r.sv / r.inc * 100 : null; r.cap = r.inc - (r.out - r.disc); r.n = ms.length;
+    r.days = ms.reduce((t, ym) => t + (ym === curYM() ? new Date().getDate() : new Date(+ym.slice(0, 4), +ym.slice(5), 0).getDate()), 0);
+    r.pilB = PILLARS.map(q => pilBalanceAt(q.id, endM)); r.pil = r.pilB.reduce((t, v) => t + v, 0); r.pil0 = PILLARS.reduce((t, q) => t + pilBalanceAt(q.id, addMonths(P.from, -1)), 0);
+    r.emerg = pilBalanceAt('emerg', endM) + pilBalanceAt('liq', endM); r.essM = (r.out - r.disc) / r.n; return r; };
+  const a = per(A), b = per(B), avg = a.n !== b.n, K = (r, v) => avg ? v / r.n : v;
+  const E = n => ANON ? '••• €' : (n < 0 ? '-' : '') + fmtN(Math.abs(n), 2) + ' €', E0 = n => ANON ? '•••' : (n < 0 ? '-' : '') + fmtN(Math.abs(n)) + ' €', P = (x, t) => t ? Math.round(x / t * 100) + '%' : '–';
+  const pct = (va, vb) => Math.abs(vb - va) < 0.5 ? '=' : va > 0.5 ? (vb >= va ? '+' : '') + Math.round((vb - va) / va * 100) + '%' : 'nuova';
+  const VARc = {'var(--good)':'#0ca30c', 'var(--warn)':'#fab219', 'var(--serious)':'#ec835a', 'var(--critical)':'#e5484d'};
+  const rgb = c => { c = VARc[c] || c || '#888888'; const h = c.replace('#', ''); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16) || 0); };
+  const fill = c => doc.setFillColor(...rgb(c)), txt = (c, t, x, yy, o) => { doc.setTextColor(...rgb(c)); doc.text(t, x, yy, o); };
+  const bar = (x, yy, w, h, c) => { if (w > 0.2 && h > 0.1) { fill(c); doc.roundedRect(x, yy, w, h, Math.min(1, w / 2, h / 2), Math.min(1, w / 2, h / 2), 'F'); } };
+  const need = h => { if (y + h > 283) { doc.addPage(); y = 18; } };
+  const h1 = (t, hh) => { if (y + (hh || 40) > 283 && y > 40) { doc.addPage(); y = 18; } doc.setFont('helvetica', 'bold'); doc.setFontSize(13); txt('#000000', t, M, y); y += 7; };
+  const sub = t => { doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2); const L = doc.splitTextToSize(t, Wd); need(L.length * 4 + 2); txt('#777777', L, M, y); y += L.length * 4 + 2; };
+  const line = () => { y += 2; doc.setDrawColor(220); doc.line(M, y, M + Wd, y); y += 7; };
+  const lab = P2 => P2.label || (P2.from === P2.to ? ymLabel(P2.from) : ymLabel(P2.from, {month:'short', year:'numeric'}) + ' - ' + ymLabel(P2.to, {month:'short', year:'numeric'}));
+  const LA = lab(A), LB = lab(B), CA = '#a8a8a8', CB = '#C98500', good = (d, up) => Math.abs(d) < 0.5 ? '#888888' : (d > 0) === up ? '#15803d' : '#e5484d';
+  const legend = () => { doc.setFont('helvetica', 'normal'); doc.setFontSize(7.6); fill(CA); doc.rect(M, y - 2.4, 3, 3, 'F'); txt('#444444', LA, M + 4.5, y); const w1 = doc.getTextWidth(LA); fill(CB); doc.rect(M + 12 + w1, y - 2.4, 3, 3, 'F'); txt('#444444', LB, M + 16.5 + w1, y); y += 6; };
+  /* barre verticali a coppie: la differenza sta sopra la barra di B */
+  const vpair = (items, h, up, colB) => { need(h + 20); y += 5; const mx = Math.max(1, ...items.flatMap(q => [Math.abs(q.a), Math.abs(q.b)])), cw = Wd / items.length; doc.setDrawColor(225); doc.line(M, y + h, M + Wd, y + h);
+    items.forEach((q, i) => { const bw = Math.min(14, cw * 0.3), x0 = M + i * cw + cw / 2 - bw - 0.5, ha = Math.max(0, q.a) / mx * h, hb = Math.max(0, q.b) / mx * h; bar(x0, y + h - ha, bw, ha, CA); bar(x0 + bw + 1, y + h - hb, bw, hb, q.cb || colB || CB);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.2); txt(good(q.b - q.a, q.up != null ? q.up : up), q.t || pct(q.a, q.b), x0 + bw * 1.5 + 1, y + h - Math.max(ha, hb) - 1.8, {align:'center'});
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.4); txt('#555555', String(q.n).slice(0, 16), M + i * cw + cw / 2, y + h + 4.2, {align:'center'}); if (!ANON && q.lb !== false) { doc.setFontSize(6.6); txt('#888888', q.lb || E0(q.b), M + i * cw + cw / 2, y + h + 7.6, {align:'center'}); } });
+    y += h + 12; legend(); };
+  /* barre orizzontali a coppie: la differenza accanto alla barra */
+  const hpair = (items, up, fmt) => { const mx = Math.max(1, ...items.flatMap(q => [q.a, q.b])); items.forEach(q => { need(11); const bx = M + 50, bwM = Wd - 50 - 30, d = q.b - q.a;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.8); txt('#222222', String(q.n).slice(0, 26), M, y + 4.4); bar(bx, y, bwM * q.a / mx, 3.2, CA); bar(bx, y + 4, bwM * q.b / mx, 3.2, q.c || CB);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); txt(good(d, up), q.t || pct(q.a, q.b), bx + bwM * Math.max(q.a, q.b) / mx + 2, y + 6.4); doc.setFont('helvetica', 'normal'); doc.setFontSize(7.8); if (!ANON || fmt) txt('#555555', fmt ? fmt(q.b) : E0(q.b), M + Wd, y + 6.4, {align:'right'}); y += 10; }); };
+  const donut = (cx, cy, r, segs, center) => { const tot = segs.reduce((t2, g) => t2 + Math.max(0, g.v), 0); if (!(tot > 0)) return; let a0 = -Math.PI / 2; doc.setLineWidth(0.2);
+    segs.forEach(g => { if (!(g.v > 0)) return; const a1 = a0 + g.v / tot * 2 * Math.PI; fill(g.c); doc.setDrawColor(...rgb(g.c)); for (let an = a0; an < a1 - 1e-6; an += 0.06) { const b2 = Math.min(a1, an + 0.06); doc.triangle(cx, cy, cx + r * Math.cos(an), cy + r * Math.sin(an), cx + r * Math.cos(b2), cy + r * Math.sin(b2), 'FD'); } a0 = a1; });
+    doc.setFillColor(255, 255, 255); doc.setDrawColor(255, 255, 255); doc.circle(cx, cy, r * 0.58, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); txt('#222222', center[0], cx, cy + 0.5, {align:'center'}); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); txt('#888888', center[1], cx, cy + 4, {align:'center'}); doc.setDrawColor(220); };
+  /* intestazione */
+  doc.setFillColor(0, 0, 0); doc.rect(0, 0, 210, 30, 'F'); doc.setTextColor(255, 201, 10); doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text('Buddy4Free Risparmio', M, 14);
+  doc.setTextColor(255); doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('Confronto: ' + LA + '  e  ' + LB + ' · ' + ({1:'sintetico', 2:'completo', 3:'approfondito'})[LV] + (ANON ? ' · cifre nascoste' : '') + ' · generato il ' + new Date().toLocaleDateString('it-IT'), M, 22); y = 40;
+  if (avg) sub('I due periodi hanno lunghezze diverse (' + a.n + ' e ' + b.n + ' mesi): gli importi sono medie al mese, così il confronto è corretto.');
+  /* 1. i numeri principali */
+  h1('I numeri a confronto', 70);
+  vpair([{n:'Entrate', a:K(a, a.inc), b:K(b, b.inc), up:true, cb:'#22A45D'}, {n:'Uscite', a:K(a, a.out), b:K(b, b.out), up:false}, {n:'Risparmio', a:K(a, a.sv), b:K(b, b.sv), up:true, cb:'#22A45D'}, {n:'Capacità', a:K(a, a.cap), b:K(b, b.cap), up:true, cb:'#3987e5'}, {n:essMode() === 'auto' ? 'Extra' : 'Non essenziali', a:K(a, a.disc), b:K(b, b.disc), up:false}], 38);
+  /* 2. pagella affiancata */
+  { const rows = [['Tasso di risparmio', a.rate, b.rate, v => v === null ? '–' : Math.round(v) + '%', v => v === null ? '#888888' : VARc[band(v).c] || '#888888'],
+      ['Mesi di autonomia', a.essM > 0 ? a.emerg / a.essM : null, b.essM > 0 ? b.emerg / b.essM : null, v => v === null ? '–' : fmtN(v, 1) + ' mesi', v => v === null ? '#888888' : v >= S.emergMonths ? '#0ca30c' : v >= 3 ? '#fab219' : '#e5484d'],
+      [essMode() === 'auto' ? 'Quota di extra' : 'Quota non essenziale', a.out ? a.disc / a.out * 100 : null, b.out ? b.disc / b.out * 100 : null, v => v === null ? '–' : Math.round(v) + '%', () => '#3987e5']];
+    h1('La pagella a confronto', 40); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.6); txt('#888888', LA.toUpperCase().slice(0, 24), M + 110, y, {align:'right'}); txt('#888888', LB.toUpperCase().slice(0, 24), M + Wd, y, {align:'right'}); y += 6;
+    rows.forEach(([n, va, vb, f, c]) => { need(8); doc.setFont('helvetica', 'normal'); doc.setFontSize(9.4); txt('#222222', n, M, y); [[va, M + 110], [vb, M + Wd]].forEach(([v, x]) => { fill(c(v)); doc.circle(x - doc.getTextWidth(f(v)) - 4, y - 1.2, 1.8, 'F'); doc.setFont('helvetica', 'bold'); txt('#222222', f(v), x, y, {align:'right'}); doc.setFont('helvetica', 'normal'); }); y += 7; }); line(); }
+  /* 3. capacità di risparmio: due ciambelle */
+  if (C2 && a.inc > 0 && b.inc > 0) { h1('La capacità di risparmio', 70); need(48); const sg = r => [{v:r.out - r.disc, c:'#3987e5'}, {v:r.disc, c:'#C98500'}, {v:Math.max(0, r.sv), c:'#22A45D'}];
+    donut(M + 40, y + 20, 18, sg(a), [P(Math.max(0, a.sv), a.cap), 'della capacità']); donut(M + Wd - 40, y + 20, 18, sg(b), [P(Math.max(0, b.sv), b.cap), 'della capacità']); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.4); txt('#444444', LA, M + 40, y + 44, {align:'center'}); txt('#444444', LB, M + Wd - 40, y + 44, {align:'center'});
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.4); [['Essenziali', '#3987e5'], [essMode() === 'auto' ? 'Extra' : 'Non essenziali', '#C98500'], ['Risparmio', '#22A45D']].forEach(([n, c], k) => { fill(c); doc.rect(M + 78, y + 12 + k * 6 - 2.4, 3, 3, 'F'); txt('#444444', n, M + 82.5, y + 12 + k * 6); });
+    y += 50; sub('Al centro: quanta parte della capacità di risparmio (entrate meno spese essenziali) è diventata risparmio.'); line(); }
+  /* 4. voci di spesa */
+  const ids = [...new Set(Object.keys(a.byCat).concat(Object.keys(b.byCat)))].map(c => ({c, n:catOf('out', c).n, a:K(a, a.byCat[c] || 0), b:K(b, b.byCat[c] || 0), col:catColor('out', catOf('out', c))})).filter(q => q.a > 0.5 || q.b > 0.5).sort((p, q) => Math.max(q.a, q.b) - Math.max(p.a, p.b)).slice(0, LV === 1 ? 8 : 12);
+  h1('Dove vanno i soldi, voce per voce', Math.min(250, ids.length * 10 + 24)); hpair(ids.map(q => ({n:q.n, a:q.a, b:q.b, c:q.col})), false); sub('Barra grigia ' + LA + ', barra colorata ' + LB + '. Accanto alla barra la variazione, a destra l\'importo di ' + LB + '.'); line();
+  /* 5. extra voce per voce */
+  if (C2 && essMode() === 'auto') { const ex = [...new Set(Object.keys(a.ext).concat(Object.keys(b.ext)))].map(c => ({n:catOf('out', c).n, a:K(a, a.ext[c] || 0), b:K(b, b.ext[c] || 0), c:catColor('out', catOf('out', c))})).filter(q => q.a > 1 || q.b > 1).sort((p, q) => Math.max(q.a, q.b) - Math.max(p.a, p.b)).slice(0, 8);
+    if (ex.length) { h1('L\'extra voce per voce', ex.length * 10 + 24); hpair(ex, false); sub('La parte oltre le tue abitudini in ogni voce: è quella che cambia più facilmente da un periodo all\'altro.'); line(); } }
+  /* 6. entrate */
+  if (C2) { const inn = [...new Set(Object.keys(a.byIn).concat(Object.keys(b.byIn)))].map(c => ({n:catOf('in', c).n, a:K(a, a.byIn[c] || 0), b:K(b, b.byIn[c] || 0), c:catColor('in', catOf('in', c))})).filter(q => q.a > 0.5 || q.b > 0.5).sort((p, q) => q.b - p.b).slice(0, 6);
+    if (inn.length) { h1('Da dove arrivano i soldi', inn.length * 10 + 20); hpair(inn, true); line(); } }
+  /* 7. andamento dentro i periodi */
+  if (C2) { h1('Andamento dentro i periodi', 60); const mono = a.n === 1 && b.n === 1;
+    const series = r => { if (mono) { const ym = r.ms[0], nd = new Date(+ym.slice(0, 4), +ym.slice(5), 0).getDate(), up = ym === curYM() ? new Date().getDate() : nd, d = {}; monthTx(ym).forEach(x => { if (x.t === 'out' && !x.plan && x.a > 0) d[+x.d.slice(8)] = (d[+x.d.slice(8)] || 0) + x.a; }); let c = 0; return Array.from({length:31}, (_, i) => i + 1 > up ? null : (c += d[i + 1] || 0)); } let c = 0; return r.ss.map(s2 => (c += s2.out)); };
+    const sa = series(a), sb = series(b), n = Math.max(sa.length, sb.length), ch = 32, x0 = M + 14, w = Wd - 16, mx = Math.max(1, ...sa.concat(sb).filter(v => v != null)), X = i => x0 + i / Math.max(1, n - 1) * w, Y = v => y + ch - v / mx * ch; need(ch + 16);
+    doc.setLineWidth(0.15); doc.setDrawColor(225); doc.setFontSize(6.5); [0, 0.5, 1].forEach(f => { const yy = Y(mx * f); doc.line(x0, yy, x0 + w, yy); if (!ANON) txt('#999999', fmtN(mx * f), x0 - 2, yy + 1, {align:'right'}); });
+    [[sa, CA, 0.6], [sb, CB, 0.8]].forEach(([S2, c, lw]) => { const pts = S2.map((v, i) => v == null ? null : [X(i), Y(v)]).filter(Boolean); if (pts.length < 2) return; doc.setDrawColor(...rgb(c)); doc.setLineWidth(lw); doc.lines(pts.slice(1).map((p2, i) => [p2[0] - pts[i][0], p2[1] - pts[i][1]]), pts[0][0], pts[0][1], [1, 1], 'S', false); });
+    const la = sa.filter(v => v != null).pop() || 0, lb2 = sb.filter(v => v != null).pop() || 0; doc.setFont('helvetica', 'bold'); doc.setFontSize(8.2); txt(good(lb2 - la, false), pct(la, lb2), x0 + w, Y(Math.max(la, lb2)) - 2, {align:'right'});
+    doc.setLineWidth(0.2); doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6); for (let i = 0; i < n; i += Math.max(1, Math.ceil(n / 8))) txt('#888888', mono ? String(i + 1) : String(i + 1) + '° mese', X(i), y + ch + 4, {align:'center'}); y += ch + 9; legend();
+    sub(mono ? 'Uscite sommate giorno per giorno nei due mesi.' : 'Uscite sommate mese per mese dall\'inizio di ciascun periodo.'); line(); }
+  /* 8. abitudini */
+  if (A3) { const top = ids.slice(0, 6), wk = r => Math.max(1, r.days / 7);
+    h1('Abitudini: quante volte a settimana', top.length * 10 + 24); hpair(top.map(q => ({n:q.n, a:(a.cnt[q.c] || 0) / wk(a), b:(b.cnt[q.c] || 0) / wk(b), c:q.col})), false, v => fmtN(v, 1) + ' a sett.'); line();
+    const da = a.wd.map(v => K(a, v)), db = b.wd.map(v => K(b, v)); h1('Quando si spende', 60); vpair(['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'].map((n, i) => ({n, a:da[i], b:db[i], up:false, lb:false})), 30); sub('Spese variabili per giorno della settimana. Sopra le barre la variazione.'); line();
+    h1('I 4 pilastri a fine periodo', 60); vpair(PILLARS.map((q, i) => ({n:q.n.replace('Investimenti a lungo termine', 'Investimenti'), a:a.pilB[i], b:b.pilB[i], up:true, cb:q.c})), 30); line();
+    const tg = [...new Set(Object.keys(a.tags).concat(Object.keys(b.tags)))]; if (tg.length) { h1('Eventi ed etichette', tg.length * 10 + 20); hpair(tg.map((t, k) => ({n:ANON ? 'Etichetta ' + (k + 1) : t, a:a.tags[t] || 0, b:b.tags[t] || 0})), false); line(); } }
+  /* 9. cosa dicono i numeri */
+  const say = []; const dOut = K(b, b.out) - K(a, a.out);
+  if (a.out > 0) say.push('Le uscite' + (avg ? ' medie al mese' : '') + ' sono ' + (Math.abs(dOut) < 1 ? 'rimaste uguali' : (dOut > 0 ? 'cresciute del ' : 'calate del ') + Math.abs(Math.round(dOut / K(a, a.out) * 100)) + '%') + ' tra ' + LA + ' e ' + LB + '.');
+  if (a.rate !== null && b.rate !== null) say.push('Il tasso di risparmio è passato dal ' + Math.round(a.rate) + '% al ' + Math.round(b.rate) + '%.');
+  if (a.cap > 0 && b.cap > 0) say.push('Della capacità di risparmio è diventato risparmio il ' + P(Math.max(0, a.sv), a.cap) + ' in ' + LA + ' e il ' + P(Math.max(0, b.sv), b.cap) + ' in ' + LB + '.');
+  { const ch = ids.map(q => ({n:q.n, d:q.b - q.a, a:q.a})).filter(q => Math.abs(q.d) >= 1).sort((p, q) => Math.abs(q.d) - Math.abs(p.d)); if (ch[0]) say.push('La voce che è cambiata di più è ' + ch[0].n + (ch[0].a > 0.5 ? (ch[0].d > 0 ? ', salita del ' : ', scesa del ') + Math.abs(Math.round(ch[0].d / ch[0].a * 100)) + '%.' : ', comparsa in ' + LB + '.')); }
+  { const nw = ids.filter(q => q.a <= 0.5 && q.b > 0.5).map(q => q.n), gone = ids.filter(q => q.b <= 0.5 && q.a > 0.5).map(q => q.n); if (nw.length) say.push('Voci nuove in ' + LB + ': ' + nw.join(', ') + '.'); if (gone.length) say.push('Voci che non compaiono più: ' + gone.join(', ') + '.'); }
+  if (b.pil !== a.pil) say.push('Il patrimonio nei pilastri a fine periodo è passato da ' + E(a.pil) + ' a ' + E(b.pil) + '.');
+  if (say.length) { h1('Cosa dicono i numeri', 70); const cols = ['#C98500', '#3987e5', '#22A45D', '#e5484d', '#8b5cf6', '#0e9aa7', '#C98500'];
+    say.slice(0, 7).forEach((t2, k) => { doc.setFont('helvetica', 'bold'); doc.setFontSize(9.6); const L = doc.splitTextToSize(t2, Wd - 22), hh = Math.max(13, L.length * 4.8 + 7); need(hh + 3); doc.setFillColor(247, 246, 241); doc.roundedRect(M, y, Wd, hh, 3, 3, 'F'); fill(cols[k % cols.length]); doc.rect(M, y, 1.8, hh, 'F'); doc.circle(M + 9, y + hh / 2, 4.2, 'F');
+      doc.setFontSize(10); txt('#ffffff', String(k + 1), M + 9, y + hh / 2 + 1.3, {align:'center'}); doc.setFontSize(9.6); txt('#1f1f1f', L, M + 17, y + (hh - L.length * 4.8) / 2 + 3.6); y += hh + 3; }); }
+  need(12); y += 4; doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(120); doc.text('Documento generato dall\'app per uso personale. Descrive i tuoi dati: non è una consulenza finanziaria.', M, y);
+  let ICO = null; try { const rb = await fetch('icons/icon-192.png'); if (rb.ok) ICO = await new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = ko; rb.blob().then(bb => fr.readAsDataURL(bb)); }); } catch(e) {}
+  const np = doc.getNumberOfPages(); for (let i = 1; i <= np; i++) { doc.setPage(i); try { if (ICO) { doc.saveGraphicsState(); doc.roundedRect(181, 280, 13, 13, 3, 3, null); doc.clip(); doc.discardPath(); doc.addImage(ICO, 'PNG', 181, 280, 13, 13); doc.restoreGraphicsState(); } } catch(e) {} doc.setFontSize(7.5); doc.setTextColor(150); doc.text('Buddy4Free Risparmio · Confronto ' + ({1:'sintetico', 2:'completo', 3:'approfondito'})[LV] + ' · pagina ' + i + ' di ' + np, 105, 292, {align:'center'}); }
+  try { await downloads.save({filename:'buddy4free-confronto-' + A.from + '_' + A.to + '-vs-' + B.from + '_' + B.to + '-' + ({1:'sintetico', 2:'completo', 3:'approfondito'})[LV] + (ANON ? '-anonimo' : '') + '.pdf', data:doc.output('blob')}); toast('PDF salvato'); } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare il PDF'); }
+}
 async function exportPDF(mode, level, opt){
   /* periodo scelto (uno o più mesi, anche passati) e cifre nascoste per condividere la struttura */
   const REAL = _curYM(), RT = _today(), PR = opt && opt.from ? opt : (mode === 'y' ? {from:REAL.slice(0, 4) + '-01', to:REAL} : {from:REAL, to:REAL}), ANON = !!(opt && opt.anon);
@@ -3995,7 +4101,7 @@ async function exportPDF(mode, level, opt){
   const curYM = () => END, today = () => ENDD, pB = id => END === REAL ? pilBalance(id) : pilBalanceAt(id, END);
   if (PR.from !== PR.to) mode = 'y';
   if (!downloads) return toast('Il salvataggio dei file non è disponibile qui');
-  try { await loadScript('vendor/jspdf.umd.min.js'); } catch(e) { return toast('Non riesco a preparare il PDF in questo momento'); }
+  try { await pdfLib(); } catch(e) { return toast('Non riesco a preparare il PDF in questo momento'); }
   /* icona dell'app per il piede di pagina (quadrata con angoli tondi); se non si carica, il logo tondo */
   let ICO = null; try { const rb = await fetch('icons/icon-192.png'); if (rb.ok) ICO = await new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = ko; rb.blob().then(b => fr.readAsDataURL(b)); }); } catch(e) {}
   const build = HT => { const CH = []; let CHI = -1;

@@ -26,7 +26,7 @@ const SEL = '#view button:not(.danger), #view [data-nav], #view .chip, #view [da
     await p.evaluate(() => document.querySelectorAll('#catpop,.sheet').forEach(x => x.remove()));
   }
   let saved = []; await p.exposeFunction('__save', (f, l) => saved.push(f + ':' + l)); await p.evaluate(() => { downloads.save = async o => { await window.__save(o.filename, o.data && o.data.size || String(o.data).length); }; });
-  await p.evaluate(async () => { await exportCSV(); await exportPDF('y', 'a'); await exportPDF('m', 'a'); }).catch(e => errs.push('export ' + e.message)); await p.waitForTimeout(3000);
+  await p.evaluate(async () => { await exportCSV(); await exportPDF('y', 'a'); await exportPDF('m', 'a'); await exportCompare({from:'2025-01', to:'2025-12'}, {from:'2026-01', to:'2026-12'}, {level:'a'}); }).catch(e => errs.push('export ' + e.message)); await p.waitForTimeout(3000);
   ok(V + ' CSV e PDF generati con dati avvelenati', saved.length >= 2, saved.join(' '));
   ok(V + ' nessun codice eseguito o HTML iniettato (' + clicks + ' clic)', !hits.length, hits.slice(0, 3).join(' | '));
   ok(V + ' nessun errore della pagina', !errs.length, errs.slice(0, 3).join(' | '));

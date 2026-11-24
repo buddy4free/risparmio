@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611231548">
+<meta name="b4f-build" content="202611240737">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-NxgyUbB9wpp3reZVXTj++OQhweAxJPTigv0QFVmp1QY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-mkk/Q/X6ZlbdZNaytVP6e3tOt2AiU640gRylTO5erng='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -1936,6 +1936,7 @@ window.addEventListener('scroll', () => { if (TIPC) tipPos(); }, {passive:true})
 const NEWS = [
   {k:'n2611-cerchio', d:'2026-11-23', t:'Grafici a cerchio più chiari', x:'Ogni voce ha il nome accanto con una freccia. Tocca uno spicchio: al centro vedi importo e percentuale, sotto «Movimenti» e «Dettaglio» aprono una finestra solo per quella voce. Si apre anche «Altro».', go:{screen:'stats'}, el:'.donut svg:has(circle[data-dk])', h:'Tocca uno spicchio, poi «Movimenti» o «Dettaglio». Trascinando sull\'anello il cerchio gira.'},
   {k:'n2611-barre', d:'2026-11-23', t:'Categorie a colpo d\'occhio', x:'In Home, in «Dove vanno i tuoi soldi», tocca una categoria: si apre la finestra veloce con l\'andamento del mese, i suoi movimenti e come si divide.', go:{screen:'home'}, el:'.catscroll .hbar[data-dnp]', h:'Tocca una categoria per aprire la finestra veloce.'},
+  {k:'n2411-mov', d:'2026-11-24', t:'Movimenti più snelli', x:'L\'elenco del mese mostra gli ultimi 3 giorni: il resto si apre con «Mostra il resto del mese». Sotto trovi subito i movimenti programmati, che non contano più nei totali di Entrate e Uscite.', go:{screen:'tx'}, el:'#tx-rest', h:'Tocca qui per vedere tutto il mese.'},
   {k:'n2311-stip', d:'2026-11-23', only:() => payOn(), t:'Lo stipendio nella tua categoria', x:'In «Il mio stipendio» puoi scegliere in quale categoria registrarlo quando confermi che è arrivato. E se lo sposti a mano, l\'app lo riconosce e non lo richiede più.', go:{screen:'pay'}, el:'#view .list .item', h:'Apri lo stipendio: trovi «Registralo nella categoria».'},
   {k:'n2311-pdf', d:'2026-11-23', t:'Resoconto PDF, un solo pulsante', x:'In Impostazioni → Dati c\'è ora un solo «Resoconto PDF»: scegli un mese, un anno o un periodo a piacere (da… a…), anche da confrontare con un altro.', go:{screen:'settings', sec:'dati'}, el:'[data-pdf]', h:'Tocca qui e scegli il periodo: anche «Un periodo a scelta».'},
   {k:'n2611-scenari', d:'2026-11-23', t:'Il futuro in 1.000 scenari, più chiaro', x:'Nel simulatore i tre risultati si chiamano «Se va male», «A metà» e «Se va bene»: i puntini mostrano quanti futuri su 10 arrivano almeno a quella cifra.', go:{screen:'sim'}, el:'#mc .mcp', h:'Più puntini pieni = più futuri arrivano almeno lì.'}
@@ -2183,7 +2184,7 @@ function renderHome(){
 let txFilter = 'all';
 /* filtri dei movimenti: categoria (TXC = {t, c, s}), periodo (mese, anno, tutto) */
 const normQ = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-let TXQ = '', TXC = null, TXP = 'm', TXY = +curYM().slice(0, 4), TXLIM = 80, TXREF = null, TXFR = addMonths(curYM(), -5), TXTO = curYM(), TXSEL = null, TXMV = {c:'', s:''};
+let TXALL = false, TXQ = '', TXC = null, TXP = 'm', TXY = +curYM().slice(0, 4), TXLIM = 80, TXREF = null, TXFR = addMonths(curYM(), -5), TXTO = curYM(), TXSEL = null, TXMV = {c:'', s:''};
 /* periodo condiviso da Movimenti e Analisi */
 function txMonths(){
   const first = [...S.tx.map(x => ymOf(x.d)), ...S.rec.map(r => r.from)].sort()[0] || curYM();
@@ -2245,13 +2246,13 @@ function renderTx(){
   const fresh = TXREF !== PREV; TXREF = PREV;
   if (R.cat) { TXBACK = PREV && PREV.screen !== 'tx' ? {screen:PREV.screen} : null; if (PREV && PREV.screen === 'stats' && ST.mode === 'm' && ST.ym) viewYM = ST.ym;
     TXC = {t:R.ct || 'out', c:R.cat, s:R.sub}; TXP = 'm'; if (PREV && PREV.screen === 'stats') { if (ST.mode === 'y') { TXP = 'y'; TXY = ST.y; } else if (ST.mode === 'p') { TXP = 'p'; TXFR = ST.from; TXTO = ST.to; } } R = {screen:'tx'}; }
-  else if (fresh && PREV && !['tx', 'add', 'cats', 'an'].includes(PREV.screen)) { TXC = null; TXBACK = null; TXSEL = null; }
+  else if (fresh && PREV && !['tx', 'add', 'cats', 'an'].includes(PREV.screen)) { TXC = null; TXBACK = null; TXSEL = null; TXALL = false; }
   if (TXC && !S.cats[TXC.t].some(c => c.id === TXC.c)) TXC = null;
   if (!TXC) TXBACK = null;
   const months = txMonths();
   let L = [].concat(...months.map(ym => monthTx(ym)));
   const XF = (S.xfers || []).filter(x => months.includes(ymOf(x.d))).map(x => Object.assign({xfer:true}, x));
-  const inc = L.filter(x => x.t === 'in').reduce((t, x) => t + x.a, 0), out = L.filter(x => x.t === 'out').reduce((t, x) => t + x.a, 0);
+  const inc = L.filter(x => x.t === 'in' && !x.plan).reduce((t, x) => t + x.a, 0), out = L.filter(x => x.t === 'out' && !x.plan).reduce((t, x) => t + x.a, 0);
   const cat = TXC && catOf(TXC.t, TXC.c);
   if (TXC) { L = L.filter(x => x.t === TXC.t && x.c === TXC.c); if (TXC.s !== undefined && TXC.s !== null) L = L.filter(x => (x.s || '') === TXC.s); }
   else if (txFilter === 'xfer') L = XF;
@@ -2277,6 +2278,9 @@ function renderTx(){
     summary = '<div class="card"><span class="label">Ricerca "' + esc(TXQ) + '" · ' + movN(L.length) + '</span><div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur2(fi) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur2(fo) + '</b></div></div></div>';
   } else summary = '<div class="io"><div><span class="label">Entrate</span><b style="color:' + IN_COL + '">' + eur2(inc) + '</b></div><div><span class="label">Uscite</span><b style="color:' + OUT_COL + '">' + eur2(out) + '</b></div></div>';
   const withY = TXP !== 'm', dl = d => dLabel(d) + (withY ? ' ' + d.slice(0, 4) : '');
+  /* elenco snello: nel mese, senza filtri né ricerca, solo gli ultimi 3 giorni con movimenti; il resto si apre a richiesta (i programmati restano sotto) */
+  const allDays = Object.keys(groups).sort().reverse(), compact = !TXALL && !TXSEL && !TXC && !TXQ && TXP === 'm' && allDays.length > 3, realDays = compact ? allDays.slice(0, 3) : allDays;
+  const hidN = compact ? allDays.slice(3).reduce((t, d) => t + groups[d].length, 0) : 0, moreBtn = compact ? '<button class="btn ghost wide" id="tx-rest" style="margin:6px 0 14px">' + ic('list') + 'Mostra il resto del mese · ' + movN(hidN) + '</button>' : '';
   /* selezione multipla: sposta in un'altra categoria o sottocategoria, oppure elimina */
   const selectable = shown.filter(x => !x.xfer && !x.rec);
   if (TXSEL) [...TXSEL].forEach(id => { if (!S.tx.some(x => x.id === id)) TXSEL.delete(id); });
@@ -2298,17 +2302,18 @@ function renderTx(){
     (TXC ? '<div class="spread"><span class="chip" style="background:' + catColor(TXC.t, cat) + ';color:#fff">' + ic(cat.i) + esc(cat.n) + (TXC.s ? ' › ' + esc(TXC.s) : TXC.s === '' ? ' › senza sottocategoria' : '') + '</span><button class="textlink" id="tx-clr">Togli il filtro</button></div>'
       : '<div class="filters">' + [['all','Tutti'],['out','Uscite'],['in','Entrate'],['xfer','Trasferimenti']].map(f => '<button data-f="' + f[0] + '" aria-pressed="' + (txFilter === f[0]) + '">' + f[1] + '</button>').join('') + '</div>') +
     summary + selBar() +
-    (L.length ? '<div>' + Object.keys(groups).sort().reverse().map(d => [groups, d]).concat(Object.keys(fgroups).sort().map(d => [fgroups, d])).map(([G, d], gi, GA) => (G === fgroups && (gi === 0 || GA[gi - 1][0] !== fgroups) ? '<div class="planhead"><span class="label">Movimenti programmati</span><span class="small muted">Non ancora avvenuti: non contano nei totali di oggi</span></div>' : '') + '<div class="dayhead">' + dl(d) + '</div><div class="list">' + G[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
+    (L.length ? '<div>' + realDays.map(d => [groups, d]).concat(Object.keys(fgroups).sort().map(d => [fgroups, d])).map(([G, d], gi, GA) => (G === fgroups && (gi === 0 || GA[gi - 1][0] !== fgroups) ? moreBtn + '<div class="planhead"><span class="label">Movimenti programmati</span><span class="small muted">Non ancora avvenuti: non contano nei totali di oggi</span></div>' : '') + '<div class="dayhead">' + dl(d) + '</div><div class="list">' + G[d].map(x => { if (x.xfer) return '<button class="item" ' + nav$({screen:'add', editX:x.id}) + '><span class="ic" style="background:#3987e5;color:#fff">' + ic('repeat') + '</span><span class="t"><b>' + esc(destLabel(x.from)) + ' → ' + esc(destLabel(x.to)) + '</b><span class="sub">Trasferimento interno' + (x.n ? ' · ' + esc(x.n) : '') + '</span></span><span class="amt num">↔ ' + eur2(x.a) + '</span></button>';
       const c = catOf(x.t, x.c);
       if (TXSEL) { const ok = !x.rec && S.tx.some(y => y.id === x.id); return '<label class="item selrow' + (ok ? '' : ' off') + '">' + (ok ? '<input type="checkbox" data-tsel="' + x.id + '"' + (TXSEL.has(x.id) ? ' checked' : '') + '>' : '<span class="small muted" title="Ricorrente: si modifica dalla serie">↻</span>') + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (isRf(x) ? ' · rimborso' : '') + '</span></span>' + txAmt(x) + '</label>'; }
       return '<button class="item" ' + nav$({screen:'add', edit:x.id}) + '>' + catTile(x.t, c) + '<span class="t"><b>' + esc(x.n || x.s || c.n) + '</b><span class="sub">' + esc(c.n + (x.s ? ' · ' + x.s : '')) + (x.p && x.p !== 'liq' ? (x.t === 'in' ? ' · → ' : ' · da ') + esc(destLabel(x.p)) : '') + (x.plan && !x.rec ? ' · programmata il ' + dshort(x.d) : x.plan ? ' · previsto' : x.rec ? ' · ' + recFreq(S.rec.find(r => r.id === x.rec) || {}, true) : '') + (isRf(x) ? ' · <b style="color:' + IN_COL + '">rimborso</b>' : '') + (x.fx ? ' · ' + esc(fxTxt(x.fx)) : '') + (x.tag ? ' <span class="tagpill">' + esc(x.tag) + '</span>' : '') + '</span></span>' + txAmt(x) + '</button>'; }).join('') + '</div>').join('') + '</div>' +
-      selCard() + (L.length > shown.length ? '<button class="btn ghost" id="tx-more">Mostra altri ' + Math.min(300, L.length - shown.length) + ' (' + (L.length - shown.length) + ' in tutto)</button>' : '')
+      (compact && !Object.keys(fgroups).length ? moreBtn : '') + selCard() + (L.length > shown.length ? '<button class="btn ghost" id="tx-more">Mostra altri ' + Math.min(300, L.length - shown.length) + ' (' + (L.length - shown.length) + ' in tutto)</button>' : '')
       : '<div class="note">Nessun movimento' + (TXC || TXQ ? ' con questo filtro' : '') + (TXP === 'm' ? ' a ' + ymLabel(viewYM, {month:'long'}) : TXP === 'y' ? ' nel ' + TXY : TXP === 'p' ? ' nel periodo' : '') + '.' + (TXP === 'm' ? ' Prova "Anno" o "Tutto" per vedere un periodo più lungo.' : '') + '</div>') +
     (downloads && S.tx.length + S.rec.length ? '<button class="textlink" id="csv">Esporta tutti i movimenti in CSV</button>' : '') +
   '</div>';
   bindDemo();
   const rr = () => { TXLIM = 80; renderTx(); }, keepY = () => { const y = window.scrollY; renderTx(); window.scrollTo({top:y}); };
   bindTxPeriod(rr);
+  const trs = view.querySelector('#tx-rest'); if (trs) trs.onclick = () => { TXALL = true; const y = window.scrollY; renderTx(); window.scrollTo({top:y}); };
   const sb = view.querySelector('#tx-sel'); if (sb) sb.onclick = () => { TXSEL = TXSEL ? null : new Set(); if (TXSEL) histPush(); keepY(); };
   const sa = view.querySelector('#tx-sall'); if (sa) sa.onclick = () => { const ids = selectable.map(x => x.id); if (ids.every(id => TXSEL.has(id))) ids.forEach(id => TXSEL.delete(id)); else ids.forEach(id => TXSEL.add(id)); keepY(); };
   view.querySelectorAll('[data-tsel]').forEach(cb => cb.onchange = () => { cb.checked ? TXSEL.add(cb.dataset.tsel) : TXSEL.delete(cb.dataset.tsel); keepY(); });

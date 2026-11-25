@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="b4f-build" content="202611252129">
+<meta name="b4f-build" content="202611252139">
 <meta name="color-scheme" content="dark only">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-uC3/N1Yz0rS757Z9m7qOfOKIPUMFNi6ipDoibALM9dE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-tpOTpsg8UDaUiylhSdP7vk7cygTkWNEUr+PoyW7CRbM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://api.frankfurter.dev; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="darkreader-lock">
 <meta name="description" content="Buddy4Free Risparmio: traccia entrate e uscite, riempi i 4 pilastri e raggiungi i tuoi obiettivi. Gratuita, senza pubblicità.">
@@ -2604,6 +2604,9 @@ function renderAdd(){
   if (fa) bindPad(); else document.body.classList.remove('kpon', 'kpsave');
   const fc = document.getElementById('f-cur'); if (fc) fc.onclick = e => { e.preventDefault(); e.stopPropagation(); curPick(); };
   view.querySelectorAll('[data-tagp]').forEach(b => b.onclick = () => { document.getElementById('f-tag').value = b.dataset.tagp; F.tag = b.dataset.tagp; });
+  /* quello che scrivi resta anche se dopo tocchi l'importo e la schermata si ridisegna */
+  [['f-n', v => F.n = v], ['f-tag', v => F.tag = v.trim().slice(0, 40)], ['f-d', v => { if (v) F.d = v; }]].forEach(([id, f]) => { const el = document.getElementById(id); if (el) el.addEventListener('input', () => { if (F) f(el.value); }); });
+  const frc = document.getElementById('f-rec'); if (frc) frc.addEventListener('change', () => { if (F) F.rec = frc.checked; });
   const fdd = document.getElementById('f-d'); if (fdd && F.cur !== 'EUR') fdd.addEventListener('change', () => { F.d = fdd.value || today(); if (!F.fxm) fxLoad(); });
   if (F.cur !== 'EUR') { if (F.fxr || F.fxm) fxShow(); else fxLoad(); }
   saveBtn.onclick = () => {

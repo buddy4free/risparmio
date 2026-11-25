@@ -71,6 +71,12 @@ const {OUT, ok, fine, apri, demo, fs} = require('./comune');
   await p.fill('#tr-n', 'Prevista'); await p.fill('#tr-a', '2026-12-01'); await p.click('#tr-ok'); await p.waitForTimeout(400);
   ok('etichetta creata prima delle spese: compare e resta salvata', await p.evaluate(() => tagsAll().some(g => g.n === 'Prevista' && g.cnt === 0) && S.tagDefs.some(d => d.n === 'Prevista' && d.from === '2026-12-01')));
 
+  // 3d. famiglie, archivio e confronto delle etichette
+  await p.evaluate(() => { S.tx.push({id:'tf1', t:'out', c:'viaggi', s:'', a:300, d:'2025-08-03', n:'Volo', p:'liq', tag:'Viaggio Grecia'}, {id:'tf2', t:'out', c:'viaggi', s:'', a:400, d:addMonths(curYM(), -1) + '-05', n:'Volo', p:'liq', tag:'Viaggio Spagna'}); save(); nav({screen:'tags'}); }); await p.waitForTimeout(400);
+  ok('etichette: «Viaggio …» diventano una famiglia', await p.evaluate(() => !!document.querySelector('[data-nav*="viaggio"]') && !document.querySelector('[data-nav*="Viaggio Grecia"]')));
+  await p.evaluate(() => nav({screen:'tags', cmp:'Viaggio Grecia|Viaggio Spagna'})); await p.waitForTimeout(400);
+  ok('etichette: il confronto mostra totali e differenza', await p.evaluate(() => document.querySelectorAll('#view .tgb').length >= 4 && /\+100/.test(document.getElementById('view').innerText)));
+
   // 4. tutte le schermate si aprono senza errori
   const scr = ['home', 'tx', 'charts', 'stats', 'an', 'review', 'pillars', 'goals', 'sim', 'debts', 'gym', 'missions', 'learn', 'well', 'rec', 'dues', 'tags', 'cats', 'pay', 'notif', 'legend', 'howto', 'support', 'privacy', 'terms'];
   const vuote = [];

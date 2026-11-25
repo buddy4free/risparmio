@@ -60,6 +60,9 @@ const {OUT, ok, fine, apri, demo, fs} = require('./comune');
   await p.click('#dnpop [data-m="see"]'); await p.waitForTimeout(300);
   ok('etichetta: Dettaglio mostra le categorie', await p.evaluate(() => document.querySelectorAll('#dnpop .dnrows button').length === 2));
   await p.evaluate(() => document.getElementById('dnpop').remove());
+  await p.evaluate(() => nav({screen:'tags'})); await p.waitForTimeout(300); await p.click('#tg-new'); await p.waitForTimeout(300);
+  await p.fill('#tr-n', 'Prevista'); await p.fill('#tr-a', '2026-12-01'); await p.click('#tr-ok'); await p.waitForTimeout(400);
+  ok('etichetta creata prima delle spese: compare e resta salvata', await p.evaluate(() => tagsAll().some(g => g.n === 'Prevista' && g.cnt === 0) && S.tagDefs.some(d => d.n === 'Prevista' && d.from === '2026-12-01')));
 
   // 4. tutte le schermate si aprono senza errori
   const scr = ['home', 'tx', 'charts', 'stats', 'an', 'review', 'pillars', 'goals', 'sim', 'debts', 'gym', 'missions', 'learn', 'well', 'rec', 'dues', 'tags', 'cats', 'pay', 'notif', 'legend', 'howto', 'support', 'privacy', 'terms'];

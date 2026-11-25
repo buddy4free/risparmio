@@ -2594,6 +2594,9 @@ function renderAdd(){
   if (fa) bindPad(); else document.body.classList.remove('kpon', 'kpsave');
   const fc = document.getElementById('f-cur'); if (fc) fc.onclick = e => { e.preventDefault(); e.stopPropagation(); curPick(); };
   view.querySelectorAll('[data-tagp]').forEach(b => b.onclick = () => { document.getElementById('f-tag').value = b.dataset.tagp; F.tag = b.dataset.tagp; });
+  /* quello che scrivi resta anche se dopo tocchi l'importo e la schermata si ridisegna */
+  [['f-n', v => F.n = v], ['f-tag', v => F.tag = v.trim().slice(0, 40)], ['f-d', v => { if (v) F.d = v; }]].forEach(([id, f]) => { const el = document.getElementById(id); if (el) el.addEventListener('input', () => { if (F) f(el.value); }); });
+  const frc = document.getElementById('f-rec'); if (frc) frc.addEventListener('change', () => { if (F) F.rec = frc.checked; });
   const fdd = document.getElementById('f-d'); if (fdd && F.cur !== 'EUR') fdd.addEventListener('change', () => { F.d = fdd.value || today(); if (!F.fxm) fxLoad(); });
   if (F.cur !== 'EUR') { if (F.fxr || F.fxm) fxShow(); else fxLoad(); }
   saveBtn.onclick = () => {

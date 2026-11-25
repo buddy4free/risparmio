@@ -3,3 +3,4 @@
 Qui si raccolgono, una per riga con "- ", le novità che i tester noteranno (solo quelle visibili, non le correzioni interne).
 Alla pubblicazione automatica (vedi `.github/workflows/pubblica.yml`) diventano una issue su GitHub, così Lorenzo riceve la notifica con il testo pronto da inoltrare; poi le righe si svuotano.
 - Scrivendo nei campi di testo (nota, etichetta, nomi…) il campo sale sopra la tastiera del telefono, senza restare coperto.
+- Nuovo movimento: etichetta, nota e data scritte prima dell'importo non si cancellano più quando poi inserisci l'importo.

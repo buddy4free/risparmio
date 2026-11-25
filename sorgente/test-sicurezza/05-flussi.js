@@ -19,6 +19,13 @@ const {OUT, ok, fine, apri, demo, fs} = require('./comune');
   await p.evaluate(() => nav({screen:'tx'})); await p.waitForTimeout(500);
   ok('il movimento compare nei Movimenti', await p.evaluate(() => document.getElementById('view').innerText.includes('Prova automatica')), await p.evaluate(() => document.getElementById('view').innerText.slice(0, 300)));
 
+  // 1b. etichetta e nota scritte prima dell'importo non si perdono
+  await p.evaluate(() => { F = null; nav({screen:'add', type:'out'}); }); await p.waitForTimeout(400);
+  await p.click('[data-cl="alimentari"]'); await p.waitForTimeout(300); const sb2 = await p.$('[data-cs="Supermercato"]'); if (sb2) { await sb2.click(); await p.waitForTimeout(300); } const ds2 = await p.$('[data-p="liq"]'); if (ds2) { await ds2.click(); await p.waitForTimeout(400); }
+  await p.fill('#f-tag', 'Prima etichetta'); await p.fill('#f-n', 'Prima nota'); await p.click('#f-a'); await p.waitForTimeout(300);
+  for (const k of ['8', '5']) await p.click('[data-k2="' + k + '"]'); await p.click('[data-k2="ok"]'); await p.waitForTimeout(400); await p.click('[data-savebig]'); await p.waitForTimeout(500);
+  ok('etichetta e nota scritte prima dell\'importo restano', await p.evaluate(() => S.tx.some(x => x.n === 'Prima nota' && x.tag === 'Prima etichetta' && x.a === 85)), await p.evaluate(() => JSON.stringify(S.tx.filter(x => x.a === 85).map(x => [x.n, x.tag]))));
+
   // 2. backup protetto e ripristino
   let file = ''; await p.exposeFunction('__bk', d => { file = d; });
   await p.evaluate(() => { downloads.save = async o => { await window.__bk(String(o.data)); }; nav({screen:'settings', sec:'sicurezza'}); }); await p.waitForTimeout(400);

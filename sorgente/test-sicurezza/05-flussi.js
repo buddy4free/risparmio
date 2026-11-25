@@ -60,6 +60,23 @@ const {OUT, ok, fine, apri, demo, fs} = require('./comune');
   const rs = await p.$('#prs-ok'); if (rs) { await rs.click(); await p.waitForTimeout(400); }
   ok('stipendi persi: si ripristinano dalle entrate confermate', await p.evaluate(id => pays().some(q => q.id === id && q.net === 1234 && q.day === 11), rid), await p.evaluate(() => JSON.stringify(S.pays)));
 
+  // 3c. etichetta: finestra veloce con movimenti e cerchio per categoria
+  await p.evaluate(() => { document.querySelectorAll('.psheet').forEach(x => x.remove()); S.tx.push({id:'tz1', t:'out', c:'viaggi', s:'', a:200, d:'2026-08-03', n:'Volo', p:'liq', tag:'Prova etichetta'}, {id:'tz2', t:'out', c:'ristoranti', s:'', a:50, d:'2026-08-04', n:'Cena', p:'liq', tag:'Prova etichetta'}); save(); nav({screen:'tags', tag:'Prova etichetta'}); }); await p.waitForTimeout(400);
+  await p.click('#tg-see'); await p.waitForTimeout(400);
+  ok('etichetta: Movimenti apre la finestra con i suoi movimenti', await p.evaluate(() => document.querySelectorAll('#dnpop .item').length === 2));
+  await p.click('#dnpop [data-m="see"]'); await p.waitForTimeout(300);
+  ok('etichetta: Dettaglio mostra le categorie', await p.evaluate(() => document.querySelectorAll('#dnpop .dnrows button').length === 2));
+  await p.evaluate(() => document.getElementById('dnpop').remove());
+  await p.evaluate(() => nav({screen:'tags'})); await p.waitForTimeout(300); await p.click('#tg-new'); await p.waitForTimeout(300);
+  await p.fill('#tr-n', 'Prevista'); await p.fill('#tr-a', '2026-12-01'); await p.click('#tr-ok'); await p.waitForTimeout(400);
+  ok('etichetta creata prima delle spese: compare e resta salvata', await p.evaluate(() => tagsAll().some(g => g.n === 'Prevista' && g.cnt === 0) && S.tagDefs.some(d => d.n === 'Prevista' && d.from === '2026-12-01')));
+
+  // 3d. famiglie, archivio e confronto delle etichette
+  await p.evaluate(() => { S.tx.push({id:'tf1', t:'out', c:'viaggi', s:'', a:300, d:'2025-08-03', n:'Volo', p:'liq', tag:'Viaggio Grecia'}, {id:'tf2', t:'out', c:'viaggi', s:'', a:400, d:addMonths(curYM(), -1) + '-05', n:'Volo', p:'liq', tag:'Viaggio Spagna'}); save(); nav({screen:'tags'}); }); await p.waitForTimeout(400);
+  ok('etichette: «Viaggio …» diventano una famiglia', await p.evaluate(() => !!document.querySelector('[data-nav*="viaggio"]') && !document.querySelector('[data-nav*="Viaggio Grecia"]')));
+  await p.evaluate(() => nav({screen:'tags', cmp:'Viaggio Grecia|Viaggio Spagna'})); await p.waitForTimeout(400);
+  ok('etichette: il confronto mostra totali e differenza', await p.evaluate(() => document.querySelectorAll('#view .tgb').length >= 4 && /\+100/.test(document.getElementById('view').innerText)));
+
   // 4. tutte le schermate si aprono senza errori
   const scr = ['home', 'tx', 'charts', 'stats', 'an', 'review', 'pillars', 'goals', 'sim', 'debts', 'gym', 'missions', 'learn', 'well', 'rec', 'dues', 'tags', 'cats', 'pay', 'notif', 'legend', 'howto', 'support', 'privacy', 'terms'];
   const vuote = [];

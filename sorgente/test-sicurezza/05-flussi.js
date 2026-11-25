@@ -43,6 +43,16 @@ const {OUT, ok, fine, apri, demo, fs} = require('./comune');
   const imp = await p.evaluate(() => S.tx.filter(x => / CSV$/.test(x.n || '')).map(x => x.t + ':' + x.a + ':' + x.d).sort());
   ok('import CSV: 3 movimenti con segno, importo e data', imp.length === 3 && imp.includes('out:23.4:2026-11-03') && imp.includes('in:1500:2026-11-04'), JSON.stringify(imp) + ' (prima ' + n1 + ')');
 
+  // 3b. stipendi impostati: restano dopo la riapertura (il 24/11/2026 un errore li cancellava all'avvio)
+  await p.evaluate(() => { S.pays = [1, 2, 3].map(i => mkPay({kind:i === 3 ? 'pens' : 'stip', net:1000 * i, day:10 + i, mens:13, name:'P' + i})); save(); });
+  await p.reload(); await p.waitForTimeout(900);
+  ok('stipendi: dopo la riapertura ci sono ancora tutti', await p.evaluate(() => pays().length === 3 && pays().every(q => q.net > 0)), await p.evaluate(() => JSON.stringify(S.pays)));
+  // recupero per chi li ha persi: ricostruiti dalle entrate confermate, stesso collegamento
+  const rid = await p.evaluate(() => { const q = S.pays[0]; S.tx.push({id:'rz1', t:'in', c:'stipendio', s:'', a:1234, d:addMonths(curYM(), -1) + '-11', n:'P1', pay:q.id}); S.pays = []; delete S.payRescueNo; save(); return q.id; });
+  await p.evaluate(() => nav({screen:'home'})); await p.waitForTimeout(400); await p.evaluate(() => document.querySelectorAll('.psheet').forEach(x => x.remove())); await p.evaluate(() => nav({screen:'home'})); await p.waitForTimeout(1500);
+  const rs = await p.$('#prs-ok'); if (rs) { await rs.click(); await p.waitForTimeout(400); }
+  ok('stipendi persi: si ripristinano dalle entrate confermate', await p.evaluate(id => pays().some(q => q.id === id && q.net === 1234 && q.day === 11), rid), await p.evaluate(() => JSON.stringify(S.pays)));
+
   // 4. tutte le schermate si aprono senza errori
   const scr = ['home', 'tx', 'charts', 'stats', 'an', 'review', 'pillars', 'goals', 'sim', 'debts', 'gym', 'missions', 'learn', 'well', 'rec', 'dues', 'tags', 'cats', 'pay', 'notif', 'legend', 'howto', 'support', 'privacy', 'terms'];
   const vuote = [];

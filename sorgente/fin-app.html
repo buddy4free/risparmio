@@ -1225,7 +1225,7 @@ function migrate(){
   S.tgt = S.tgt || {liq:null, emerg:null};
   if (!S.remOn || typeof S.remOn !== 'object') S.remOn = {track:true}; /* nell'app Android: "Hai segnato tutto?" attivo di serie */
   try { if (S.pay && !S.pays) S.pays = [S.pay]; delete S.pay;
-    S.pays = (Array.isArray(S.pays) ? S.pays : []).filter(P => P && typeof P === 'object' && +P.net > 0).slice(0, PAY_MAX).map(payNorm); } catch(e) { S.pays = []; }
+    const pp = (Array.isArray(S.pays) ? S.pays : []).filter(P => P && typeof P === 'object' && +P.net > 0).slice(0, 6).map(payNorm); S.pays = pp; } catch(e) { if (!Array.isArray(S.pays)) S.pays = []; /* in caso di errore non si cancella mai niente */ }
 }
 try { const raw = localStorage.getItem(LS_KEY); if (raw) { S = Object.assign(freshState(), clean(JSON.parse(raw))); migrate(); } } catch(e) {}
 let R = S.setup ? {screen:'home'} : {screen:'welcome'};
@@ -1393,8 +1393,9 @@ function payExp(p, ym){
 function payMatch(ym, real){
   const E = pays().flatMap(p => payExp(p, ym)), got = new Set(); if (!E.length) return {E, got};
   const L = monthTx(ym).filter(x => x.t === 'in' && (!real || !x.plan));
-  L.forEach(x => { if (!x.pay) return; const k = ((x.n || '').match(/^(13ª|14ª)/) || [, ''])[1], e = E.find(e => !got.has(e) && e.p.id === x.pay && e.c === x.c && e.k === k) || E.find(e => !got.has(e) && e.p.id === x.pay && e.k === k) || E.find(e => !got.has(e) && e.p.id === x.pay); if (e) got.add(e); });
-  L.filter(x => !x.pay).sort((a, b) => b.a - a.a).forEach(x => { const C = E.filter(e => !got.has(e) && e.c === x.c).sort((a, b) => Math.abs(a.a - x.a) - Math.abs(b.a - x.a)); if (!C.length) return;
+  const ids = new Set(pays().map(p => p.id)), linked = x => x.pay && ids.has(x.pay);
+  L.forEach(x => { if (!linked(x)) return; const k = ((x.n || '').match(/^(13ª|14ª)/) || [, ''])[1], e = E.find(e => !got.has(e) && e.p.id === x.pay && e.c === x.c && e.k === k) || E.find(e => !got.has(e) && e.p.id === x.pay && e.k === k) || E.find(e => !got.has(e) && e.p.id === x.pay); if (e) got.add(e); });
+  L.filter(x => !linked(x)).sort((a, b) => b.a - a.a).forEach(x => { const C = E.filter(e => !got.has(e) && e.c === x.c).sort((a, b) => Math.abs(a.a - x.a) - Math.abs(b.a - x.a)); if (!C.length) return;
     got.add(C[0]); if (C[0].k === '') { const ex = E.find(e => e.p === C[0].p && e.k && !got.has(e)); if (ex && x.a >= (C[0].a + ex.a) * 0.9) got.add(ex); } });
   return {E, got};
 }
@@ -1483,9 +1484,19 @@ function renderPay(){
     save(); toast(old ? 'Aggiornato' : 'Fatto: in Home trovi la previsione del mese'); nav({screen:'pay'}); };
   const dl = view.querySelector('#pf-del'); if (dl) dl.onclick = () => { S.pays = pays().filter(p => p.id !== old.id); save(); toast('Tolto: le entrate già registrate restano'); nav({screen:'pay'}); };
 }
+/* recupero: il 24-25/11/2026 un errore ha svuotato gli stipendi impostati; si ricostruiscono dalle entrate confermate con «È arrivato?» */
+function payRescueList(){ const have = new Set((S.pays || []).map(p => p.id)), last = {};
+  S.tx.filter(x => x.pay && x.t === 'in' && !have.has(x.pay) && !/^(13ª|14ª)/.test(x.n || '')).forEach(x => { if (!last[x.pay] || x.d > last[x.pay].d) last[x.pay] = x; });
+  return Object.values(last).map(x => ({id:x.pay, kind:x.c === 'pensione' ? 'pens' : 'stip', name:String(x.n || '').trim().slice(0, 30), net:x.a, day:+x.d.slice(8), mens:S.tx.some(y => y.pay === x.pay && /^14ª/.test(y.n || '')) ? 14 : S.tx.some(y => y.pay === x.pay && /^13ª/.test(y.n || '')) ? 13 : 12, m14:7, cat:x.c, from:ymOf(S.tx.filter(y => y.pay === x.pay).map(y => y.d).sort()[0])})); }
+function payRescue(){ if (S.payRescueNo || (S.pays || []).length) return false; const L = payRescueList().slice(0, 6); if (!L.length) return false;
+  catPop('<b style="font-size:1.1rem">Ritroviamo i tuoi stipendi</b><p class="small" style="margin:0">Con l\'aggiornamento di ieri un nostro errore ha tolto gli stipendi e le pensioni che avevi impostato. Ci scusiamo. Li possiamo ricostruire dalle entrate che avevi confermato:</p><ul class="small" style="margin:0;padding-left:18px">' + L.map(p => '<li><b>' + esc(cap(payName(p))) + '</b>: ' + eur(p.net) + ' ' + dayIt(p.day) + (p.mens > 12 ? ' · ' + p.mens + ' mensilità' : '') + '</li>').join('') + '</ul><p class="small muted" style="margin:0">Dopo puoi controllarli in Impostazioni → Profilo → Il mio stipendio.</p><button class="btn wide" id="prs-ok">Sì, ripristinali</button><button class="textlink" id="prs-no" style="align-self:center">No, li inserisco io</button>', (o, close) => {
+    o.querySelector('#prs-ok').onclick = () => { S.pays = L.map(payNorm); close(); save(); toast('Stipendi ripristinati'); render(); };
+    o.querySelector('#prs-no').onclick = () => { S.payRescueNo = true; save(); close(); }; }); return true; }
 /* il giorno dell'accredito (e i giorni dopo, finché non arriva): conferma con un tocco */
 function payAsk(){
-  if (!payOn() || S.demo || R.screen !== 'home' || document.querySelector('.psheet') || document.getElementById('lock')) return false;
+  if (S.demo || R.screen !== 'home' || document.querySelector('.psheet') || document.getElementById('lock')) return false;
+  if (payRescue()) return true;
+  if (!payOn()) return false;
   const lost = S.tx.filter(x => x.pay && x.t === 'in' && !S.cats.in.some(c => c.id === x.c)), lp = lost.length && pays().find(p => p.id === lost[0].pay);
   if (lp && S.payFix !== today()) { const to = catOf('in', payCatId(lp));
     catPop('<b style="font-size:1.1rem">Stipendi finiti in «Altro»</b><p class="small muted" style="margin:0">' + (lost.length === 1 ? 'Un\'entrata confermata' : lost.length + ' entrate confermate') + ' con «È arrivato?» ' + (lost.length === 1 ? 'è' : 'sono') + ' in una categoria che non esiste più, quindi ' + (lost.length === 1 ? 'appare' : 'appaiono') + ' in «Altro». Le sposto in «' + esc(to.n) + '»? Puoi cambiare la categoria in Impostazioni → Il mio stipendio.</p><button class="btn wide" id="pfx-ok">Sì, sposta in «' + esc(to.n) + '»</button><button class="textlink" id="pfx-no" style="align-self:center">Non ora</button>', (o, close) => {

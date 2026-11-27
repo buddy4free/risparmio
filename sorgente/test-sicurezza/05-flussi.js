@@ -77,6 +77,13 @@ const {OUT, ok, fine, apri, demo, fs} = require('./comune');
   await p.evaluate(() => nav({screen:'tags', cmp:'Viaggio Grecia|Viaggio Spagna'})); await p.waitForTimeout(400);
   ok('etichette: il confronto mostra totali e differenza', await p.evaluate(() => document.querySelectorAll('#view .tgb').length >= 4 && /\+100/.test(document.getElementById('view').innerText)));
 
+  // 3e. «Il tuo anno»: schede e immagine da condividere senza importi
+  await p.evaluate(() => { document.querySelectorAll('.psheet').forEach(x => x.remove()); nav({screen:'year'}); }); await p.waitForTimeout(500);
+  ok('il tuo anno: almeno 3 schede', await p.evaluate(() => document.querySelectorAll('.ycard .slide').length >= 3));
+  await p.evaluate(() => { window.__yt = []; const f = CanvasRenderingContext2D.prototype.fillText; CanvasRenderingContext2D.prototype.fillText = function (s, ...r) { window.__yt.push(String(s)); return f.call(this, s, ...r); }; window.__ys = null; downloads.save = async o => { window.__ys = o.filename; }; });
+  await p.click('#yr-share'); await p.waitForTimeout(1500);
+  ok('il tuo anno: immagine salvata, senza importi', await p.evaluate(() => !!window.__ys && window.__yt.length > 4 && !window.__yt.some(s => s.includes('€'))), await p.evaluate(() => JSON.stringify(window.__yt)));
+
   // 4. tutte le schermate si aprono senza errori
   const scr = ['home', 'tx', 'charts', 'stats', 'an', 'review', 'pillars', 'goals', 'sim', 'debts', 'gym', 'missions', 'learn', 'well', 'rec', 'dues', 'tags', 'cats', 'pay', 'notif', 'legend', 'howto', 'support', 'privacy', 'terms'];
   const vuote = [];

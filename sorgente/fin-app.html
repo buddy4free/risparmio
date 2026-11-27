@@ -645,6 +645,7 @@ body.locked #view, body.locked #tabs, body.locked #fab, body.locked header{visib
 .donut svg{width:100%;max-width:380px;height:auto}
 .dact{display:flex;justify-content:space-between;width:100%;max-width:380px;margin-top:-6px;gap:8px}.dact[hidden]{display:flex;visibility:hidden}.dact .btn{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;padding:8px 12px;width:auto;min-height:0}.dact .i{width:18px;height:18px}
 #dnpop{touch-action:none}.tgb{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.tgb .track{height:10px;border-radius:6px;background:var(--soft2);overflow:hidden;display:block}.tgb .track i{display:block;height:100%;border-radius:6px}.tgb .num{white-space:nowrap}.tgarc summary{cursor:pointer;padding:8px 0;font-weight:700}
+.ycard .slide{padding:6px 2px}.yslide{display:flex;flex-direction:column;gap:10px;min-height:250px;justify-content:center;padding:18px;border-radius:18px;background:var(--soft)}.yslide p{margin:0;line-height:1.5}.ybig{font-family:var(--display);font-size:3.2rem;line-height:1;color:var(--ytext)}
 .dnpin{max-height:88dvh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y}.dnpin>*{flex-shrink:0}.dncum{width:100%;height:auto}.dnrows{display:flex;flex-direction:column;gap:2px}.dnrows button{display:grid;grid-template-columns:14px 1fr auto auto;gap:10px;align-items:center;padding:10px 4px;background:none;border:0;border-bottom:1px solid var(--line);color:var(--fg);text-align:left;font:inherit}.dnrows i{width:14px;height:14px;border-radius:4px}.dnrows small{color:var(--muted);min-width:36px;text-align:right}.dnrows b{min-width:78px;text-align:right}
 .mcp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.mcpt{border-radius:14px;padding:10px 9px;display:flex;flex-direction:column;gap:4px;min-width:0;border:2px solid transparent}.mcpt b{font-family:var(--display);font-size:1.12rem;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mcpl{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}.mcps{font-size:.74rem;line-height:1.25;color:var(--muted)}.mcpd{display:flex;gap:2px}.mcpd i{flex:0 1 7px;aspect-ratio:1;border-radius:50%;background:color-mix(in srgb,var(--muted) 30%,transparent)}.mcpd i.on{background:#c98500}
 .mcpt.p9{background:color-mix(in srgb,var(--yellow) 42%,var(--bg));border-color:var(--yellow)}.mcpt.p5{background:color-mix(in srgb,var(--yellow) 20%,var(--bg));border-color:color-mix(in srgb,var(--yellow) 55%,transparent)}.mcpt.p1{background:color-mix(in srgb,var(--yellow) 6%,var(--bg));border-color:color-mix(in srgb,var(--yellow) 20%,transparent)}.mcpt.p9 .mcps,.mcpt.p9 .mcpl{color:var(--fg)}
@@ -1708,7 +1709,7 @@ function render(){
   document.getElementById('topbar').hidden = R.screen === 'welcome' || R.screen === 'add';
   document.getElementById('gear').hidden = true; document.getElementById('help').hidden = true;
   ({welcome:renderWelcome, setup:renderSetup, home:renderHome, tx:renderTx, charts:renderStats, stats:renderStats, add:renderAdd, pillars:renderPillars, pillar:renderPillar, goal:renderGoal,
-    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, pay:renderPay, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, trasloco:renderTrasloco, tags:renderTags, import:renderImport, cats:renderCats, an:renderAn, notif:renderNotif, legend:renderLegend, howto:renderHowto, sim:renderSim, dues:renderDues, rec:renderRec, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen](); if (R.screen === 'home') remAskOnce(); tipNext(); if (R.screen === 'home') newsNext();
+    gtips:renderGoalTips, gym:renderGym, read:renderRead, breath:renderBreath, review:renderReview, champ:renderChamp, well:renderWell, settings:renderSettings, pay:renderPay, support:renderSupport, terms:renderTerms, privacy:renderPrivacy, trasloco:renderTrasloco, tags:renderTags, import:renderImport, cats:renderCats, an:renderAn, year:renderYear, notif:renderNotif, legend:renderLegend, howto:renderHowto, sim:renderSim, dues:renderDues, rec:renderRec, wbi:renderWbi, missions:renderMissions, mission:renderMission, learn:renderLearn, lesson:renderLesson, debts:renderDebts, whatif:renderWhatIf})[R.screen](); if (R.screen === 'home') remAskOnce(); tipNext(); if (R.screen === 'home') newsNext();
   postRender(); bindCarousels();
 }
 function demoBar(){ return S.demo ? '<div class="demo"><span>Stai guardando dati di esempio.</span><button id="demo-end">Inizia con i tuoi dati</button></div>' : ''; }
@@ -1920,6 +1921,7 @@ window.addEventListener('scroll', () => { if (TIPC) tipPos(); }, {passive:true})
 const NEWS = [
   {k:'n2611-cerchio', d:'2026-11-23', t:'Grafici a cerchio più chiari', x:'Ogni voce ha il nome accanto con una freccia. Tocca uno spicchio: al centro vedi importo e percentuale, sotto «Movimenti» e «Dettaglio» aprono una finestra solo per quella voce. Si apre anche «Altro».', go:{screen:'stats'}, el:'.donut svg:has(circle[data-dk])', h:'Tocca uno spicchio, poi «Movimenti» o «Dettaglio». Trascinando sull\'anello il cerchio gira.'},
   {k:'n2611-barre', d:'2026-11-23', t:'Categorie a colpo d\'occhio', x:'In Home, in «Dove vanno i tuoi soldi», tocca una categoria: si apre la finestra veloce con l\'andamento del mese, i suoi movimenti e come si divide.', go:{screen:'home'}, el:'.catscroll .hbar[data-dnp]', h:'Tocca una categoria per aprire la finestra veloce.'},
+  {k:'n2711-anno', d:'2026-11-28', t:'Il tuo 2026', x:'In Statistiche trovi «Il tuo 2026»: i numeri dell\'anno in poche schede da scorrere (mese più leggero, voce cresciuta di più, capacità di risparmio, giorni senza spese) e un\'immagine da condividere senza importi.', go:{screen:'stats'}, el:'[data-nav*="year"]', h:'Tocca qui per il riepilogo del tuo anno.'},
   {k:'n2511-tag', d:'2026-11-26', t:'Etichette: prepara, raggruppa, confronta', x:'In Statistiche → Etichette puoi creare un\'etichetta prima delle spese. Con la stessa prima parola («Viaggio Grecia», «Viaggio Spagna»; «Natale 2025», «Natale 2026») diventano una famiglia da confrontare: totale, spesa al giorno e categorie. Quelle vecchie vanno da sole nell\'archivio.', go:{screen:'tags'}, el:'#tg-new', h:'Crea un\'etichetta iniziando da un tipo, oppure tocca «Confronta».'},
   {k:'n2411-stip6', d:'2026-11-24', only:() => payOn(), t:'Fino a 6 stipendi e pensioni', x:'In «Il mio stipendio» puoi aggiungere fino a 6 stipendi o pensioni, per esempio quelli di chi vive con te: ognuno con il suo nome, la sua categoria e la conferma «È arrivato?».', go:{screen:'pay'}, el:'#view .list', h:'Sotto l\'elenco trovi «Aggiungi uno stipendio o una pensione».'},
   {k:'n2411-mov', d:'2026-11-24', t:'Movimenti più snelli', x:'L\'elenco del mese mostra gli ultimi 3 giorni: il resto si apre con «Mostra il resto del mese». Sotto trovi subito i movimenti programmati, che non contano più nei totali di Entrate e Uscite.', go:{screen:'tx'}, el:'#tx-rest', h:'Tocca qui per vedere tutto il mese.'},
@@ -3096,7 +3098,7 @@ function renderStats(){
   const inRows = Object.entries(byIn).sort((a, c) => c[1] - a[1]).map(([c, a]) => { const k = catOf('in', c); return {id:c, n:k.n, v:a, c:catColor('in', k), tile:catTile('in', k), dnp:months.length ? dnp$('in', c, months[0], months[months.length - 1]) : null}; });
   const fcR = payOn() && ST.mode === 'm' && months[0] === curYM() ? (f => f.payP ? f : null)(fcStats(curYM())) : null;
   view.innerHTML = '<div class="sec" style="gap:20px">' + demoBar() + '<div class="intro"><h2>Statistiche</h2></div>' + (n => '<div class="row"><button class="readcard" ' + nav$({screen:'tags'}) + '><span class="t"><b>' + ic('list') + ' Etichette</b><span>' + (n ? n + (n === 1 ? ' etichetta' : ' etichette') + ': viaggi, eventi, progetti' : 'Spese di categorie diverse sotto un nome, come «Vacanza Grecia»') + '</span></span>' + ic('right') + '</button></div>')(tagsAll().length) +
-    statViews('stats') + stPeriodHTML() +
+    statViews('stats') + (S.tx.length ? '<button class="readcard" ' + nav$({screen:'year'}) + '><span class="t"><b>' + ic('sparkle') + ' Il tuo ' + curYM().slice(0, 4) + '</b><span>I numeri dell\'anno in poche schede, e un\'immagine da condividere senza importi</span></span>' + ic('right') + '</button>' : '') + stPeriodHTML() +
     '<div class="card"><div class="spread"><span class="label">Riepilogo · ' + label + '</span>' + (fcR ? '' : '<span class="status" style="background:' + b.c + '">' + (rate === null ? 'Nessuna entrata' : Math.round(rate) + '% · ' + b.l) + '</span>') + '</div>' +
       (fcR ? '<div class="row" style="justify-content:space-between;gap:8px"><span class="status" style="background:' + b.c + '">' + (rate === null ? 'Nessuna entrata' : Math.round(rate) + '% · ' + b.l + ' oggi') + '</span>' + (fcR.rate !== null ? '<span class="status fcst">previsto ' + Math.round(fcR.rate) + '%</span>' : '') + '</div>' : '') +
       '<div class="carousel"><div class="slide">' + (fcR ? fcBarsHTML([{n:'Entrate totali', v:inc, f:fcR.inc, c:IN_COL, fc:IN_COL, tile:'<span class="ic" style="background:' + IN_COL + '">' + ic('plus') + '</span>', fs:' (con ' + payWords() + ')'}, {n:'Uscite totali', v:out, f:fcR.out, c:OUT_COL, fc:OUT_COL, tile:'<span class="ic" style="background:' + OUT_COL + '">' + ic('cart') + '</span>'}, {n:'Risparmio', v:sv, f:fcR.save, c:b.c, fc:band(fcR.rate).c, tile:'<span class="ic" style="background:' + b.c + '">' + ic('coins') + '</span>', sub:rate === null ? '–' : Math.round(rate) + '%', fs:fcR.rate === null ? '' : ' · ' + Math.round(fcR.rate) + '%'}], Math.max(1, fcR.inc, fcR.out, inc, out)) : hbarsHTML([{n:'Entrate totali', v:inc, c:IN_COL, tile:'<span class="ic" style="background:' + IN_COL + '">' + ic('plus') + '</span>'}, {n:'Uscite totali', v:out, c:OUT_COL, tile:'<span class="ic" style="background:' + OUT_COL + '">' + ic('cart') + '</span>'}, {n:'Risparmio', v:sv, c:b.c, tile:'<span class="ic" style="background:' + b.c + '">' + ic('coins') + '</span>', sub:rate === null ? '–' : Math.round(rate) + '%'}])) + '</div><div class="slide">' + (inc > 0 || out > 0 ? donutHTML(sv >= 0 ? [{n:'Uscite', v:out, c:OUT_COL}, {n:'Risparmio', v:sv, c:b.c}] : [{n:'Entrate', v:inc, c:IN_COL}, {n:'Uscite oltre le entrate', v:-sv, c:'#E5484D'}], sv >= 0 ? inc : inc - sv) : '<p class="small muted">Nessun movimento nel periodo.</p>') + '</div></div><div class="dots"><i class="on"></i><i></i></div>' +
@@ -5661,6 +5663,65 @@ async function saveCard(found, btn){
     const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
     await downloads.save({filename:'buddy4free-campione-risparmio.png', data:blob}); toast('Card salvata');
   } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare la card'); }
+  btn.disabled = false;
+}
+
+/* ---------- "Il tuo anno": schede da scorrere con i numeri dell'anno, confronto solo con se stessi; immagine da condividere senza importi ---------- */
+function yearData(y){
+  const cm = curYM(), months = Array.from({length:12}, (_, i) => y + '-' + pad(i + 1)).filter(ym => ym <= cm && monthTx(ym).some(x => !x.plan));
+  if (!months.length) return null;
+  const st = months.map(ym => ({ym, s:stats(ym)})), full = st.filter(d => d.ym < cm), base = full.length >= 2 ? full : st;
+  const inc = st.reduce((t, d) => t + d.s.inc, 0), out = st.reduce((t, d) => t + d.s.out, 0), rate = inc > 0 ? (inc - out) / inc * 100 : null;
+  const best = base.filter(d => d.s.rate !== null).sort((a, b) => b.s.rate - a.s.rate)[0], light = base.slice().sort((a, b) => a.s.out - b.s.out)[0], avgOut = base.reduce((t, d) => t + d.s.out, 0) / base.length;
+  const tx = [].concat(...months.map(ym => monthTx(ym))).filter(x => !x.plan), days = new Set(tx.map(x => x.d)), outDays = new Set(tx.filter(x => x.t === 'out').map(x => x.d));
+  const d0 = months[0] + '-01', dEnd = months[months.length - 1] === cm ? today() : months[months.length - 1] + '-' + pad(new Date(+y, +months[months.length - 1].slice(5), 0).getDate());
+  let free = 0, run = 0, runMax = 0, trk = 0, trkMax = 0; for (let d = new Date(d0 + 'T12:00'); d <= new Date(dEnd + 'T12:00'); d.setDate(d.getDate() + 1)) { const k = d.toISOString().slice(0, 10); if (!outDays.has(k)) { free++; run++; runMax = Math.max(runMax, run); } else run = 0; if (days.has(k)) { trk++; trkMax = Math.max(trkMax, trk); } else trk = 0; }
+  /* voce cresciuta e voce scesa: prima metà contro seconda metà dei mesi tracciati (media al mese) */
+  const h = Math.floor(base.length / 2), A = base.slice(0, h), B = base.slice(h), avgCat = (L, c) => L.length ? L.reduce((t, d) => t + (d.s.byCat[c] || 0), 0) / L.length : 0;
+  const cats = [...new Set([].concat(...base.map(d => Object.keys(d.s.byCat))))].map(c => ({c, a:avgCat(A, c), b:avgCat(B, c)})).filter(q => q.a >= 15 || q.b >= 15);
+  const up = A.length ? cats.filter(q => q.b > q.a).sort((p, q) => (q.b - q.a) - (p.b - p.a))[0] : null, down = A.length ? cats.filter(q => q.b < q.a).sort((p, q) => (p.b - p.a) - (q.b - q.a))[0] : null;
+  /* capacità di risparmio (entrate − essenziali): primi mesi contro ultimi */
+  const cap = d => d.s.inc - (d.s.out - (d.s.disc || 0)), k3 = Math.min(3, Math.floor(base.length / 2)), c0 = k3 ? base.slice(0, k3).reduce((t, d) => t + cap(d), 0) / k3 : null, c1 = k3 ? base.slice(-k3).reduce((t, d) => t + cap(d), 0) / k3 : null;
+  return {y, months, st, base, inc, out, rate, best, light, avgOut, n:tx.length, free, runMax, trkMax, days:days.size, up, down, c0, c1, k3};
+}
+function renderYear(){
+  const ys = [...new Set(S.tx.filter(x => x.d <= today()).map(x => x.d.slice(0, 4)))].sort().reverse(), y = R.y || ys[0] || curYM().slice(0, 4), D = yearData(y), mn = ym => ymLabel(ym, {month:'long'});
+  if (!D) { view.innerHTML = '<div class="sec" style="gap:18px">' + backBtn('Statistiche', {screen:'stats'}) + '<div class="intro"><h2>Il tuo ' + esc(y) + '</h2></div><div class="note">Servono almeno un po\' di movimenti registrati in quest\'anno per raccontarlo.</div></div>'; return; }
+  const pc = (a, b) => b ? Math.round((a / b - 1) * 100) : 0, slide = (k, big, title, txt) => '<div class="slide"><div class="yslide yk' + k + '"><span class="label">' + title + '</span><b class="ybig">' + big + '</b><p>' + txt + '</p></div></div>';
+  const S1 = [slide(0, esc(String(D.n)), 'Il tuo ' + esc(y), 'movimenti registrati in ' + D.months.length + (D.months.length === 1 ? ' mese' : ' mesi') + ', in ' + D.days + ' giorni diversi. Il tracciamento più lungo: <b>' + D.trkMax + ' giorni di fila</b>.')];
+  if (D.rate !== null) S1.push(slide(1, Math.round(D.rate) + '%', 'Tasso di risparmio dell\'anno', 'Su ogni 100 € entrati, ' + Math.max(0, Math.round(D.rate)) + ' € sono rimasti.' + (D.best ? ' Il mese migliore è stato <b>' + mn(D.best.ym) + '</b>, con il ' + Math.round(D.best.s.rate) + '%.' : '')));
+  if (D.light && D.base.length > 1) S1.push(slide(2, esc(cap(mn(D.light.ym))), 'Il mese più leggero', 'Hai speso il <b>' + Math.abs(pc(D.light.s.out, D.avgOut)) + '% in meno</b> della tua media mensile dell\'anno (' + eur(D.light.s.out) + ' contro ' + eur(D.avgOut) + ').'));
+  if (D.up) S1.push(slide(3, '+' + pc(D.up.b, D.up.a) + '%', 'La voce cresciuta di più', '<b>' + esc(catOf('out', D.up.c).n) + '</b>: da ' + eur(D.up.a) + ' a ' + eur(D.up.b) + ' al mese tra la prima e la seconda parte dell\'anno.'));
+  if (D.down) S1.push(slide(4, pc(D.down.b, D.down.a) + '%', 'La voce scesa di più', '<b>' + esc(catOf('out', D.down.c).n) + '</b>: da ' + eur(D.down.a) + ' a ' + eur(D.down.b) + ' al mese.'));
+  if (D.k3 && D.c0) S1.push(slide(5, (D.c1 >= D.c0 ? '+' : '') + pc(D.c1, D.c0) + '%', 'Capacità di risparmio', 'Entrate meno spese essenziali: negli ultimi ' + D.k3 + ' mesi <b>' + eur(D.c1) + '</b> al mese, nei primi ' + D.k3 + ' <b>' + eur(D.c0) + '</b>.'));
+  S1.push(slide(6, esc(String(D.free)), 'Giorni senza spese', 'La serie più lunga: <b>' + D.runMax + ' giorni di fila</b> senza uscite.'));
+  view.innerHTML = '<div class="sec" style="gap:18px">' + backBtn('Statistiche', {screen:'stats'}) + '<div class="intro"><span class="label">Riepilogo</span><h2>Il tuo ' + esc(y) + '</h2><p class="muted" style="margin:0">Scorri le schede. Ti confronti solo con te stesso.' + (y === curYM().slice(0, 4) ? ' L\'anno è ancora in corso: i numeri arrivano a oggi.' : '') + '</p></div>' +
+    (ys.length > 1 ? '<div class="row" style="flex-wrap:wrap;gap:6px">' + ys.map(v => '<button class="chip" ' + nav$({screen:'year', y:v}) + ' aria-pressed="' + (v === y) + '">' + v + '</button>').join('') + '</div>' : '') +
+    '<div class="card ycard"><div class="carousel">' + S1.join('') + '</div><div class="dots">' + S1.map((_, i) => '<i' + (i ? '' : ' class="on"') + '></i>').join('') + '</div></div>' +
+    (downloads ? '<button class="btn wide" id="yr-share">' + ic('sparkle') + ' Salva l\'immagine da condividere</button><span class="small muted" style="text-align:center">L\'immagine non contiene importi: solo percentuali, giorni e mesi.</span>' : '') + '</div>';
+  const b = view.querySelector('#yr-share'); if (b) b.onclick = () => yearCard(D, b);
+}
+async function yearCard(D, btn){
+  btn.disabled = true;
+  try {
+    await document.fonts.ready;
+    const W = 1080, H = 1920, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const x = cv.getContext('2d'), mn = ym => ymLabel(ym, {month:'long'}), pc = (a, b) => b ? Math.round((a / b - 1) * 100) : 0;
+    x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
+    const gr = x.createRadialGradient(W / 2, 900, 50, W / 2, 900, 900); gr.addColorStop(0, 'rgba(255,201,10,.18)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    const img = new Image(); img.src = LOGO; await img.decode(); const lw = 300, lh = lw * img.height / img.width; x.drawImage(img, (W - lw) / 2, 110, lw, lh);
+    x.textAlign = 'center'; let y = 110 + lh + 120;
+    x.fillStyle = '#FFC90A'; x.font = '64px "Permanent Marker", cursive'; x.fillText('Il mio ' + D.y, W / 2, y); y += 70;
+    const rows = [[String(D.n), 'movimenti registrati']];
+    if (D.rate !== null) rows.push([Math.round(D.rate) + '%', 'tasso di risparmio dell\'anno']);
+    if (D.light && D.base.length > 1) rows.push([cap(mn(D.light.ym)), 'il mese più leggero (−' + Math.abs(pc(D.light.s.out, D.avgOut)) + '%)']);
+    if (D.k3 && D.c0) rows.push([(D.c1 >= D.c0 ? '+' : '') + pc(D.c1, D.c0) + '%', 'capacità di risparmio']);
+    rows.push([String(D.free), 'giorni senza spese']);
+    if (rows.length < 5) rows.splice(1, 0, [D.trkMax + ' giorni', 'di tracciamento di fila']);
+    rows.slice(0, 5).forEach(([a, b2]) => { y += 180; x.fillStyle = '#FFF'; x.font = '900 104px Archivo, Arial, sans-serif'; x.fillText(a, W / 2, y); x.fillStyle = '#CCC'; x.font = '500 44px Figtree, Arial, sans-serif'; x.fillText(b2, W / 2, y + 60); });
+    x.fillStyle = '#FFC90A'; x.fillRect((W - 460) / 2, H - 170, 460, 90); x.fillStyle = '#000'; x.font = '52px "Permanent Marker", cursive'; x.fillText('@Buddy4free', W / 2, H - 106);
+    const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+    await downloads.save({filename:'buddy4free-il-mio-' + D.y + '.png', data:blob}); toast('Immagine salvata');
+  } catch(e) { if (e && e.code !== 'declined') toast('Non è stato possibile salvare l\'immagine'); }
   btn.disabled = false;
 }
 
